@@ -1,0 +1,14 @@
+{
+  "extends": "@spark/config/tsconfig.base.json",
+  "compilerOptions": {
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "allowImportingTsExtensions": true,
+    "declaration": true,
+    "declarationMap": true,
+    "emitDeclarationOnly": true,
+    "outDir": "dist",
+    "composite": true,
+    "strictNullChecks": true
+  }
+}

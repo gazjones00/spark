@@ -1,0 +1,3 @@
+{
+  "extends": "@spark/config/tsconfig.base.json"
+}

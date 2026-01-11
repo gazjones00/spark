@@ -1,0 +1,33 @@
+{
+  "name": "@spark/auth",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./server": "./src/auth.ts",
+    "./client": "./src/client.ts",
+    "./react": "./src/react/index.ts",
+    "./react/hooks": "./src/react/hooks/index.ts",
+    "./react/components": "./src/react/components/index.ts"
+  },
+  "scripts": {},
+  "dependencies": {
+    "@spark/db": "workspace:*",
+    "better-auth": "catalog:",
+    "dotenv": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@spark/config": "workspace:*",
+    "@types/react": "^19.2.7",
+    "react": "^19.2.3",
+    "typescript": "catalog:"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  }
+}

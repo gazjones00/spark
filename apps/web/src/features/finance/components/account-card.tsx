@@ -1,0 +1,59 @@
+import { Wallet, PiggyBank, Briefcase } from "lucide-react";
+
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import type { Account } from "@spark/truelayer/types";
+
+type AccountType = "TRANSACTION" | "SAVINGS" | "BUSINESS_TRANSACTION" | "BUSINESS_SAVINGS";
+
+const accountTypeConfig: Record<AccountType, { icon: typeof Wallet; label: string }> = {
+  TRANSACTION: { icon: Wallet, label: "Current" },
+  SAVINGS: { icon: PiggyBank, label: "Savings" },
+  BUSINESS_TRANSACTION: { icon: Briefcase, label: "Business" },
+  BUSINESS_SAVINGS: { icon: Briefcase, label: "Business Savings" },
+};
+
+interface AccountCardProps {
+  account: Account;
+}
+
+function getAccountNumber(accountNumber: Account["accountNumber"]): string {
+  if (accountNumber.number) {
+    return `****${accountNumber.number.slice(-4)}`;
+  }
+  if (accountNumber.iban) {
+    return `****${accountNumber.iban.slice(-4)}`;
+  }
+  return "";
+}
+
+export function AccountCard({ account }: AccountCardProps) {
+  const accountType = account.accountType ?? "TRANSACTION";
+  const { icon: Icon, label } = accountTypeConfig[accountType];
+
+  return (
+    <Card className="transition-colors hover:bg-muted/50">
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            <div className="bg-muted rounded-none p-2">
+              <Icon className="size-5 text-muted-foreground" />
+            </div>
+            <div>
+              <p className="font-medium">{account.displayName}</p>
+              <p className="text-muted-foreground text-xs">
+                {account.provider.displayName} • {getAccountNumber(account.accountNumber)}
+              </p>
+            </div>
+          </div>
+          <Badge variant="outline" className="text-xs">
+            {label}
+          </Badge>
+        </div>
+        <p className="text-muted-foreground mt-4 text-xs">
+          Last updated: {new Date(account.updateTimestamp).toLocaleDateString()}
+        </p>
+      </CardContent>
+    </Card>
+  );
+}

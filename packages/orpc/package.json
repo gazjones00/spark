@@ -1,0 +1,22 @@
+{
+  "name": "@spark/orpc",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/client.ts",
+    "./contract": "./src/contract.ts"
+  },
+  "dependencies": {
+    "@orpc/client": "^1.13.2",
+    "@orpc/contract": "^1.13.2",
+    "@orpc/openapi-client": "^1.13.2",
+    "@orpc/tanstack-query": "^1.13.2",
+    "@spark/env": "workspace:*",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@spark/config": "workspace:*",
+    "typescript": "catalog:"
+  }
+}
