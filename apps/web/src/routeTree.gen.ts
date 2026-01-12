@@ -16,7 +16,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedTransactionsRouteImport } from './routes/_authenticated/transactions'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedAccountsRouteImport } from './routes/_authenticated/accounts'
-import { Route as AuthenticatedAccountsConnectRouteImport } from './routes/_authenticated/accounts.connect'
+import { Route as AuthenticatedAccountsConnectRouteImport } from './routes/_authenticated/accounts_.connect'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -55,16 +55,16 @@ const AuthenticatedAccountsRoute = AuthenticatedAccountsRouteImport.update({
 } as any)
 const AuthenticatedAccountsConnectRoute =
   AuthenticatedAccountsConnectRouteImport.update({
-    id: '/connect',
-    path: '/connect',
-    getParentRoute: () => AuthenticatedAccountsRoute,
+    id: '/accounts_/connect',
+    path: '/accounts/connect',
+    getParentRoute: () => AuthenticatedRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
-  '/accounts': typeof AuthenticatedAccountsRouteWithChildren
+  '/accounts': typeof AuthenticatedAccountsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/transactions': typeof AuthenticatedTransactionsRoute
   '/accounts/connect': typeof AuthenticatedAccountsConnectRoute
@@ -73,7 +73,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
-  '/accounts': typeof AuthenticatedAccountsRouteWithChildren
+  '/accounts': typeof AuthenticatedAccountsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/transactions': typeof AuthenticatedTransactionsRoute
   '/accounts/connect': typeof AuthenticatedAccountsConnectRoute
@@ -84,10 +84,10 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
-  '/_authenticated/accounts': typeof AuthenticatedAccountsRouteWithChildren
+  '/_authenticated/accounts': typeof AuthenticatedAccountsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/transactions': typeof AuthenticatedTransactionsRoute
-  '/_authenticated/accounts/connect': typeof AuthenticatedAccountsConnectRoute
+  '/_authenticated/accounts_/connect': typeof AuthenticatedAccountsConnectRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -117,7 +117,7 @@ export interface FileRouteTypes {
     | '/_authenticated/accounts'
     | '/_authenticated/dashboard'
     | '/_authenticated/transactions'
-    | '/_authenticated/accounts/connect'
+    | '/_authenticated/accounts_/connect'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -178,39 +178,28 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAccountsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/accounts/connect': {
-      id: '/_authenticated/accounts/connect'
-      path: '/connect'
+    '/_authenticated/accounts_/connect': {
+      id: '/_authenticated/accounts_/connect'
+      path: '/accounts/connect'
       fullPath: '/accounts/connect'
       preLoaderRoute: typeof AuthenticatedAccountsConnectRouteImport
-      parentRoute: typeof AuthenticatedAccountsRoute
+      parentRoute: typeof AuthenticatedRoute
     }
   }
 }
 
-interface AuthenticatedAccountsRouteChildren {
+interface AuthenticatedRouteChildren {
+  AuthenticatedAccountsRoute: typeof AuthenticatedAccountsRoute
+  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedTransactionsRoute: typeof AuthenticatedTransactionsRoute
   AuthenticatedAccountsConnectRoute: typeof AuthenticatedAccountsConnectRoute
 }
 
-const AuthenticatedAccountsRouteChildren: AuthenticatedAccountsRouteChildren = {
-  AuthenticatedAccountsConnectRoute: AuthenticatedAccountsConnectRoute,
-}
-
-const AuthenticatedAccountsRouteWithChildren =
-  AuthenticatedAccountsRoute._addFileChildren(
-    AuthenticatedAccountsRouteChildren,
-  )
-
-interface AuthenticatedRouteChildren {
-  AuthenticatedAccountsRoute: typeof AuthenticatedAccountsRouteWithChildren
-  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
-  AuthenticatedTransactionsRoute: typeof AuthenticatedTransactionsRoute
-}
-
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
-  AuthenticatedAccountsRoute: AuthenticatedAccountsRouteWithChildren,
+  AuthenticatedAccountsRoute: AuthenticatedAccountsRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedTransactionsRoute: AuthenticatedTransactionsRoute,
+  AuthenticatedAccountsConnectRoute: AuthenticatedAccountsConnectRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(

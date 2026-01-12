@@ -80,6 +80,23 @@ export const GetAccountsResponseSchema = z.object({
   accounts: z.array(SavedAccountSchema),
 });
 
+export const UpdateAccountInputSchema = z.object({
+  id: z.string(),
+  displayName: z.string().optional(),
+});
+
+export const UpdateAccountResponseSchema = z.object({
+  account: SavedAccountSchema,
+});
+
+export const DeleteAccountInputSchema = z.object({
+  id: z.string(),
+});
+
+export const DeleteAccountResponseSchema = z.object({
+  success: z.boolean(),
+});
+
 export const contract = oc.router({
   health: oc
     .route({
@@ -112,6 +129,31 @@ export const contract = oc.router({
       })
       .input(SaveAccountsInputSchema)
       .output(SaveAccountsResponseSchema),
+  }),
+
+  accounts: oc.router({
+    list: oc
+      .route({
+        method: "GET",
+        path: "/accounts",
+      })
+      .output(GetAccountsResponseSchema),
+
+    update: oc
+      .route({
+        method: "PATCH",
+        path: "/accounts/{id}",
+      })
+      .input(UpdateAccountInputSchema)
+      .output(UpdateAccountResponseSchema),
+
+    delete: oc
+      .route({
+        method: "DELETE",
+        path: "/accounts/{id}",
+      })
+      .input(DeleteAccountInputSchema)
+      .output(DeleteAccountResponseSchema),
   }),
 });
 

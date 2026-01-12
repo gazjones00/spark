@@ -1,11 +1,13 @@
+import { AccountCard } from "../AccountCard";
 import type { Account } from "@spark/truelayer/types";
-import { AccountCard } from "./account-card";
 
 interface AccountsListProps {
-  accounts: Account[];
+  accounts: (Account & { id: string })[];
+  onEdit?: (id: string) => void;
+  onDelete?: (id: string) => void;
 }
 
-export function AccountsList({ accounts }: AccountsListProps) {
+export function AccountsList({ accounts, onEdit, onDelete }: AccountsListProps) {
   if (accounts.length === 0) {
     return (
       <div className="text-muted-foreground rounded-none border border-dashed p-8 text-center">
@@ -18,7 +20,12 @@ export function AccountsList({ accounts }: AccountsListProps) {
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {accounts.map((account) => (
-        <AccountCard key={account.accountId} account={account} />
+        <AccountCard
+          key={account.accountId}
+          account={account}
+          onEdit={onEdit}
+          onDelete={onDelete}
+        />
       ))}
     </div>
   );

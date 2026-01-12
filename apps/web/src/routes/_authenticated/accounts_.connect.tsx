@@ -4,14 +4,14 @@ import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ConnectAccountModal } from "@/features/finance/components/connect-account-modal";
+import { ConnectAccountModal } from "@/features/finance/components/ConnectAccountModal";
 
 const searchSchema = z.object({
   code: z.string().optional(),
   state: z.string().optional(),
 });
 
-export const Route = createFileRoute("/_authenticated/accounts/connect")({
+export const Route = createFileRoute("/_authenticated/accounts_/connect")({
   component: ConnectAccountPage,
   validateSearch: searchSchema,
 });

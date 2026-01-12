@@ -86,8 +86,14 @@ export type TrueLayerErrorCode =
   | "server_error";
 
 // Account Types
+export const AccountType = {
+  TRANSACTION: "TRANSACTION",
+  SAVINGS: "SAVINGS",
+  BUSINESS_TRANSACTION: "BUSINESS_TRANSACTION",
+  BUSINESS_SAVINGS: "BUSINESS_SAVINGS",
+} as const;
 
-export type AccountType = "TRANSACTION" | "SAVINGS" | "BUSINESS_TRANSACTION" | "BUSINESS_SAVINGS";
+export type AccountType = (typeof AccountType)[keyof typeof AccountType];
 
 export type Currency = "EUR" | "GBP" | "USD" | "AUD";
 
