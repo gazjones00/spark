@@ -108,7 +108,9 @@ export class InitialSyncJob {
     await this.db
       .insert(truelayerTransactions)
       .values(transactionValues)
-      .onConflictDoNothing({ target: [truelayerTransactions.transactionId, truelayerTransactions.accountId] });
+      .onConflictDoNothing({
+        target: [truelayerTransactions.transactionId, truelayerTransactions.accountId],
+      });
 
     this.logger.log(`Saved ${transactions.length} transactions for account ${accountId}`);
   }
