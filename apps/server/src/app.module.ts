@@ -7,6 +7,7 @@ import { env } from "@spark/env/server";
 import type { Request } from "express";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
+import { AccountsModule } from "./modules/accounts";
 import { DatabaseModule } from "./modules/database";
 import { TruelayerModule } from "./providers/truelayer";
 import { TruelayerController } from "./providers/truelayer/truelayer.controller";
@@ -20,6 +21,7 @@ declare module "@orpc/nest" {
 @Module({
   imports: [
     DatabaseModule,
+    AccountsModule,
     AuthModule.forRoot({ auth }),
     TruelayerModule.forRoot({
       environment: "production",
