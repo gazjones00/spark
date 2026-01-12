@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "@libsql/client": "^0.17.0",
+    "@spark/common": "workspace:*",
     "@spark/env": "workspace:*",
     "@spark/truelayer": "workspace:*",
     "dotenv": "catalog:",

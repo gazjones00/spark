@@ -1,3 +1,4 @@
+import { enumValues } from "@spark/common";
 import { z } from "zod";
 
 export const TransactionCategory = {
@@ -54,9 +55,9 @@ export const AccountProviderSchema = z.object({
   displayName: z.string().optional(),
 });
 
-export const AccountTypeSchema = z.enum(Object.values(AccountType));
+export const AccountTypeSchema = z.enum(enumValues(AccountType));
 
-export const CurrencySchema = z.enum(Object.values(Currency));
+export const CurrencySchema = z.enum(enumValues(Currency));
 
 export const AccountSchema = z.object({
   updateTimestamp: z.string(),
@@ -73,9 +74,9 @@ export const RunningBalanceSchema = z.object({
   currency: CurrencySchema,
 });
 
-export const TransactionTypeSchema = z.enum(Object.values(TransactionType));
+export const TransactionTypeSchema = z.enum(enumValues(TransactionType));
 
-export const TransactionCategorySchema = z.enum(Object.values(TransactionCategory));
+export const TransactionCategorySchema = z.enum(enumValues(TransactionCategory));
 
 export const TransactionMetaSchema = z.object({
   bankTransactionId: z.string().optional(),

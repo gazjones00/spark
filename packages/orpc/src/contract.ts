@@ -145,6 +145,8 @@ export const contract = oc.router({
 
 export type Contract = typeof contract;
 
+export type Account = z.infer<typeof SavedAccountSchema>;
+
 export {
   AccountNumberSchema,
   AccountProviderSchema,

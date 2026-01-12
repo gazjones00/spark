@@ -1,8 +1,8 @@
+import type { Account } from "@spark/orpc/contract";
 import { AccountCard } from "../AccountCard";
-import type { Account } from "@spark/truelayer/types";
 
 interface AccountsListProps {
-  accounts: (Account & { id: string })[];
+  accounts: Account[];
   onEdit?: (id: string) => void;
   onDelete?: (id: string) => void;
 }

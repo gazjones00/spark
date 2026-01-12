@@ -9,6 +9,7 @@
     "./schemas": "./src/schemas.ts"
   },
   "dependencies": {
+    "@spark/common": "workspace:*",
     "@spark/env": "workspace:*",
     "zod": "catalog:"
   },

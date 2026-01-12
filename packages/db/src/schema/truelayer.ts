@@ -10,11 +10,9 @@ import {
   TransactionCategory,
   TransactionType,
 } from "@spark/truelayer/schemas";
+import { enumValues } from "@spark/common";
 
 import { pgTable, text, timestamp, numeric, jsonb, uniqueIndex } from "drizzle-orm/pg-core";
-
-const enumValues = <T extends Record<string, string>>(obj: T) =>
-  Object.values(obj) as [T[keyof T], ...T[keyof T][]];
 
 export const truelayerConnections = pgTable("truelayer_connections", {
   id: text("id").primaryKey(),

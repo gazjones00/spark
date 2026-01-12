@@ -3,9 +3,11 @@ import { Wallet, PiggyBank, Briefcase, Pencil, Trash2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { type Account, AccountType } from "@spark/truelayer/types";
+import type { Account } from "@spark/orpc/contract";
+import { AccountType } from "@spark/truelayer/types";
+import type { AccountType as AccountTypeType } from "@spark/truelayer/types";
 
-const accountTypeConfig: Record<AccountType, { icon: typeof Wallet; label: string }> = {
+const accountTypeConfig: Record<AccountTypeType, { icon: typeof Wallet; label: string }> = {
   TRANSACTION: { icon: Wallet, label: "Current" },
   SAVINGS: { icon: PiggyBank, label: "Savings" },
   BUSINESS_TRANSACTION: { icon: Briefcase, label: "Business" },
@@ -23,13 +25,13 @@ function getAccountNumber(accountNumber: Account["accountNumber"]): string {
 }
 
 interface AccountCardProps {
-  account: Account & { id: string };
+  account: Account;
   onEdit?: (id: string) => void;
   onDelete?: (id: string) => void;
 }
 
 export function AccountCard({ account, onEdit, onDelete }: AccountCardProps) {
-  const accountType: AccountType = account.accountType ?? AccountType.TRANSACTION;
+  const accountType: AccountTypeType = account.accountType ?? AccountType.TRANSACTION;
   const { icon: Icon, label } = accountTypeConfig[accountType];
 
   return (
