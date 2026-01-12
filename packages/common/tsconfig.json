@@ -1,0 +1,13 @@
+{
+  "extends": "@spark/config/tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "lib": ["ESNext"],
+    "allowImportingTsExtensions": true,
+    "emitDeclarationOnly": true,
+    "composite": true,
+    "strictNullChecks": true
+  },
+  "include": ["src/**/*"]
+}
