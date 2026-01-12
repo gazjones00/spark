@@ -13,6 +13,7 @@
     "@orpc/openapi-client": "^1.13.2",
     "@orpc/tanstack-query": "^1.13.2",
     "@spark/env": "workspace:*",
+    "@spark/truelayer": "workspace:*",
     "zod": "catalog:"
   },
   "devDependencies": {

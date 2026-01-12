@@ -1,4 +1,11 @@
 import { oc } from "@orpc/contract";
+import {
+  AccountNumberSchema,
+  AccountProviderSchema,
+  AccountSchema,
+  AccountTypeSchema,
+  CurrencySchema,
+} from "@spark/truelayer/schemas";
 import { z } from "zod";
 
 export const HelloResponseSchema = z.object({
@@ -10,39 +17,14 @@ export const AuthLinkResponseSchema = z.object({
   state: z.string(),
 });
 
+// TrueLayer API Schemas
+
 export const GenerateAuthLinkInputSchema = z.object({
   providerId: z.string().optional(),
 });
 
 export const ExchangeCodeInputSchema = z.object({
   code: z.string(),
-});
-
-export const AccountNumberSchema = z.object({
-  number: z.string().optional(),
-  sortCode: z.string().optional(),
-  swiftBic: z.string().optional(),
-  iban: z.string().optional(),
-  routingNumber: z.string().optional(),
-  bsb: z.string().optional(),
-});
-
-export const AccountProviderSchema = z.object({
-  providerId: z.string().optional(),
-  logoUri: z.string().optional(),
-  displayName: z.string().optional(),
-});
-
-export const AccountSchema = z.object({
-  updateTimestamp: z.string(),
-  accountId: z.string(),
-  accountType: z
-    .enum(["TRANSACTION", "SAVINGS", "BUSINESS_TRANSACTION", "BUSINESS_SAVINGS"])
-    .optional(),
-  displayName: z.string(),
-  currency: z.enum(["EUR", "GBP", "USD", "AUD"]),
-  accountNumber: AccountNumberSchema,
-  provider: AccountProviderSchema,
 });
 
 export const ExchangeCodeResponseSchema = z.object({
@@ -63,14 +45,16 @@ export const SaveAccountsResponseSchema = z.object({
   savedCount: z.number(),
 });
 
+// ============================================================================
+// Accounts API Schemas - Extends domain schemas for API-specific fields
+// ============================================================================
+
 export const SavedAccountSchema = z.object({
   id: z.string(),
   accountId: z.string(),
-  accountType: z
-    .enum(["TRANSACTION", "SAVINGS", "BUSINESS_TRANSACTION", "BUSINESS_SAVINGS"])
-    .nullable(),
+  accountType: AccountTypeSchema.nullable(),
   displayName: z.string(),
-  currency: z.enum(["EUR", "GBP", "USD", "AUD"]),
+  currency: CurrencySchema,
   accountNumber: AccountNumberSchema,
   provider: AccountProviderSchema,
   updateTimestamp: z.string(),
@@ -96,6 +80,8 @@ export const DeleteAccountInputSchema = z.object({
 export const DeleteAccountResponseSchema = z.object({
   success: z.boolean(),
 });
+
+// API Contract
 
 export const contract = oc.router({
   health: oc
@@ -158,3 +144,11 @@ export const contract = oc.router({
 });
 
 export type Contract = typeof contract;
+
+export {
+  AccountNumberSchema,
+  AccountProviderSchema,
+  AccountSchema,
+  AccountTypeSchema,
+  CurrencySchema,
+} from "@spark/truelayer/schemas";

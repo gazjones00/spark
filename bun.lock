@@ -144,6 +144,7 @@
       "dependencies": {
         "@libsql/client": "^0.17.0",
         "@spark/env": "workspace:*",
+        "@spark/truelayer": "workspace:*",
         "dotenv": "catalog:",
         "drizzle-orm": "catalog:",
         "pg": "^8.16.3",
@@ -151,7 +152,6 @@
       },
       "devDependencies": {
         "@spark/config": "workspace:*",
-        "@spark/truelayer": "workspace:*",
         "@types/pg": "^8.15.6",
         "drizzle-kit": "catalog:",
         "typescript": "catalog:",
@@ -179,6 +179,7 @@
         "@orpc/openapi-client": "^1.13.2",
         "@orpc/tanstack-query": "^1.13.2",
         "@spark/env": "workspace:*",
+        "@spark/truelayer": "workspace:*",
         "zod": "catalog:",
       },
       "devDependencies": {

@@ -1,46 +1,20 @@
 import type {
   AccountNumber,
   AccountProvider,
+  RunningBalance,
+  TransactionMeta,
+} from "@spark/truelayer/types";
+import {
   AccountType,
   Currency,
-  RunningBalance,
   TransactionCategory,
-  TransactionMeta,
   TransactionType,
-} from "@spark/truelayer/types";
+} from "@spark/truelayer/schemas";
 
 import { pgTable, text, timestamp, numeric, jsonb, uniqueIndex } from "drizzle-orm/pg-core";
 
-export const accountTypes = [
-  "TRANSACTION",
-  "SAVINGS",
-  "BUSINESS_TRANSACTION",
-  "BUSINESS_SAVINGS",
-] as const satisfies readonly AccountType[];
-
-export const currencies = ["EUR", "GBP", "USD", "AUD"] as const satisfies readonly Currency[];
-
-export const transactionTypes = ["DEBIT", "CREDIT"] as const satisfies readonly TransactionType[];
-
-export const transactionCategories = [
-  "ATM",
-  "BILL_PAYMENT",
-  "CASH",
-  "CASHBACK",
-  "CHEQUE",
-  "CORRECTION",
-  "CREDIT",
-  "DIRECT_DEBIT",
-  "DIVIDEND",
-  "FEE_CHARGE",
-  "INTEREST",
-  "OTHER",
-  "PURCHASE",
-  "STANDING_ORDER",
-  "TRANSFER",
-  "DEBIT",
-  "UNKNOWN",
-] as const satisfies readonly TransactionCategory[];
+const enumValues = <T extends Record<string, string>>(obj: T) =>
+  Object.values(obj) as [T[keyof T], ...T[keyof T][]];
 
 export const truelayerConnections = pgTable("truelayer_connections", {
   id: text("id").primaryKey(),
@@ -59,9 +33,9 @@ export const truelayerAccounts = pgTable("truelayer_accounts", {
     .notNull()
     .references(() => truelayerConnections.id),
   userId: text("user_id").notNull(),
-  accountType: text("account_type", { enum: accountTypes }),
+  accountType: text("account_type", { enum: enumValues(AccountType) }),
   displayName: text("display_name").notNull(),
-  currency: text("currency", { enum: currencies }).notNull(),
+  currency: text("currency", { enum: enumValues(Currency) }).notNull(),
   accountNumber: jsonb("account_number").$type<AccountNumber>().notNull(),
   provider: jsonb("provider").$type<AccountProvider>().notNull(),
   updateTimestamp: timestamp("update_timestamp", { withTimezone: true }).notNull(),
@@ -82,10 +56,10 @@ export const truelayerTransactions = pgTable(
     timestamp: timestamp("timestamp", { withTimezone: true }).notNull(),
     description: text("description").notNull(),
     amount: numeric("amount", { precision: 19, scale: 4 }).notNull(),
-    currency: text("currency", { enum: currencies }).notNull(),
-    transactionType: text("transaction_type", { enum: transactionTypes }).notNull(),
+    currency: text("currency", { enum: enumValues(Currency) }).notNull(),
+    transactionType: text("transaction_type", { enum: enumValues(TransactionType) }).notNull(),
     transactionCategory: text("transaction_category", {
-      enum: transactionCategories,
+      enum: enumValues(TransactionCategory),
     }).notNull(),
     transactionClassification: jsonb("transaction_classification").$type<string[]>().notNull(),
     merchantName: text("merchant_name"),
