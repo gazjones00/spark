@@ -55,7 +55,7 @@ export function AccountCard({ account, onEdit, onDelete }: AccountCardProps) {
         </div>
         <div className="mt-auto flex items-center justify-between pt-4">
           <p className="text-muted-foreground text-xs">
-            Last updated: {new Date(account.updateTimestamp).toLocaleDateString()}
+            Last updated: {new Date(account.updatedAt).toLocaleDateString()}
           </p>
           <div className="flex gap-1">
             <Button

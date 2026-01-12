@@ -57,7 +57,7 @@ export const SavedAccountSchema = z.object({
   currency: CurrencySchema,
   accountNumber: AccountNumberSchema,
   provider: AccountProviderSchema,
-  updateTimestamp: z.string(),
+  updatedAt: z.string(),
 });
 
 export const GetAccountsResponseSchema = z.object({

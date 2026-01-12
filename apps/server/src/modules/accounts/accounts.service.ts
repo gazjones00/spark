@@ -27,7 +27,7 @@ export class AccountsService {
         currency: account.currency,
         accountNumber: account.accountNumber,
         provider: account.provider,
-        updateTimestamp: account.updateTimestamp.toISOString(),
+        updatedAt: account.updatedAt.toISOString(),
       })),
     };
   }
@@ -64,7 +64,7 @@ export class AccountsService {
         currency: updated.currency,
         accountNumber: updated.accountNumber,
         provider: updated.provider,
-        updateTimestamp: updated.updateTimestamp.toISOString(),
+        updatedAt: updated.updatedAt.toISOString(),
       },
     };
   }
