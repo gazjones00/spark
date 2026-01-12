@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { AccountsList } from "@/features/finance/components/accounts-list";
+import { AccountsList } from "@/features/finance/components/AccountList";
 import { ConnectAccountModal } from "@/features/finance/components/ConnectAccountModal";
 import { orpc } from "@spark/orpc";
 
