@@ -13,7 +13,6 @@ export function Processor(
   const options =
     typeof queueNameOrOptions === "object" ? queueNameOrOptions : { queueName: queueNameOrOptions };
 
-  // biome-ignore lint/complexity/noBannedTypes: ClassDecorator requires Function type
   return (target: Function) => {
     SetMetadata(SCOPE_OPTIONS_METADATA, options)(target);
     SetMetadata(PROCESSOR_METADATA, options)(target);

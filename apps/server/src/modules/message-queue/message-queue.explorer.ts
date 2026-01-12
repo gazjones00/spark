@@ -1,9 +1,9 @@
-import { Inject, Injectable, Logger, type OnModuleInit } from "@nestjs/common";
+import { Injectable, Logger, type OnModuleInit } from "@nestjs/common";
 import { DiscoveryService, MetadataScanner, ModuleRef } from "@nestjs/core";
 import { InstanceWrapper } from "@nestjs/core/injector/instance-wrapper";
-import { type MessageQueue, QUEUE_DRIVER } from "./constants";
-import type { MessageQueueDriver, MessageQueueJob } from "./drivers/message-queue-driver.interface";
+import type { MessageQueueJob } from "./drivers/message-queue-driver.interface";
 import { MessageQueueMetadataAccessor } from "./message-queue-metadata.accessor";
+import { MessageQueueService } from "./services/message-queue.service";
 
 interface ProcessorInstance {
   instance: Record<string, (...args: unknown[]) => Promise<void>>;
@@ -19,7 +19,6 @@ export class MessageQueueExplorer implements OnModuleInit {
     private readonly discoveryService: DiscoveryService,
     private readonly metadataAccessor: MessageQueueMetadataAccessor,
     private readonly metadataScanner: MetadataScanner,
-    @Inject(QUEUE_DRIVER) private readonly driver: MessageQueueDriver,
   ) {}
 
   onModuleInit() {
@@ -34,9 +33,11 @@ export class MessageQueueExplorer implements OnModuleInit {
     const grouped = this.groupByQueueName(processors);
 
     for (const [queueName, processorInstances] of Object.entries(grouped)) {
-      this.driver.register?.(queueName as MessageQueue);
+      const queueService = this.moduleRef.get<MessageQueueService>(`QUEUE_${queueName}`, {
+        strict: false,
+      });
 
-      this.driver.work(queueName as MessageQueue, async (job: MessageQueueJob) => {
+      queueService.work(async (job: MessageQueueJob) => {
         for (const { instance, methods } of processorInstances) {
           for (const { methodName, jobName } of methods) {
             if (jobName === job.name) {

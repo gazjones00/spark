@@ -21,7 +21,8 @@ const driver = new BullMQDriver({
       clientSecret: env.TRUELAYER_CLIENT_SECRET,
       redirectUri: env.TRUELAYER_REDIRECT_URI,
     }),
-    MessageQueueModule.registerWorker({ driver }),
+    MessageQueueModule.register({ driver }),
+    MessageQueueModule.registerExplorer(),
     JobsModule,
   ],
 })
