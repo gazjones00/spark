@@ -3,5 +3,5 @@ export const PROCESS_METADATA = Symbol("message-queue:process_metadata");
 export const QUEUE_DRIVER = Symbol("message-queue:queue_driver");
 
 export enum MessageQueue {
-  default = "default",
+  DEFAULT = "DEFAULT",
 }

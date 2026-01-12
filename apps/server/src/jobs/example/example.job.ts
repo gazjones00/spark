@@ -5,7 +5,7 @@ export interface ExampleJobData {
   message: string;
 }
 
-@Processor(MessageQueue.default)
+@Processor(MessageQueue.DEFAULT)
 @Injectable()
 export class ExampleJob {
   private readonly logger = new Logger(ExampleJob.name);

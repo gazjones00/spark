@@ -8,7 +8,9 @@ import type { Request } from "express";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { AccountsModule } from "./modules/accounts";
+import { BullBoardModule } from "./modules/bull-board";
 import { DatabaseModule } from "./modules/database";
+import { BullMQDriver, MessageQueueModule } from "./modules/message-queue";
 import { TruelayerModule } from "./providers/truelayer";
 import { TruelayerController } from "./providers/truelayer/truelayer.controller";
 
@@ -18,13 +20,22 @@ declare module "@orpc/nest" {
   }
 }
 
+const messageQueueDriver = new BullMQDriver({
+  connection: {
+    host: env.REDIS_HOST,
+    port: env.REDIS_PORT,
+  },
+});
+
 @Module({
   imports: [
     DatabaseModule,
     AccountsModule,
+    MessageQueueModule.register({ driver: messageQueueDriver }),
+    BullBoardModule.forRoot(messageQueueDriver),
     AuthModule.forRoot({ auth }),
     TruelayerModule.forRoot({
-      environment: "production",
+      environment: env.TRUELAYER_ENV,
       clientId: env.TRUELAYER_CLIENT_ID,
       clientSecret: env.TRUELAYER_CLIENT_SECRET,
       redirectUri: env.TRUELAYER_REDIRECT_URI,

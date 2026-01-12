@@ -80,6 +80,10 @@ export class MessageQueueModule {
    * Register the message queue module for the worker (process jobs)
    */
   static registerWorker(options: MessageQueueModuleOptions): DynamicModule {
+    const queueProviders = Object.values(MessageQueue).map((queueName) =>
+      createQueueServiceProvider(queueName),
+    );
+
     return {
       module: MessageQueueModule,
       imports: [DiscoveryModule],
@@ -87,8 +91,9 @@ export class MessageQueueModule {
         { provide: QUEUE_DRIVER, useValue: options.driver },
         MessageQueueExplorer,
         MessageQueueMetadataAccessor,
+        ...queueProviders,
       ],
-      exports: [QUEUE_DRIVER],
+      exports: [QUEUE_DRIVER, ...queueProviders.map((p) => (p as { provide: string }).provide)],
     };
   }
 
@@ -96,6 +101,10 @@ export class MessageQueueModule {
    * Register the message queue module for the worker with async options
    */
   static registerWorkerAsync(options: MessageQueueModuleAsyncOptions): DynamicModule {
+    const queueProviders = Object.values(MessageQueue).map((queueName) =>
+      createQueueServiceProvider(queueName),
+    );
+
     return {
       module: MessageQueueModule,
       imports: [DiscoveryModule],
@@ -107,8 +116,9 @@ export class MessageQueueModule {
         },
         MessageQueueExplorer,
         MessageQueueMetadataAccessor,
+        ...queueProviders,
       ],
-      exports: [QUEUE_DRIVER],
+      exports: [QUEUE_DRIVER, ...queueProviders.map((p) => (p as { provide: string }).provide)],
     };
   }
 }

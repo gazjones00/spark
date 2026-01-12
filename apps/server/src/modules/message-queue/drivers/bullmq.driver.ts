@@ -74,4 +74,8 @@ export class BullMQDriver implements MessageQueueDriver {
 
     await Promise.all(closePromises);
   }
+
+  getQueues(): Queue[] {
+    return Object.values(this.queueMap);
+  }
 }

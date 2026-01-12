@@ -4,6 +4,9 @@ import { truelayerAccounts, truelayerConnections } from "@spark/db/schema";
 import { env } from "@spark/env/server";
 import { TruelayerClient } from "./truelayer.client";
 import { DATABASE_CONNECTION } from "../../modules/database";
+import { MessageQueue } from "../../modules/message-queue";
+import type { MessageQueueService } from "../../modules/message-queue";
+import type { InitialSyncJobData } from "../../jobs/initial-sync/initial-sync.job";
 
 export interface GenerateAuthLinkInput {
   providerId?: string;
@@ -38,6 +41,7 @@ export class TruelayerService {
   constructor(
     private readonly client: TruelayerClient,
     @Inject(DATABASE_CONNECTION) private readonly db: Database,
+    @Inject(`QUEUE_${MessageQueue.DEFAULT}`) private readonly queue: MessageQueueService,
   ) {}
 
   buildCallbackRedirectUrl(code: string, state?: string): string {
@@ -120,6 +124,15 @@ export class TruelayerService {
           });
         return account;
       }),
+    );
+
+    await Promise.all(
+      savedAccounts.map((account) =>
+        this.queue.add<InitialSyncJobData>("InitialSyncJob", {
+          accountId: account.accountId,
+          connectionId,
+        }),
+      ),
     );
 
     return {
