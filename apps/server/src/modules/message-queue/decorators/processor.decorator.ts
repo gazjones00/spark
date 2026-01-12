@@ -1,0 +1,21 @@
+import { Scope, SetMetadata } from "@nestjs/common";
+import { SCOPE_OPTIONS_METADATA } from "@nestjs/common/constants";
+import { type MessageQueue, PROCESSOR_METADATA } from "../constants";
+
+export interface MessageQueueProcessorOptions {
+  queueName: MessageQueue;
+  scope?: Scope;
+}
+
+export function Processor(
+  queueNameOrOptions: MessageQueue | MessageQueueProcessorOptions,
+): ClassDecorator {
+  const options =
+    typeof queueNameOrOptions === "object" ? queueNameOrOptions : { queueName: queueNameOrOptions };
+
+  // biome-ignore lint/complexity/noBannedTypes: ClassDecorator requires Function type
+  return (target: Function) => {
+    SetMetadata(SCOPE_OPTIONS_METADATA, options)(target);
+    SetMetadata(PROCESSOR_METADATA, options)(target);
+  };
+}

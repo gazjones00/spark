@@ -18,7 +18,8 @@
   },
   "type": "module",
   "scripts": {
-    "dev": "turbo dev",
+    "dev": "turbo dev dev:worker",
+    "dev:worker": "turbo -F @spark/server dev:worker",
     "build": "turbo build",
     "test": "turbo test",
     "check-types": "turbo check-types",
