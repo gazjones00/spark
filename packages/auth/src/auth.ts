@@ -2,10 +2,12 @@ import { db } from "@spark/db";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { env } from "@spark/env/server";
+import { tanstackStartCookies } from "better-auth/tanstack-start";
 
 const isProduction = env.NODE_ENV === "production";
 
 export const auth = betterAuth({
+  plugins: [tanstackStartCookies()],
   database: drizzleAdapter(db, {
     provider: "pg",
   }),
