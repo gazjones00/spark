@@ -3,6 +3,8 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { env } from "@spark/env/server";
 
+const isProduction = env.NODE_ENV === "production";
+
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: "pg",
@@ -14,8 +16,8 @@ export const auth = betterAuth({
   advanced: {
     cookiePrefix: "spark",
     defaultCookieAttributes: {
-      sameSite: "none",
-      secure: true,
+      sameSite: isProduction ? "none" : "lax",
+      secure: isProduction,
       httpOnly: true,
     },
   },
