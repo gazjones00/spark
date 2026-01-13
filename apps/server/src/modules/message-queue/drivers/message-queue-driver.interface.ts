@@ -9,6 +9,11 @@ export interface MessageQueueJob<T = unknown> {
 export interface QueueJobOptions {
   priority?: number;
   delay?: number;
+  attempts?: number;
+  backoff?: {
+    type: "exponential" | "fixed";
+    delay: number;
+  };
 }
 
 export interface WorkerOptions {
@@ -23,6 +28,14 @@ export interface MessageQueueDriver {
     jobName: string,
     data: T,
     options?: QueueJobOptions,
+  ): Promise<void>;
+
+  addCron?<T>(
+    queueName: MessageQueue,
+    schedulerId: string,
+    pattern: string,
+    jobName: string,
+    data: T,
   ): Promise<void>;
 
   work<T>(

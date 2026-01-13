@@ -36,7 +36,25 @@ export class BullMQDriver implements MessageQueueDriver {
     if (!queue) {
       throw new Error(`Queue "${queueName}" not registered. Call register() first.`);
     }
-    await queue.add(jobName, data, options);
+    await queue.add(jobName, data, {
+      ...options,
+      attempts: options?.attempts ?? 3,
+      backoff: options?.backoff ?? { type: "exponential", delay: 1000 },
+    });
+  }
+
+  async addCron<T>(
+    queueName: MessageQueue,
+    schedulerId: string,
+    pattern: string,
+    jobName: string,
+    data: T,
+  ): Promise<void> {
+    const queue = this.queueMap[queueName];
+    if (!queue) {
+      throw new Error(`Queue "${queueName}" not registered. Call register() first.`);
+    }
+    await queue.upsertJobScheduler(schedulerId, { pattern }, { name: jobName, data });
   }
 
   work<T>(

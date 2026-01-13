@@ -20,6 +20,13 @@ export class MessageQueueService {
     return this.driver.add(this.queueName, jobName, data, options);
   }
 
+  addCron<T>(schedulerId: string, pattern: string, jobName: string, data: T): Promise<void> {
+    if (!this.driver.addCron) {
+      throw new Error("addCron is not supported by this driver");
+    }
+    return this.driver.addCron(this.queueName, schedulerId, pattern, jobName, data);
+  }
+
   work<T>(handler: (job: MessageQueueJob<T>) => Promise<void>, options?: WorkerOptions): void {
     return this.driver.work(this.queueName, handler, options);
   }

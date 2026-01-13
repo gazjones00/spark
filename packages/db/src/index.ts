@@ -7,4 +7,4 @@ export const db = drizzle(env.DATABASE_URL, { schema });
 
 export type Database = typeof db;
 
-export { eq, and, or, sql, desc, asc } from "drizzle-orm";
+export { eq, and, or, sql, desc, asc, gt, lt, gte, lte } from "drizzle-orm";

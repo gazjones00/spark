@@ -6,7 +6,7 @@ import { TruelayerClient } from "./truelayer.client";
 import { DATABASE_CONNECTION } from "../../modules/database";
 import { MessageQueue } from "../../modules/message-queue";
 import type { MessageQueueService } from "../../modules/message-queue";
-import type { InitialSyncJobData } from "../../jobs/initial-sync/initial-sync.job";
+import type { InitialSyncJobData } from "../../jobs/initial-sync.job";
 
 export interface GenerateAuthLinkInput {
   providerId?: string;

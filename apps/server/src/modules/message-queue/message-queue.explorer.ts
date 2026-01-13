@@ -5,9 +5,18 @@ import type { MessageQueueJob } from "./drivers/message-queue-driver.interface";
 import { MessageQueueMetadataAccessor } from "./message-queue-metadata.accessor";
 import { MessageQueueService } from "./services/message-queue.service";
 
+interface MethodMetadata {
+  methodName: string;
+  jobName: string;
+  cron?: {
+    pattern: string;
+    schedulerId: string;
+  };
+}
+
 interface ProcessorInstance {
   instance: Record<string, (...args: unknown[]) => Promise<void>>;
-  methods: Array<{ methodName: string; jobName: string }>;
+  methods: MethodMetadata[];
 }
 
 @Injectable()
@@ -21,11 +30,11 @@ export class MessageQueueExplorer implements OnModuleInit {
     private readonly metadataScanner: MetadataScanner,
   ) {}
 
-  onModuleInit() {
-    this.explore();
+  async onModuleInit() {
+    await this.explore();
   }
 
-  explore() {
+  async explore() {
     const processors = this.discoveryService
       .getProviders()
       .filter((wrapper) => this.isProcessor(wrapper));
@@ -49,6 +58,24 @@ export class MessageQueueExplorer implements OnModuleInit {
       });
 
       this.logger.log(`Worker registered for queue "${queueName}"`);
+
+      await this.registerCronJobs(queueService, processorInstances);
+    }
+  }
+
+  private async registerCronJobs(
+    queueService: MessageQueueService,
+    processorInstances: ProcessorInstance[],
+  ): Promise<void> {
+    for (const { methods } of processorInstances) {
+      for (const { jobName, cron } of methods) {
+        if (cron) {
+          await queueService.addCron(cron.schedulerId, cron.pattern, jobName, {});
+          this.logger.log(
+            `Cron job registered: "${jobName}" with pattern "${cron.pattern}" (schedulerId: ${cron.schedulerId})`,
+          );
+        }
+      }
     }
   }
 
@@ -69,12 +96,27 @@ export class MessageQueueExplorer implements OnModuleInit {
       const queueName = metadata.queueName;
       const instance = wrapper.instance as ProcessorInstance["instance"];
       const prototype = Object.getPrototypeOf(instance);
-      const methods: ProcessorInstance["methods"] = [];
+      const methods: MethodMetadata[] = [];
 
       this.metadataScanner.scanFromPrototype(instance, prototype, (methodName) => {
         const processMetadata = this.metadataAccessor.getProcessMetadata(prototype[methodName]);
         if (processMetadata) {
-          methods.push({ methodName, jobName: processMetadata.jobName });
+          const cronMetadata = this.metadataAccessor.getCronMetadata(prototype[methodName]);
+
+          const methodMeta: MethodMetadata = {
+            methodName,
+            jobName: processMetadata.jobName,
+          };
+
+          if (cronMetadata) {
+            methodMeta.cron = {
+              pattern: cronMetadata.pattern,
+              schedulerId:
+                cronMetadata.schedulerId ?? this.generateSchedulerId(processMetadata.jobName),
+            };
+          }
+
+          methods.push(methodMeta);
         }
       });
 
@@ -87,5 +129,12 @@ export class MessageQueueExplorer implements OnModuleInit {
     }
 
     return grouped;
+  }
+
+  private generateSchedulerId(jobName: string): string {
+    return jobName
+      .replace(/([a-z])([A-Z])/g, "$1-$2")
+      .replace(/([A-Z])([A-Z][a-z])/g, "$1-$2")
+      .toLowerCase();
   }
 }

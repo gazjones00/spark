@@ -3,69 +3,39 @@ import { type Database, eq } from "@spark/db";
 import { truelayerConnections, truelayerTransactions } from "@spark/db/schema";
 import { TruelayerClient } from "../../providers/truelayer/truelayer.client";
 import { DATABASE_CONNECTION } from "../../modules/database";
-import { MessageQueue, Process, Processor } from "../../modules/message-queue";
+import { ConnectionNotFoundError, TokenExpiredError, TokenRefreshError } from "../errors";
 
-export interface InitialSyncJobData {
+export interface SyncTransactionsParams {
   accountId: string;
   connectionId: string;
+  daysToSync: number;
 }
 
-const HISTORICAL_DAYS = 90;
-
-@Processor(MessageQueue.DEFAULT)
 @Injectable()
-export class InitialSyncJob {
-  private readonly logger = new Logger(InitialSyncJob.name);
+export class TransactionSyncService {
+  private readonly logger = new Logger(TransactionSyncService.name);
 
   constructor(
     private readonly truelayerClient: TruelayerClient,
     @Inject(DATABASE_CONNECTION) private readonly db: Database,
   ) {}
 
-  @Process("InitialSyncJob")
-  async handle(data: InitialSyncJobData): Promise<void> {
-    const { accountId, connectionId } = data;
-
-    this.logger.log(`Starting initial sync for account ${accountId}`);
+  async syncTransactions(params: SyncTransactionsParams): Promise<number> {
+    const { accountId, connectionId, daysToSync } = params;
 
     const connection = await this.db.query.truelayerConnections.findFirst({
       where: eq(truelayerConnections.id, connectionId),
     });
 
     if (!connection) {
-      this.logger.error(`Connection ${connectionId} not found`);
-      return;
+      throw new ConnectionNotFoundError(connectionId);
     }
 
-    let accessToken = connection.accessToken;
-
-    if (connection.expiresAt < new Date()) {
-      if (!connection.refreshToken) {
-        this.logger.error(`Connection ${connectionId} expired and no refresh token available`);
-        return;
-      }
-
-      this.logger.log(`Access token expired, refreshing for connection ${connectionId}`);
-      const tokenResponse = await this.truelayerClient.refreshToken({
-        refreshToken: connection.refreshToken,
-      });
-
-      accessToken = tokenResponse.accessToken;
-
-      await this.db
-        .update(truelayerConnections)
-        .set({
-          accessToken: tokenResponse.accessToken,
-          refreshToken: tokenResponse.refreshToken,
-          expiresAt: tokenResponse.expiresAt,
-          updatedAt: new Date(),
-        })
-        .where(eq(truelayerConnections.id, connectionId));
-    }
+    const accessToken = await this.getValidAccessToken(connection);
 
     const toDate = new Date();
     const fromDate = new Date();
-    fromDate.setDate(fromDate.getDate() - HISTORICAL_DAYS);
+    fromDate.setDate(fromDate.getDate() - daysToSync);
 
     const formatDate = (date: Date): string => date.toISOString().split("T")[0];
 
@@ -73,18 +43,25 @@ export class InitialSyncJob {
       `Fetching transactions from ${formatDate(fromDate)} to ${formatDate(toDate)} for account ${accountId}`,
     );
 
-    const transactions = await this.truelayerClient.getTransactions({
-      accessToken,
-      accountId,
-      from: formatDate(fromDate),
-      to: formatDate(toDate),
-    });
+    let transactions;
+    try {
+      transactions = await this.truelayerClient.getTransactions({
+        accessToken,
+        accountId,
+        from: formatDate(fromDate),
+        to: formatDate(toDate),
+      });
+    } catch (error) {
+      this.logger.error(
+        `Failed to fetch transactions for account ${accountId}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      throw error;
+    }
 
     this.logger.log(`Fetched ${transactions.length} transactions for account ${accountId}`);
 
     if (transactions.length === 0) {
-      this.logger.log(`No transactions to sync for account ${accountId}`);
-      return;
+      return 0;
     }
 
     const transactionValues = transactions.map((transaction) => ({
@@ -113,5 +90,42 @@ export class InitialSyncJob {
       });
 
     this.logger.log(`Saved ${transactions.length} transactions for account ${accountId}`);
+
+    return transactions.length;
+  }
+
+  private async getValidAccessToken(
+    connection: typeof truelayerConnections.$inferSelect,
+  ): Promise<string> {
+    if (connection.expiresAt >= new Date()) {
+      return connection.accessToken;
+    }
+
+    if (!connection.refreshToken) {
+      throw new TokenExpiredError(connection.id);
+    }
+
+    this.logger.log(`Refreshing token for connection ${connection.id}`);
+
+    let tokenResponse;
+    try {
+      tokenResponse = await this.truelayerClient.refreshToken({
+        refreshToken: connection.refreshToken,
+      });
+    } catch (error) {
+      throw new TokenRefreshError(connection.id, error instanceof Error ? error : undefined);
+    }
+
+    await this.db
+      .update(truelayerConnections)
+      .set({
+        accessToken: tokenResponse.accessToken,
+        refreshToken: tokenResponse.refreshToken,
+        expiresAt: tokenResponse.expiresAt,
+        updatedAt: new Date(),
+      })
+      .where(eq(truelayerConnections.id, connection.id));
+
+    return tokenResponse.accessToken;
   }
 }

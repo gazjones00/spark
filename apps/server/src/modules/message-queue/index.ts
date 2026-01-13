@@ -1,7 +1,7 @@
 export { MessageQueueModule } from "./message-queue.module";
 export { type MessageQueueModuleOptions } from "./message-queue-core.module";
 export { MessageQueue, QUEUE_DRIVER } from "./constants";
-export { Processor, Process } from "./decorators";
+export { Processor, Process, Cron } from "./decorators";
 export { MessageQueueService } from "./services";
 export type {
   MessageQueueDriver,
