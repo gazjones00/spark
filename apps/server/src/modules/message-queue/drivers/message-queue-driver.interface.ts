@@ -1,40 +1,36 @@
-import type { MessageQueue } from "../constants";
+import type { Jobs, MessageQueue } from "../constants";
+import type { WorkerOptions as BullMQWorkerOptions } from "bullmq";
 
 export interface MessageQueueJob<T = unknown> {
   id: string;
-  name: string;
+  name: Jobs;
   data: T;
 }
 
 export interface QueueJobOptions {
+  jobId?: string;
   priority?: number;
   delay?: number;
   attempts?: number;
+  removeOnComplete?: boolean | number | { count?: number };
+  removeOnFail?: boolean | number | { count?: number };
   backoff?: {
     type: "exponential" | "fixed";
     delay: number;
   };
 }
-
-export interface WorkerOptions {
-  concurrency?: number;
-}
+export type WorkerOptions = Pick<BullMQWorkerOptions, "concurrency">;
 
 export interface MessageQueueDriver {
   register?(queueName: MessageQueue): void;
 
-  add<T>(
-    queueName: MessageQueue,
-    jobName: string,
-    data: T,
-    options?: QueueJobOptions,
-  ): Promise<void>;
+  add<T>(queueName: MessageQueue, jobName: Jobs, data: T, options?: QueueJobOptions): Promise<void>;
 
   addCron?<T>(
     queueName: MessageQueue,
     schedulerId: string,
     pattern: string,
-    jobName: string,
+    jobName: Jobs,
     data: T,
   ): Promise<void>;
 

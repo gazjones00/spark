@@ -1,5 +1,8 @@
-import { Injectable, Logger } from "@nestjs/common";
-import { MessageQueue, Process, Processor } from "../modules/message-queue";
+import { Inject, Injectable, Logger } from "@nestjs/common";
+import { type Database, eq } from "@spark/db";
+import { truelayerAccounts } from "@spark/db/schema";
+import { DATABASE_CONNECTION } from "../modules/database";
+import { Jobs, MessageQueue, Process, Processor } from "../modules/message-queue";
 import { TransactionSyncService } from "./services/transaction-sync.service";
 
 export interface AccountSyncJobData {
@@ -7,25 +10,31 @@ export interface AccountSyncJobData {
   connectionId: string;
 }
 
-const SYNC_DAYS = 7;
-
 @Processor(MessageQueue.DEFAULT)
 @Injectable()
 export class AccountSyncJob {
   private readonly logger = new Logger(AccountSyncJob.name);
 
-  constructor(private readonly transactionSyncService: TransactionSyncService) {}
+  constructor(
+    private readonly transactionSyncService: TransactionSyncService,
+    @Inject(DATABASE_CONNECTION) private readonly db: Database,
+  ) {}
 
-  @Process("AccountSyncJob")
+  @Process(Jobs.AccountSync)
   async handle(data: AccountSyncJobData): Promise<void> {
     const { accountId, connectionId } = data;
 
     this.logger.log(`Syncing account ${accountId}`);
 
+    const account = await this.db.query.truelayerAccounts.findFirst({
+      where: eq(truelayerAccounts.accountId, accountId),
+      columns: { lastSyncedAt: true },
+    });
+
     await this.transactionSyncService.syncTransactions({
       accountId,
       connectionId,
-      daysToSync: SYNC_DAYS,
+      lastSyncedAt: account?.lastSyncedAt,
     });
   }
 }

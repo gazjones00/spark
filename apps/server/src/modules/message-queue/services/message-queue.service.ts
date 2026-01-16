@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { type MessageQueue, QUEUE_DRIVER } from "../constants";
+import { type Jobs, type MessageQueue, QUEUE_DRIVER } from "../constants";
 import type {
   MessageQueueDriver,
   MessageQueueJob,
@@ -16,11 +16,11 @@ export class MessageQueueService {
     this.driver.register?.(queueName);
   }
 
-  add<T>(jobName: string, data: T, options?: QueueJobOptions): Promise<void> {
+  add<T>(jobName: Jobs, data: T, options?: QueueJobOptions): Promise<void> {
     return this.driver.add(this.queueName, jobName, data, options);
   }
 
-  addCron<T>(schedulerId: string, pattern: string, jobName: string, data: T): Promise<void> {
+  addCron<T>(schedulerId: string, pattern: string, jobName: Jobs, data: T): Promise<void> {
     if (!this.driver.addCron) {
       throw new Error("addCron is not supported by this driver");
     }

@@ -1,5 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { MessageQueue, Process, Processor } from "../modules/message-queue";
+import { Jobs, MessageQueue, Process, Processor } from "../modules/message-queue";
 import { TransactionSyncService } from "./services/transaction-sync.service";
 
 export interface InitialSyncJobData {
@@ -16,7 +16,7 @@ export class InitialSyncJob {
 
   constructor(private readonly transactionSyncService: TransactionSyncService) {}
 
-  @Process("InitialSyncJob")
+  @Process(Jobs.InitialSync)
   async handle(data: InitialSyncJobData): Promise<void> {
     const { accountId, connectionId } = data;
 

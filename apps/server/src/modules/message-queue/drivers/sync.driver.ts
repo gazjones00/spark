@@ -1,4 +1,4 @@
-import type { MessageQueue } from "../constants";
+import type { Jobs, MessageQueue } from "../constants";
 import type {
   MessageQueueDriver,
   MessageQueueJob,
@@ -18,19 +18,21 @@ export class SyncDriver implements MessageQueueDriver {
 
   async add<T>(
     queueName: MessageQueue,
-    jobName: string,
+    jobName: Jobs,
     data: T,
     _options?: QueueJobOptions,
   ): Promise<void> {
     const handler = this.handlers[queueName];
-    if (handler) {
-      const job: MessageQueueJob<T> = {
-        id: String(++this.jobCounter),
-        name: jobName,
-        data,
-      };
-      await handler(job);
+    if (!handler) {
+      throw new Error(`No handler registered for queue "${queueName}"`);
     }
+
+    const job: MessageQueueJob<T> = {
+      id: String(++this.jobCounter),
+      name: jobName,
+      data,
+    };
+    await handler(job);
   }
 
   work<T>(

@@ -14,6 +14,12 @@ import { enumValues } from "@spark/common";
 
 import { pgTable, text, timestamp, numeric, jsonb, uniqueIndex } from "drizzle-orm/pg-core";
 
+export enum SyncStatus {
+  OK = "OK",
+  NEEDS_REAUTH = "NEEDS_REAUTH",
+  ERROR = "ERROR",
+}
+
 export const truelayerConnections = pgTable("truelayer_connections", {
   id: text("id").primaryKey(),
   userId: text("user_id").notNull(),
@@ -37,6 +43,11 @@ export const truelayerAccounts = pgTable("truelayer_accounts", {
   accountNumber: jsonb("account_number").$type<AccountNumber>().notNull(),
   provider: jsonb("provider").$type<AccountProvider>().notNull(),
   updateTimestamp: timestamp("update_timestamp", { withTimezone: true }).notNull(),
+  syncStatus: text("sync_status", { enum: enumValues(SyncStatus) })
+    .notNull()
+    .default(SyncStatus.OK),
+  lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }),
+  nextSyncAt: timestamp("next_sync_at", { withTimezone: true }).notNull().defaultNow(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });

@@ -1,5 +1,5 @@
 import { Queue, Worker } from "bullmq";
-import type { MessageQueue } from "../constants";
+import type { Jobs, MessageQueue } from "../constants";
 import type {
   MessageQueueDriver,
   MessageQueueJob,
@@ -28,7 +28,7 @@ export class BullMQDriver implements MessageQueueDriver {
 
   async add<T>(
     queueName: MessageQueue,
-    jobName: string,
+    jobName: Jobs,
     data: T,
     options?: QueueJobOptions,
   ): Promise<void> {
@@ -40,6 +40,8 @@ export class BullMQDriver implements MessageQueueDriver {
       ...options,
       attempts: options?.attempts ?? 3,
       backoff: options?.backoff ?? { type: "exponential", delay: 1000 },
+      removeOnComplete: options?.removeOnComplete ?? { count: 1000 },
+      removeOnFail: options?.removeOnFail ?? { count: 5000 },
     });
   }
 
@@ -47,7 +49,7 @@ export class BullMQDriver implements MessageQueueDriver {
     queueName: MessageQueue,
     schedulerId: string,
     pattern: string,
-    jobName: string,
+    jobName: Jobs,
     data: T,
   ): Promise<void> {
     const queue = this.queueMap[queueName];
@@ -71,7 +73,7 @@ export class BullMQDriver implements MessageQueueDriver {
       async (job) => {
         await handler({
           id: job.id ?? "",
-          name: job.name,
+          name: job.name as Jobs,
           data: job.data as T,
         });
       },

@@ -1,13 +1,14 @@
 import { Injectable, Logger, type OnModuleInit } from "@nestjs/common";
 import { DiscoveryService, MetadataScanner, ModuleRef } from "@nestjs/core";
 import { InstanceWrapper } from "@nestjs/core/injector/instance-wrapper";
+import { type Jobs } from "./constants";
 import type { MessageQueueJob } from "./drivers/message-queue-driver.interface";
 import { MessageQueueMetadataAccessor } from "./message-queue-metadata.accessor";
 import { MessageQueueService } from "./services/message-queue.service";
 
 interface MethodMetadata {
   methodName: string;
-  jobName: string;
+  jobName: Jobs;
   cron?: {
     pattern: string;
     schedulerId: string;
@@ -17,6 +18,11 @@ interface MethodMetadata {
 interface ProcessorInstance {
   instance: Record<string, (...args: unknown[]) => Promise<void>>;
   methods: MethodMetadata[];
+}
+
+interface QueueHandlerMap {
+  handlers: Map<Jobs, (data: unknown) => Promise<void>>;
+  cronJobs: { jobName: Jobs; cron: MethodMetadata["cron"] }[];
 }
 
 @Injectable()
@@ -46,36 +52,44 @@ export class MessageQueueExplorer implements OnModuleInit {
         strict: false,
       });
 
+      const { handlers, cronJobs } = this.buildQueueHandlers(processorInstances);
+
       queueService.work(async (job: MessageQueueJob) => {
-        for (const { instance, methods } of processorInstances) {
-          for (const { methodName, jobName } of methods) {
-            if (jobName === job.name) {
-              this.logger.log(`Processing job "${job.name}" (id: ${job.id})`);
-              await instance[methodName](job.data);
-            }
-          }
+        const handler = handlers.get(job.name);
+        if (!handler) {
+          this.logger.warn(`No handler registered for job "${job.name}"`);
+          return;
+        }
+
+        this.logger.log(`Processing job "${job.name}" (id: ${job.id})`);
+        try {
+          await handler(job.data);
+        } catch (error) {
+          this.logger.error(
+            `Job "${job.name}" (id: ${job.id}) failed: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          );
+          throw error;
         }
       });
 
-      this.logger.log(`Worker registered for queue "${queueName}"`);
+      this.logger.log(`Worker registered for queue "${queueName}" (${handlers.size} handlers)`);
 
-      await this.registerCronJobs(queueService, processorInstances);
+      await this.registerCronJobs(queueService, cronJobs);
     }
   }
 
   private async registerCronJobs(
     queueService: MessageQueueService,
-    processorInstances: ProcessorInstance[],
+    cronJobs: QueueHandlerMap["cronJobs"],
   ): Promise<void> {
-    for (const { methods } of processorInstances) {
-      for (const { jobName, cron } of methods) {
-        if (cron) {
-          await queueService.addCron(cron.schedulerId, cron.pattern, jobName, {});
-          this.logger.log(
-            `Cron job registered: "${jobName}" with pattern "${cron.pattern}" (schedulerId: ${cron.schedulerId})`,
-          );
-        }
-      }
+    for (const { jobName, cron } of cronJobs) {
+      if (!cron) continue;
+      await queueService.addCron(cron.schedulerId, cron.pattern, jobName, {});
+      this.logger.log(
+        `Cron job registered: "${jobName}" with pattern "${cron.pattern}" (schedulerId: ${cron.schedulerId})`,
+      );
     }
   }
 
@@ -129,6 +143,27 @@ export class MessageQueueExplorer implements OnModuleInit {
     }
 
     return grouped;
+  }
+
+  private buildQueueHandlers(processorInstances: ProcessorInstance[]): QueueHandlerMap {
+    const handlers = new Map<Jobs, (data: unknown) => Promise<void>>();
+    const cronJobs: QueueHandlerMap["cronJobs"] = [];
+
+    for (const { instance, methods } of processorInstances) {
+      for (const { methodName, jobName, cron } of methods) {
+        if (handlers.has(jobName)) {
+          throw new Error(`Duplicate job handler registered for "${jobName}"`);
+        }
+
+        handlers.set(jobName, (data: unknown) => instance[methodName](data));
+
+        if (cron) {
+          cronJobs.push({ jobName, cron });
+        }
+      }
+    }
+
+    return { handlers, cronJobs };
   }
 
   private generateSchedulerId(jobName: string): string {

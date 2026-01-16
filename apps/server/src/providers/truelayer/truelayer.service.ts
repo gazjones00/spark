@@ -4,7 +4,7 @@ import { truelayerAccounts, truelayerConnections } from "@spark/db/schema";
 import { env } from "@spark/env/server";
 import { TruelayerClient } from "./truelayer.client";
 import { DATABASE_CONNECTION } from "../../modules/database";
-import { MessageQueue } from "../../modules/message-queue";
+import { Jobs, MessageQueue } from "../../modules/message-queue";
 import type { MessageQueueService } from "../../modules/message-queue";
 import type { InitialSyncJobData } from "../../jobs/initial-sync.job";
 
@@ -128,7 +128,7 @@ export class TruelayerService {
 
     await Promise.all(
       savedAccounts.map((account) =>
-        this.queue.add<InitialSyncJobData>("InitialSyncJob", {
+        this.queue.add<InitialSyncJobData>(Jobs.InitialSync, {
           accountId: account.accountId,
           connectionId,
         }),

@@ -1,10 +1,10 @@
 import { SetMetadata } from "@nestjs/common";
-import { PROCESS_METADATA } from "../constants";
+import { type Jobs, PROCESS_METADATA } from "../constants";
 
 export interface MessageQueueProcessOptions {
-  jobName: string;
+  jobName: Jobs;
 }
 
-export function Process(jobName: string): MethodDecorator {
+export function Process(jobName: Jobs): MethodDecorator {
   return SetMetadata(PROCESS_METADATA, { jobName });
 }

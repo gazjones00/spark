@@ -6,3 +6,9 @@ export const QUEUE_DRIVER = Symbol("message-queue:queue_driver");
 export enum MessageQueue {
   DEFAULT = "DEFAULT",
 }
+
+export enum Jobs {
+  AccountSync = "AccountSync",
+  InitialSync = "InitialSync",
+  PeriodicSync = "PeriodicSync",
+}
