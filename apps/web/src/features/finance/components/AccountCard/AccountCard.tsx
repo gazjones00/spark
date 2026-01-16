@@ -39,8 +39,16 @@ export function AccountCard({ account, onEdit, onDelete }: AccountCardProps) {
       <CardContent className="flex h-full flex-col">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <div className="bg-muted rounded-none p-2">
-              <Icon className="size-5 text-muted-foreground" />
+            <div className="bg-muted rounded-none p-2 w-10 h-10 flex items-center justify-center shrink-0">
+              {account.provider.logoUri ? (
+                <img
+                  src={account.provider.logoUri}
+                  alt={account.provider.displayName}
+                  className="size-5"
+                />
+              ) : (
+                <Icon className="size-5 text-muted-foreground" />
+              )}
             </div>
             <div>
               <p className="font-medium">{account.displayName}</p>
