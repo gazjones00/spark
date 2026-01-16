@@ -1,9 +1,10 @@
-import type { Account, Transaction } from "./schemas.ts";
+import type { Account, Balance, Transaction } from "./schemas.ts";
 
 export type {
   Account,
   AccountNumber,
   AccountProvider,
+  Balance,
   RunningBalance,
   Transaction,
   TransactionMeta,
@@ -82,6 +83,16 @@ export interface TransactionsResponse {
 
 export interface AccountsResponse {
   results: Account[];
+  status: string;
+}
+
+export interface GetBalanceOptions {
+  accessToken: string;
+  accountId: string;
+}
+
+export interface BalanceResponse {
+  results: Balance[];
   status: string;
 }
 

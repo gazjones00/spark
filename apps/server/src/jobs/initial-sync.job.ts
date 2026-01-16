@@ -1,5 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { Jobs, MessageQueue, Process, Processor } from "../modules/message-queue";
+import { BalanceSyncService } from "./services/balance-sync.service";
 import { TransactionSyncService } from "./services/transaction-sync.service";
 
 export interface InitialSyncJobData {
@@ -14,13 +15,22 @@ const HISTORICAL_DAYS = 90;
 export class InitialSyncJob {
   private readonly logger = new Logger(InitialSyncJob.name);
 
-  constructor(private readonly transactionSyncService: TransactionSyncService) {}
+  constructor(
+    private readonly transactionSyncService: TransactionSyncService,
+    private readonly balanceSyncService: BalanceSyncService,
+  ) {}
 
   @Process(Jobs.InitialSync)
   async handle(data: InitialSyncJobData): Promise<void> {
     const { accountId, connectionId } = data;
 
     this.logger.log(`Starting initial sync for account ${accountId}`);
+
+    // Sync balance
+    await this.balanceSyncService.syncBalance({
+      accountId,
+      connectionId,
+    });
 
     const count = await this.transactionSyncService.syncTransactions({
       accountId,

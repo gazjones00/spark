@@ -6,7 +6,10 @@ import type {
   TruelayerOptionsFactory,
 } from "./truelayer.interfaces";
 import { TruelayerClient } from "./truelayer.client";
+import { TruelayerConnectionService } from "./truelayer.connection.service";
 import { TruelayerService } from "./truelayer.service";
+
+const PROVIDERS = [TruelayerClient, TruelayerConnectionService, TruelayerService];
 
 @Module({})
 export class TruelayerModule {
@@ -19,10 +22,9 @@ export class TruelayerModule {
           provide: TRUELAYER_MODULE_OPTIONS,
           useValue: options,
         },
-        TruelayerClient,
-        TruelayerService,
+        ...PROVIDERS,
       ],
-      exports: [TruelayerClient, TruelayerService],
+      exports: PROVIDERS,
     };
   }
 
@@ -31,8 +33,8 @@ export class TruelayerModule {
       module: TruelayerModule,
       global: true,
       imports: options.imports ?? [],
-      providers: [...this.createAsyncProviders(options), TruelayerClient, TruelayerService],
-      exports: [TruelayerClient, TruelayerService],
+      providers: [...this.createAsyncProviders(options), ...PROVIDERS],
+      exports: PROVIDERS,
     };
   }
 

@@ -1,5 +1,11 @@
 export { TruelayerModule } from "./truelayer.module";
 export { TruelayerClient } from "./truelayer.client";
+export {
+  TruelayerConnectionService,
+  ConnectionNotFoundError,
+  TokenExpiredError,
+  TokenRefreshError,
+} from "./truelayer.connection.service";
 export { TruelayerService } from "./truelayer.service";
 export { TruelayerController } from "./truelayer.controller";
 export { TRUELAYER_MODULE_OPTIONS, TRUELAYER_CLIENT } from "./truelayer.constants";

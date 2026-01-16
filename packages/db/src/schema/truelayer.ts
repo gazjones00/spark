@@ -43,6 +43,10 @@ export const truelayerAccounts = pgTable("truelayer_accounts", {
   accountNumber: jsonb("account_number").$type<AccountNumber>().notNull(),
   provider: jsonb("provider").$type<AccountProvider>().notNull(),
   updateTimestamp: timestamp("update_timestamp", { withTimezone: true }).notNull(),
+  currentBalance: numeric("current_balance", { precision: 19, scale: 4 }),
+  availableBalance: numeric("available_balance", { precision: 19, scale: 4 }),
+  overdraft: numeric("overdraft", { precision: 19, scale: 4 }),
+  balanceUpdatedAt: timestamp("balance_updated_at", { withTimezone: true }),
   syncStatus: text("sync_status", { enum: enumValues(SyncStatus) })
     .notNull()
     .default(SyncStatus.OK),

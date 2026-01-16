@@ -1,20 +1,25 @@
 import { z } from "zod";
-import type {
-  TrueLayerConfig,
-  GenerateAuthLinkOptions,
-  AuthLinkResult,
-  ExchangeCodeOptions,
-  TokenResponse,
-  RefreshTokenOptions,
-  GetAccountsOptions,
-  Account,
-  AccountsResponse,
-  GetTransactionsOptions,
-  Transaction,
-  TransactionsResponse,
+import {
+  type TrueLayerConfig,
+  type GenerateAuthLinkOptions,
+  type AuthLinkResult,
+  type ExchangeCodeOptions,
+  type TokenResponse,
+  type RefreshTokenOptions,
+  type GetAccountsOptions,
+  type Account,
+  type GetTransactionsOptions,
+  type Transaction,
+  type GetBalanceOptions,
+  type Balance,
+  Currency,
+  AccountType,
+  TransactionCategory,
+  TransactionType,
 } from "./types.ts";
 import { getEnvironmentUrls, DEFAULT_SCOPES, DEFAULT_PROVIDERS } from "./config.ts";
 import { TrueLayerError } from "./errors.ts";
+import { enumValues } from "@spark/common";
 
 const tokenResponseSchema = z.object({
   access_token: z.string(),
@@ -46,11 +51,9 @@ const accountProviderSchema = z.object({
 const accountSchema = z.object({
   update_timestamp: z.string(),
   account_id: z.string(),
-  account_type: z
-    .enum(["TRANSACTION", "SAVINGS", "BUSINESS_TRANSACTION", "BUSINESS_SAVINGS"])
-    .optional(),
+  account_type: z.enum(enumValues(AccountType)).optional(),
   display_name: z.string(),
-  currency: z.enum(["EUR", "GBP", "USD", "AUD"]),
+  currency: z.enum(enumValues(Currency)),
   account_number: accountNumberSchema,
   provider: accountProviderSchema,
 });
@@ -62,7 +65,7 @@ const accountsResponseSchema = z.object({
 
 const runningBalanceSchema = z.object({
   amount: z.number(),
-  currency: z.enum(["EUR", "GBP", "USD", "AUD"]),
+  currency: z.enum(enumValues(Currency)),
 });
 
 const transactionMetaSchema = z.object({
@@ -89,27 +92,9 @@ const transactionSchema = z.object({
   timestamp: z.string(),
   description: z.string(),
   amount: z.number(),
-  currency: z.enum(["EUR", "GBP", "USD", "AUD"]),
-  transaction_type: z.enum(["DEBIT", "CREDIT"]),
-  transaction_category: z.enum([
-    "ATM",
-    "BILL_PAYMENT",
-    "CASH",
-    "CASHBACK",
-    "CHEQUE",
-    "CORRECTION",
-    "CREDIT",
-    "DIRECT_DEBIT",
-    "DIVIDEND",
-    "FEE_CHARGE",
-    "INTEREST",
-    "OTHER",
-    "PURCHASE",
-    "STANDING_ORDER",
-    "TRANSFER",
-    "DEBIT",
-    "UNKNOWN",
-  ]),
+  currency: z.enum(enumValues(Currency)),
+  transaction_type: z.enum(enumValues(TransactionType)),
+  transaction_category: z.enum(enumValues(TransactionCategory)),
   transaction_classification: z.array(z.string()),
   merchant_name: z.string().optional(),
   running_balance: runningBalanceSchema.optional(),
@@ -121,12 +106,26 @@ const transactionsResponseSchema = z.object({
   status: z.string(),
 });
 
+const balanceSchema = z.object({
+  currency: z.enum(enumValues(Currency)),
+  available: z.number().optional(),
+  current: z.number(),
+  overdraft: z.number().optional(),
+  update_timestamp: z.string().optional(),
+});
+
+const balanceResponseSchema = z.object({
+  results: z.array(balanceSchema),
+  status: z.string(),
+});
+
 export interface TrueLayerClient {
   generateAuthLink(options?: GenerateAuthLinkOptions): AuthLinkResult;
   exchangeCode(options: ExchangeCodeOptions): Promise<TokenResponse>;
   refreshToken(options: RefreshTokenOptions): Promise<TokenResponse>;
   getAccounts(options: GetAccountsOptions): Promise<Account[]>;
   getTransactions(options: GetTransactionsOptions): Promise<Transaction[]>;
+  getBalance(options: GetBalanceOptions): Promise<Balance>;
 }
 
 export function createTrueLayerClient(config: TrueLayerConfig): TrueLayerClient {
@@ -333,6 +332,41 @@ export function createTrueLayerClient(config: TrueLayerConfig): TrueLayerClient 
           : undefined,
       }));
     },
+
+    async getBalance(options: GetBalanceOptions): Promise<Balance> {
+      const response = await fetch(`${urls.api}/data/v1/accounts/${options.accountId}/balance`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${options.accessToken}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        const errorResult = errorResponseSchema.safeParse(data);
+        if (errorResult.success) {
+          throw TrueLayerError.fromResponse(errorResult.data);
+        }
+        throw new Error(`TrueLayer request failed: ${response.status}`);
+      }
+
+      const result = balanceResponseSchema.parse(data);
+
+      if (result.results.length === 0) {
+        throw new Error("No balance data returned from TrueLayer");
+      }
+
+      const balance = balanceSchema.parse(result.results[0]);
+
+      return {
+        currency: balance.currency,
+        available: balance.available,
+        current: balance.current,
+        overdraft: balance.overdraft,
+        updateTimestamp: balance.update_timestamp,
+      };
+    },
   };
 }
 
@@ -359,6 +393,9 @@ export type {
   RunningBalance,
   GetTransactionsOptions,
   TransactionsResponse,
+  GetBalanceOptions,
+  Balance,
+  BalanceResponse,
 } from "./types.ts";
 
 export { TrueLayerError } from "./errors.ts";

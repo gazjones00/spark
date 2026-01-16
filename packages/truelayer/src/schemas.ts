@@ -74,6 +74,14 @@ export const RunningBalanceSchema = z.object({
   currency: CurrencySchema,
 });
 
+export const BalanceSchema = z.object({
+  currency: CurrencySchema,
+  available: z.number().optional(),
+  current: z.number(),
+  overdraft: z.number().optional(),
+  updateTimestamp: z.string().optional(),
+});
+
 export const TransactionTypeSchema = z.enum(enumValues(TransactionType));
 
 export const TransactionCategorySchema = z.enum(enumValues(TransactionCategory));
@@ -117,6 +125,7 @@ export type AccountType = z.infer<typeof AccountTypeSchema>;
 export type Currency = z.infer<typeof CurrencySchema>;
 export type Account = z.infer<typeof AccountSchema>;
 export type RunningBalance = z.infer<typeof RunningBalanceSchema>;
+export type Balance = z.infer<typeof BalanceSchema>;
 export type TransactionType = z.infer<typeof TransactionTypeSchema>;
 export type TransactionCategory = z.infer<typeof TransactionCategorySchema>;
 export type TransactionMeta = z.infer<typeof TransactionMetaSchema>;

@@ -3,6 +3,7 @@ import { type Database, eq } from "@spark/db";
 import { truelayerAccounts } from "@spark/db/schema";
 import { DATABASE_CONNECTION } from "../modules/database";
 import { Jobs, MessageQueue, Process, Processor } from "../modules/message-queue";
+import { BalanceSyncService } from "./services/balance-sync.service";
 import { TransactionSyncService } from "./services/transaction-sync.service";
 
 export interface AccountSyncJobData {
@@ -17,6 +18,7 @@ export class AccountSyncJob {
 
   constructor(
     private readonly transactionSyncService: TransactionSyncService,
+    private readonly balanceSyncService: BalanceSyncService,
     @Inject(DATABASE_CONNECTION) private readonly db: Database,
   ) {}
 
@@ -31,10 +33,21 @@ export class AccountSyncJob {
       columns: { lastSyncedAt: true },
     });
 
-    await this.transactionSyncService.syncTransactions({
-      accountId,
-      connectionId,
-      lastSyncedAt: account?.lastSyncedAt,
-    });
+    // Sync balance and transactions in parallel
+    await Promise.all([
+      this.balanceSyncService.syncBalance({
+        accountId,
+        connectionId,
+      }),
+      this.transactionSyncService.syncTransactions({
+        accountId,
+        connectionId,
+        ...(account?.lastSyncedAt
+          ? { lastSyncedAt: account.lastSyncedAt }
+          : {
+              daysToSync: 7,
+            }),
+      }),
+    ]);
   }
 }

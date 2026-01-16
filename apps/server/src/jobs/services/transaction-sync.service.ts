@@ -2,15 +2,13 @@
 
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { type Database, eq } from "@spark/db";
+import { SyncStatus, truelayerAccounts, truelayerTransactions } from "@spark/db/schema";
 import {
-  SyncStatus,
-  truelayerAccounts,
-  truelayerConnections,
-  truelayerTransactions,
-} from "@spark/db/schema";
-import { TruelayerClient } from "../../providers/truelayer/truelayer.client";
+  TruelayerClient,
+  TruelayerConnectionService,
+  TokenExpiredError,
+} from "../../providers/truelayer";
 import { DATABASE_CONNECTION } from "../../modules/database";
-import { ConnectionNotFoundError, TokenExpiredError, TokenRefreshError } from "../errors";
 
 const DEFAULT_SYNC_DAYS = 7;
 const MAX_SYNC_DAYS = 90;
@@ -38,22 +36,15 @@ export class TransactionSyncService {
 
   constructor(
     private readonly truelayerClient: TruelayerClient,
+    private readonly connectionService: TruelayerConnectionService,
     @Inject(DATABASE_CONNECTION) private readonly db: Database,
   ) {}
 
   async syncTransactions(params: SyncTransactionsParams): Promise<number> {
     const { accountId, connectionId } = params;
 
-    const connection = await this.db.query.truelayerConnections.findFirst({
-      where: eq(truelayerConnections.id, connectionId),
-    });
-
-    if (!connection) {
-      throw new ConnectionNotFoundError(connectionId);
-    }
-
     try {
-      const accessToken = await this.getValidAccessToken(connection);
+      const accessToken = await this.connectionService.getAccessToken(connectionId);
 
       const toDate = new Date();
       const fromDate = this.calculateFromDate(toDate, params);
@@ -122,41 +113,6 @@ export class TransactionSyncService {
       await this.updateSyncStatus(accountId, status);
       throw error;
     }
-  }
-
-  private async getValidAccessToken(
-    connection: typeof truelayerConnections.$inferSelect,
-  ): Promise<string> {
-    if (connection.expiresAt >= new Date()) {
-      return connection.accessToken;
-    }
-
-    if (!connection.refreshToken) {
-      throw new TokenExpiredError(connection.id);
-    }
-
-    this.logger.log(`Refreshing token for connection ${connection.id}`);
-
-    let tokenResponse;
-    try {
-      tokenResponse = await this.truelayerClient.refreshToken({
-        refreshToken: connection.refreshToken,
-      });
-    } catch (error) {
-      throw new TokenRefreshError(connection.id, error instanceof Error ? error : undefined);
-    }
-
-    await this.db
-      .update(truelayerConnections)
-      .set({
-        accessToken: tokenResponse.accessToken,
-        refreshToken: tokenResponse.refreshToken,
-        expiresAt: tokenResponse.expiresAt,
-        updatedAt: new Date(),
-      })
-      .where(eq(truelayerConnections.id, connection.id));
-
-    return tokenResponse.accessToken;
   }
 
   private async updateSyncStatus(
