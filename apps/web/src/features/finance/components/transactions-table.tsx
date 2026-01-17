@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { type Transaction, type Account } from "@spark/truelayer/types";
-import { formatCurrency } from "@/lib/mock-data";
+import { formatCurrency } from "@/lib/utils";
 
 type SortField = "date" | "description" | "category" | "amount";
 type SortDirection = "asc" | "desc";

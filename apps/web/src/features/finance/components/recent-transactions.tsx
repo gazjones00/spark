@@ -3,7 +3,8 @@ import { ArrowRight } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
-import { type Transaction, categoryConfig, formatCurrency } from "@/lib/mock-data";
+import { type Transaction, categoryConfig } from "@/lib/mock-data";
+import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
 interface RecentTransactionsProps {

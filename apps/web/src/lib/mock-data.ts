@@ -246,14 +246,6 @@ export const mockBanks: Bank[] = [
   { id: "ally", name: "Ally Bank", logo: "🏦", popular: false },
 ];
 
-// Helper functions
-export function formatCurrency(amount: number, currency = "USD"): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency,
-  }).format(amount);
-}
-
 export function formatDate(date: Date): string {
   return new Intl.DateTimeFormat("en-US", {
     month: "short",

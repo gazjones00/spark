@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import type { Account } from "@spark/orpc/contract";
 import { AccountType } from "@spark/truelayer/types";
 import type { AccountType as AccountTypeType } from "@spark/truelayer/types";
+import { formatCurrency } from "@/lib/utils";
 
 const accountTypeConfig: Record<AccountTypeType, { icon: typeof Wallet; label: string }> = {
   TRANSACTION: { icon: Wallet, label: "Current" },
@@ -51,7 +52,7 @@ export function AccountCard({ account, onEdit, onDelete }: AccountCardProps) {
               )}
             </div>
             <div>
-              <p className="font-medium">{account.displayName}</p>
+              <p className="font-medium line-clamp-1">{account.displayName}</p>
               <p className="text-muted-foreground text-xs">
                 {account.provider.displayName} • {getAccountNumber(account.accountNumber)}
               </p>
@@ -60,6 +61,18 @@ export function AccountCard({ account, onEdit, onDelete }: AccountCardProps) {
           <Badge variant="outline" className="text-xs">
             {label}
           </Badge>
+        </div>
+        <div className="mt-4">
+          {account.currentBalance && (
+            <p className="text-xl font-semibold">
+              {formatCurrency(parseFloat(account.currentBalance), account.currency)}
+            </p>
+          )}
+          {account.availableBalance && account.availableBalance !== account.currentBalance && (
+            <p className="text-muted-foreground text-xs">
+              Available: {formatCurrency(parseFloat(account.availableBalance), account.currency)}
+            </p>
+          )}
         </div>
         <div className="mt-auto flex items-center justify-between pt-4">
           <p className="text-muted-foreground text-xs">

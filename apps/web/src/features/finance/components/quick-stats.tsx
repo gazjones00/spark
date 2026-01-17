@@ -1,7 +1,7 @@
 import { TrendingUp, TrendingDown, Wallet } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
-import { formatCurrency } from "@/lib/mock-data";
+import { formatCurrency } from "@/lib/utils";
 
 interface QuickStatsProps {
   netWorth: number;

@@ -28,6 +28,10 @@ export class AccountsService {
         accountNumber: account.accountNumber,
         provider: account.provider,
         updatedAt: account.updatedAt.toISOString(),
+        currentBalance: account.currentBalance,
+        availableBalance: account.availableBalance,
+        overdraft: account.overdraft,
+        balanceUpdatedAt: account.balanceUpdatedAt?.toISOString(),
       })),
     };
   }

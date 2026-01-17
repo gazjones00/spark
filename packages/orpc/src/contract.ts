@@ -58,6 +58,10 @@ export const SavedAccountSchema = z.object({
   accountNumber: AccountNumberSchema,
   provider: AccountProviderSchema,
   updatedAt: z.string(),
+  currentBalance: z.string().nullable(),
+  availableBalance: z.string().nullable(),
+  overdraft: z.string().nullable(),
+  balanceUpdatedAt: z.string().nullable(),
 });
 
 export const GetAccountsResponseSchema = z.object({
