@@ -1,9 +1,9 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { type Database, eq } from "@spark/db";
 import { truelayerAccounts } from "@spark/db/schema";
+import { BalanceService } from "../modules/accounts";
 import { DATABASE_CONNECTION } from "../modules/database";
 import { Jobs, MessageQueue, Process, Processor } from "../modules/message-queue";
-import { BalanceSyncService } from "./services/balance-sync.service";
 import { TransactionSyncService } from "./services/transaction-sync.service";
 
 export interface AccountSyncJobData {
@@ -18,7 +18,7 @@ export class AccountSyncJob {
 
   constructor(
     private readonly transactionSyncService: TransactionSyncService,
-    private readonly balanceSyncService: BalanceSyncService,
+    private readonly balanceService: BalanceService,
     @Inject(DATABASE_CONNECTION) private readonly db: Database,
   ) {}
 
@@ -35,7 +35,7 @@ export class AccountSyncJob {
 
     // Sync balance and transactions in parallel
     await Promise.all([
-      this.balanceSyncService.syncBalance({
+      this.balanceService.syncBalance({
         accountId,
         connectionId,
       }),

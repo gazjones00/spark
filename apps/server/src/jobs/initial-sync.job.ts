@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
+import { BalanceService } from "../modules/accounts";
 import { Jobs, MessageQueue, Process, Processor } from "../modules/message-queue";
-import { BalanceSyncService } from "./services/balance-sync.service";
 import { TransactionSyncService } from "./services/transaction-sync.service";
 
 export interface InitialSyncJobData {
@@ -17,7 +17,7 @@ export class InitialSyncJob {
 
   constructor(
     private readonly transactionSyncService: TransactionSyncService,
-    private readonly balanceSyncService: BalanceSyncService,
+    private readonly balanceService: BalanceService,
   ) {}
 
   @Process(Jobs.InitialSync)
@@ -27,7 +27,7 @@ export class InitialSyncJob {
     this.logger.log(`Starting initial sync for account ${accountId}`);
 
     // Sync balance
-    await this.balanceSyncService.syncBalance({
+    await this.balanceService.syncBalance({
       accountId,
       connectionId,
     });

@@ -1,10 +1,8 @@
-// TODO: Move to accounts module
-
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { type Database, eq } from "@spark/db";
 import { truelayerAccounts } from "@spark/db/schema";
-import { TruelayerClient, TruelayerConnectionService } from "../../providers/truelayer";
-import { DATABASE_CONNECTION } from "../../modules/database";
+import { TruelayerClient, TruelayerConnectionService } from "../../../providers/truelayer";
+import { DATABASE_CONNECTION } from "../../database";
 
 export interface SyncBalanceParams {
   accountId: string;
@@ -12,8 +10,8 @@ export interface SyncBalanceParams {
 }
 
 @Injectable()
-export class BalanceSyncService {
-  private readonly logger = new Logger(BalanceSyncService.name);
+export class BalanceService {
+  private readonly logger = new Logger(BalanceService.name);
 
   constructor(
     private readonly truelayerClient: TruelayerClient,
