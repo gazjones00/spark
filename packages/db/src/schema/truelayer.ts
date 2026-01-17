@@ -63,7 +63,7 @@ export const truelayerTransactions = pgTable(
     transactionId: text("transaction_id").notNull(),
     accountId: text("account_id")
       .notNull()
-      .references(() => truelayerAccounts.accountId),
+      .references(() => truelayerAccounts.accountId, { onDelete: "cascade" }),
     normalisedProviderTransactionId: text("normalised_provider_transaction_id"),
     providerTransactionId: text("provider_transaction_id"),
     timestamp: timestamp("timestamp", { withTimezone: true }).notNull(),
