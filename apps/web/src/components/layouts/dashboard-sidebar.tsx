@@ -69,13 +69,18 @@ export function DashboardSidebar() {
       </nav>
 
       <div className="border-t p-4 space-y-1">
-        <button
-          className="flex w-full items-center gap-3 rounded-none px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-          onClick={() => {}}
+        <Link
+          to="/settings"
+          className={cn(
+            "flex w-full items-center gap-3 rounded-none px-3 py-2 text-sm font-medium transition-colors",
+            location.pathname.startsWith("/settings")
+              ? "bg-primary text-primary-foreground"
+              : "text-muted-foreground hover:bg-muted hover:text-foreground",
+          )}
         >
           <Settings className="size-4" />
           Settings
-        </button>
+        </Link>
         <button
           className="cursor-pointer flex w-full items-center gap-3 rounded-none px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
           onClick={() => logout().then(() => navigate({ to: "/login" }))}
