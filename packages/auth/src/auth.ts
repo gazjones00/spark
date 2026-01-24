@@ -1,4 +1,4 @@
-import { db } from "@spark/db";
+import { db } from "@spark/db/client";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { env } from "@spark/env/server";
@@ -14,6 +14,11 @@ export const auth = betterAuth({
   trustedOrigins: [env.CORS_ORIGIN],
   emailAndPassword: {
     enabled: true,
+  },
+  user: {
+    deleteUser: {
+      enabled: true,
+    },
   },
   advanced: {
     cookiePrefix: "spark",

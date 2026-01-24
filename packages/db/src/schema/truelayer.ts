@@ -12,7 +12,8 @@ import {
 } from "@spark/truelayer/schemas";
 import { enumValues } from "@spark/common";
 
-import { pgTable, text, timestamp, numeric, jsonb, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, numeric, jsonb, uniqueIndex, index } from "drizzle-orm/pg-core";
+import { user } from "./auth.ts";
 
 export enum SyncStatus {
   OK = "OK",
@@ -20,15 +21,21 @@ export enum SyncStatus {
   ERROR = "ERROR",
 }
 
-export const truelayerConnections = pgTable("truelayer_connections", {
-  id: text("id").primaryKey(),
-  userId: text("user_id").notNull(),
-  accessToken: text("access_token").notNull(),
-  refreshToken: text("refresh_token"),
-  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-});
+export const truelayerConnections = pgTable(
+  "truelayer_connections",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    accessToken: text("access_token").notNull(),
+    refreshToken: text("refresh_token"),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [index("truelayer_connections_userId_idx").on(table.userId)],
+);
 
 export const truelayerAccounts = pgTable("truelayer_accounts", {
   id: text("id").primaryKey(),
@@ -36,7 +43,9 @@ export const truelayerAccounts = pgTable("truelayer_accounts", {
   connectionId: text("connection_id")
     .notNull()
     .references(() => truelayerConnections.id),
-  userId: text("user_id").notNull(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
   accountType: text("account_type", { enum: enumValues(AccountType) }),
   displayName: text("display_name").notNull(),
   currency: text("currency", { enum: enumValues(Currency) }).notNull(),

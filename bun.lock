@@ -49,12 +49,13 @@
         "@nestjs/cli": "^11.0.0",
         "@nestjs/schematics": "^11.0.0",
         "@nestjs/testing": "^11.0.1",
+        "@spark/testing": "workspace:*",
         "@swc/cli": "^0.7.9",
         "@swc/core": "^1.15.8",
         "@types/express": "^5.0.0",
         "@types/node": "^22.10.7",
         "@types/supertest": "^6.0.2",
-        "@vitest/ui": "^4.0.16",
+        "@vitest/ui": "catalog:",
         "eslint": "^9.18.0",
         "eslint-config-prettier": "^10.0.1",
         "eslint-plugin-prettier": "^5.2.2",
@@ -69,7 +70,7 @@
         "typescript": "^5.7.3",
         "typescript-eslint": "^8.20.0",
         "unplugin-swc": "^1.5.9",
-        "vitest": "^4.0.16",
+        "vitest": "catalog:",
       },
     },
     "apps/web": {
@@ -201,6 +202,17 @@
         "typescript": "catalog:",
       },
     },
+    "packages/testing": {
+      "name": "@spark/testing",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@spark/config": "workspace:*",
+        "typescript": "catalog:",
+      },
+      "peerDependencies": {
+        "vitest": "catalog:",
+      },
+    },
     "packages/truelayer": {
       "name": "@spark/truelayer",
       "version": "0.0.0",
@@ -217,11 +229,13 @@
   },
   "catalog": {
     "@types/bun": "^1.2.7",
+    "@vitest/ui": "^4.0.16",
     "better-auth": "^1.4.10",
     "dotenv": "^17.2.2",
     "drizzle-kit": "^0.31.8",
     "drizzle-orm": "^0.45.1",
     "typescript": "^5",
+    "vitest": "^4.0.16",
     "zod": "^4.1.13",
   },
   "packages": {
@@ -760,6 +774,8 @@
     "@spark/orpc": ["@spark/orpc@workspace:packages/orpc"],
 
     "@spark/server": ["@spark/server@workspace:apps/server"],
+
+    "@spark/testing": ["@spark/testing@workspace:packages/testing"],
 
     "@spark/truelayer": ["@spark/truelayer@workspace:packages/truelayer"],
 

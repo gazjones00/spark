@@ -1,1 +1,2 @@
-export { DATABASE_CONNECTION, DatabaseModule } from "./database.module";
+export { DATABASE_CONNECTION } from "./constants";
+export { DatabaseModule } from "./database.module";

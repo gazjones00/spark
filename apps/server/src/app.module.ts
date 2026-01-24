@@ -8,6 +8,7 @@ import type { Request } from "express";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { AccountsModule } from "./modules/accounts";
+import { SettingsModule } from "./modules/settings";
 import { BullBoardModule } from "./modules/bull-board";
 import { DatabaseModule } from "./modules/database";
 import { BullMQDriver, MessageQueueModule } from "./modules/message-queue";
@@ -31,8 +32,10 @@ const messageQueueDriver = new BullMQDriver({
   imports: [
     DatabaseModule,
     AccountsModule,
+    SettingsModule,
     MessageQueueModule.register({ driver: messageQueueDriver }),
     BullBoardModule.forRoot(messageQueueDriver),
+    // TODO: set up logger module and assign log: () => LoggerService
     AuthModule.forRoot({ auth }),
     TruelayerModule.forRoot({
       environment: env.TRUELAYER_ENV,

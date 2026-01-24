@@ -8,6 +8,20 @@
       "when": 1768604325033,
       "tag": "0000_odd_black_widow",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1769269317335,
+      "tag": "0001_boring_santa_claus",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1769284726863,
+      "tag": "0002_ordinary_secret_warriors",
+      "breakpoints": true
     }
   ]
 }

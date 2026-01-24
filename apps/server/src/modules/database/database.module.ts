@@ -1,7 +1,6 @@
 import { Global, Module } from "@nestjs/common";
-import { db } from "@spark/db";
-
-export const DATABASE_CONNECTION = "DATABASE_CONNECTION";
+import { db } from "@spark/db/client";
+import { DATABASE_CONNECTION } from "./constants";
 
 @Global()
 @Module({

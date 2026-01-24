@@ -1,0 +1,5 @@
+ALTER TABLE "truelayer_transactions" DROP CONSTRAINT "truelayer_transactions_account_id_truelayer_accounts_account_id_fk";--> statement-breakpoint
+ALTER TABLE "truelayer_accounts" ADD CONSTRAINT "truelayer_accounts_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "truelayer_connections" ADD CONSTRAINT "truelayer_connections_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "truelayer_transactions" ADD CONSTRAINT "truelayer_transactions_account_id_truelayer_accounts_account_id_fk" FOREIGN KEY ("account_id") REFERENCES "public"."truelayer_accounts"("account_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "truelayer_connections_userId_idx" ON "truelayer_connections" USING btree ("user_id");
