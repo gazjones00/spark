@@ -36,7 +36,8 @@
     "db:watch": "turbo -F @spark/db db:watch",
     "db:stop": "turbo -F @spark/db db:stop",
     "db:down": "turbo -F @spark/db db:down",
-    "check": "oxlint && oxfmt --write",
+    "check": "oxlint && oxfmt",
+    "check:fix": "oxlint && oxfmt --write",
     "prepare": "husky"
   },
   "dependencies": {

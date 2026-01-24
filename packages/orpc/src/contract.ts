@@ -15,9 +15,7 @@ export const contract = oc.router({
 export type Contract = typeof contract;
 
 // Re-export all schemas and types from domain contracts
-export {
-  HelloResponseSchema,
-} from "./contracts/health";
+export { HelloResponseSchema } from "./contracts/health";
 
 export {
   AuthLinkResponseSchema,

@@ -13,10 +13,7 @@ describe("SettingsService", () => {
     mockDb = createMockDb();
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        SettingsService,
-        { provide: DATABASE_CONNECTION, useValue: mockDb },
-      ],
+      providers: [SettingsService, { provide: DATABASE_CONNECTION, useValue: mockDb }],
     }).compile();
 
     service = module.get<SettingsService>(SettingsService);

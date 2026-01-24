@@ -13,7 +13,10 @@ import { useAuth } from "@spark/auth/react";
 import { updateUser } from "@spark/auth/client";
 
 const profileSchema = z.object({
-  name: z.string().min(1, "Name is required").transform((v) => v.trim()),
+  name: z
+    .string()
+    .min(1, "Name is required")
+    .transform((v) => v.trim()),
 });
 
 type ProfileForm = z.infer<typeof profileSchema>;
@@ -73,15 +76,9 @@ export function Profile() {
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">Display Name</Label>
-              <Input
-                id="name"
-                placeholder="Your name"
-                {...form.register("name")}
-              />
+              <Input id="name" placeholder="Your name" {...form.register("name")} />
               {form.formState.errors.name && (
-                <p className="text-destructive text-xs">
-                  {form.formState.errors.name.message}
-                </p>
+                <p className="text-destructive text-xs">{form.formState.errors.name.message}</p>
               )}
             </div>
 
@@ -91,10 +88,7 @@ export function Profile() {
               <p className="text-muted-foreground text-xs">Email cannot be changed</p>
             </div>
 
-            <Button
-              type="submit"
-              disabled={form.formState.isSubmitting || !form.formState.isDirty}
-            >
+            <Button type="submit" disabled={form.formState.isSubmitting || !form.formState.isDirty}>
               {form.formState.isSubmitting ? "Saving..." : "Save Changes"}
             </Button>
           </form>

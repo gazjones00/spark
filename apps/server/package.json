@@ -45,6 +45,7 @@
     "@nestjs/cli": "^11.0.0",
     "@nestjs/schematics": "^11.0.0",
     "@nestjs/testing": "^11.0.1",
+    "@spark/testing": "workspace:*",
     "@swc/cli": "^0.7.9",
     "@swc/core": "^1.15.8",
     "@types/express": "^5.0.0",
@@ -65,7 +66,6 @@
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.20.0",
     "unplugin-swc": "^1.5.9",
-    "@spark/testing": "workspace:*",
     "vitest": "catalog:"
   }
 }
