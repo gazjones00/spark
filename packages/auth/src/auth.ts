@@ -4,6 +4,8 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { env } from "@spark/env/server";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 
+import { socialProviders, getSocialProviders } from "./providers/config";
+
 const isProduction = env.NODE_ENV === "production";
 
 export const auth = betterAuth({
@@ -12,6 +14,7 @@ export const auth = betterAuth({
     provider: "pg",
   }),
   trustedOrigins: [env.CORS_ORIGIN],
+  socialProviders: getSocialProviders(socialProviders),
   emailAndPassword: {
     enabled: true,
   },

@@ -5,6 +5,8 @@
     ".": "./src/index.ts",
     "./server": "./src/auth.ts",
     "./client": "./src/client.ts",
+    "./providers": "./src/providers/index.ts",
+    "./providers/server": "./src/providers/server.ts",
     "./react": "./src/react/index.ts",
     "./react/hooks": "./src/react/hooks/index.ts",
     "./react/components": "./src/react/components/index.ts"

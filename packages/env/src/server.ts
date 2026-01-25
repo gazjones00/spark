@@ -15,6 +15,8 @@ export const env = createEnv({
     TRUELAYER_CLIENT_ID: z.string().min(1),
     TRUELAYER_CLIENT_SECRET: z.string().min(1),
     TRUELAYER_REDIRECT_URI: z.url(),
+    GOOGLE_CLIENT_ID: z.string().min(1),
+    GOOGLE_CLIENT_SECRET: z.string().min(1),
   },
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,
