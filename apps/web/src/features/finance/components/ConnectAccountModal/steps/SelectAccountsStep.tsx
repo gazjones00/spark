@@ -45,7 +45,7 @@ export function SelectAccountsStep({
                 onCheckedChange={() => onToggle(account.accountId)}
               />
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">{account.displayName}</p>
+                <p className="line-clamp-1 text-sm font-medium">{account.displayName}</p>
                 <div className="text-muted-foreground flex items-center gap-2 text-xs">
                   {formatAccountType(account.accountType) && (
                     <span className="capitalize">{formatAccountType(account.accountType)}</span>

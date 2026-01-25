@@ -7,6 +7,9 @@ import {
 } from "@spark/truelayer/schemas";
 import { z } from "zod";
 
+export const SyncStatusSchema = z.enum(["OK", "NEEDS_REAUTH", "ERROR"]);
+export type SyncStatus = z.infer<typeof SyncStatusSchema>;
+
 export const SavedAccountSchema = z.object({
   id: z.string(),
   accountId: z.string(),
@@ -20,6 +23,8 @@ export const SavedAccountSchema = z.object({
   availableBalance: z.string().nullable(),
   overdraft: z.string().nullable(),
   balanceUpdatedAt: z.string().nullable(),
+  syncStatus: SyncStatusSchema,
+  lastSyncedAt: z.string().nullable(),
 });
 
 export const GetAccountsResponseSchema = z.object({

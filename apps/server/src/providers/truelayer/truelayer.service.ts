@@ -1,6 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 import type { Database } from "@spark/db";
-import { truelayerAccounts, truelayerConnections } from "@spark/db/schema";
+import { truelayerAccounts, truelayerConnections, SyncStatus } from "@spark/db/schema";
 import { env } from "@spark/env/server";
 import { TruelayerClient } from "./truelayer.client";
 import { DATABASE_CONNECTION } from "../../modules/database";
@@ -120,6 +120,7 @@ export class TruelayerService {
               provider: account.provider,
               updateTimestamp: new Date(account.updateTimestamp),
               updatedAt: new Date(),
+              syncStatus: SyncStatus.OK,
             },
           });
         return account;

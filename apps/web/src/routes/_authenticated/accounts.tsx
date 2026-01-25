@@ -4,7 +4,9 @@ import { Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { AccountsList } from "@/features/finance/components/AccountList";
+import { AccountsAttentionBanner } from "@/features/finance/components/AccountsAttentionBanner";
 import { ConnectAccountModal } from "@/features/finance/components/ConnectAccountModal";
+import { useReauthAccount } from "@/features/finance/hooks/useReauthAccount";
 import { orpc } from "@spark/orpc";
 
 export const Route = createFileRoute("/_authenticated/accounts")({
@@ -17,6 +19,7 @@ function AccountsPage() {
   const { data } = useSuspenseQuery({
     queryKey: ["accounts"],
     queryFn: () => orpc.accounts.list.call({}),
+    refetchOnMount: "always",
   });
 
   const deleteMutation = useMutation({
@@ -25,6 +28,10 @@ function AccountsPage() {
       queryClient.invalidateQueries({ queryKey: ["accounts"] });
     },
   });
+
+  const reauthMutation = useReauthAccount();
+
+  const accountsNeedingAttention = data.accounts.filter((account) => account.syncStatus !== "OK");
 
   const handleEdit = (id: string) => {
     const account = data.accounts.find((a) => a.id === id);
@@ -61,7 +68,17 @@ function AccountsPage() {
         />
       </div>
 
-      <AccountsList accounts={data.accounts} onEdit={handleEdit} onDelete={handleDelete} />
+      <AccountsAttentionBanner
+        accounts={accountsNeedingAttention}
+        onReauth={(providerId) => reauthMutation.mutate(providerId)}
+      />
+
+      <AccountsList
+        accounts={data.accounts}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        onReauth={(providerId) => reauthMutation.mutate(providerId)}
+      />
     </div>
   );
 }

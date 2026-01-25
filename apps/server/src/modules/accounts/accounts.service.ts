@@ -31,7 +31,9 @@ export class AccountsService {
         currentBalance: account.currentBalance,
         availableBalance: account.availableBalance,
         overdraft: account.overdraft,
-        balanceUpdatedAt: account.balanceUpdatedAt?.toISOString(),
+        balanceUpdatedAt: account.balanceUpdatedAt?.toISOString() ?? null,
+        syncStatus: account.syncStatus,
+        lastSyncedAt: account.lastSyncedAt?.toISOString() ?? null,
       })),
     };
   }
@@ -69,6 +71,12 @@ export class AccountsService {
         accountNumber: updated.accountNumber,
         provider: updated.provider,
         updatedAt: updated.updatedAt.toISOString(),
+        currentBalance: updated.currentBalance,
+        availableBalance: updated.availableBalance,
+        overdraft: updated.overdraft,
+        balanceUpdatedAt: updated.balanceUpdatedAt?.toISOString() ?? null,
+        syncStatus: updated.syncStatus,
+        lastSyncedAt: updated.lastSyncedAt?.toISOString() ?? null,
       },
     };
   }

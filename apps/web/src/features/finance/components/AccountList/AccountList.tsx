@@ -5,9 +5,10 @@ interface AccountsListProps {
   accounts: Account[];
   onEdit?: (id: string) => void;
   onDelete?: (id: string) => void;
+  onReauth?: (providerId?: string) => void;
 }
 
-export function AccountsList({ accounts, onEdit, onDelete }: AccountsListProps) {
+export function AccountsList({ accounts, onEdit, onDelete, onReauth }: AccountsListProps) {
   if (accounts.length === 0) {
     return (
       <div className="text-muted-foreground rounded-none border border-dashed p-8 text-center">
@@ -25,6 +26,7 @@ export function AccountsList({ accounts, onEdit, onDelete }: AccountsListProps) 
           account={account}
           onEdit={onEdit}
           onDelete={onDelete}
+          onReauth={onReauth}
         />
       ))}
     </div>

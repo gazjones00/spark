@@ -1,4 +1,4 @@
-import { Wallet, PiggyBank, Briefcase, Pencil, Trash2 } from "lucide-react";
+import { Wallet, PiggyBank, Briefcase, Pencil, Trash2, RefreshCw } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +7,7 @@ import type { Account } from "@spark/orpc/contract";
 import { AccountType } from "@spark/truelayer/types";
 import type { AccountType as AccountTypeType } from "@spark/truelayer/types";
 import { formatCurrency } from "@/lib/utils";
+import { SyncStatusBadge } from "./SyncStatusBadge";
 
 const accountTypeConfig: Record<AccountTypeType, { icon: typeof Wallet; label: string }> = {
   TRANSACTION: { icon: Wallet, label: "Current" },
@@ -29,9 +30,10 @@ interface AccountCardProps {
   account: Account;
   onEdit?: (id: string) => void;
   onDelete?: (id: string) => void;
+  onReauth?: (providerId?: string) => void;
 }
 
-export function AccountCard({ account, onEdit, onDelete }: AccountCardProps) {
+export function AccountCard({ account, onEdit, onDelete, onReauth }: AccountCardProps) {
   const accountType: AccountTypeType = account.accountType ?? AccountType.TRANSACTION;
   const { icon: Icon, label } = accountTypeConfig[accountType];
 
@@ -62,7 +64,7 @@ export function AccountCard({ account, onEdit, onDelete }: AccountCardProps) {
             {label}
           </Badge>
         </div>
-        <div className="mt-4">
+        <div className="mt-4 space-y-2">
           {account.currentBalance && (
             <p className="text-xl font-semibold">
               {formatCurrency(parseFloat(account.currentBalance), account.currency)}
@@ -73,11 +75,23 @@ export function AccountCard({ account, onEdit, onDelete }: AccountCardProps) {
               Available: {formatCurrency(parseFloat(account.availableBalance), account.currency)}
             </p>
           )}
+          <div className="flex items-center gap-2">
+            {account.syncStatus !== "OK" && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-6 gap-1 text-xs"
+                onClick={() => onReauth?.(account.provider.providerId)}
+              >
+                <RefreshCw className="size-3" />
+                Reconnect
+              </Button>
+            )}
+          </div>
         </div>
-        <div className="mt-auto flex items-center justify-between pt-4">
-          <p className="text-muted-foreground text-xs">
-            Last updated: {new Date(account.updatedAt).toLocaleDateString()}
-          </p>
+        <div className="mt-auto flex items-center justify-between">
+          <SyncStatusBadge status={account.syncStatus} lastSyncedAt={account.lastSyncedAt} />
+
           <div className="flex gap-1">
             <Button
               variant="ghost"
