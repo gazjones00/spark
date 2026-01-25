@@ -137,9 +137,11 @@
         "typescript": "catalog:",
       },
       "peerDependencies": {
+        "lucide-react": ">=0.400",
         "react": ">=18",
       },
       "optionalPeers": [
+        "lucide-react",
         "react",
       ],
     },

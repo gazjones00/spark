@@ -1,8 +1,9 @@
-import * as React from "react";
+import type { ReactNode } from "react";
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface AuthLayoutProps {
-  children: React.ReactNode;
+  children: ReactNode;
   title: string;
   description: string;
 }
