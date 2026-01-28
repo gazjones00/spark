@@ -1,0 +1,13 @@
+{
+  "name": "@spark/crypto",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "devDependencies": {
+    "@spark/config": "workspace:*",
+    "typescript": "catalog:"
+  }
+}
