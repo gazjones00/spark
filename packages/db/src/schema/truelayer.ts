@@ -1,4 +1,5 @@
 import type {
+  Account,
   AccountNumber,
   AccountProvider,
   RunningBalance,
@@ -21,6 +22,22 @@ export enum SyncStatus {
   ERROR = "ERROR",
 }
 
+export const truelayerOauthStates = pgTable("truelayer_oauth_states", {
+  state: text("state").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  codeVerifier: text("code_verifier").notNull(),
+  // Token storage after code exchange (encrypted, server-side only)
+  encryptedAccessToken: text("encrypted_access_token"),
+  encryptedRefreshToken: text("encrypted_refresh_token"),
+  tokenKeyId: text("token_key_id"),
+  tokenExpiresAt: timestamp("token_expires_at", { withTimezone: true }),
+  accounts: jsonb("accounts").$type<Account[]>(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
 export const truelayerConnections = pgTable(
   "truelayer_connections",
   {
@@ -28,8 +45,9 @@ export const truelayerConnections = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
-    accessToken: text("access_token").notNull(),
-    refreshToken: text("refresh_token"),
+    encryptedAccessToken: text("encrypted_access_token").notNull(),
+    encryptedRefreshToken: text("encrypted_refresh_token"),
+    tokenKeyId: text("token_key_id").notNull(),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
