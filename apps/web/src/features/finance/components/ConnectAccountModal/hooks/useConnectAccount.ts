@@ -6,12 +6,6 @@ import type { Account } from "@spark/truelayer/types";
 
 export type Step = "start" | "loading" | "select-accounts" | "saving" | "success" | "error";
 
-interface TokenData {
-  accessToken: string;
-  refreshToken: string | null;
-  expiresAt: string;
-}
-
 interface UseConnectAccountOptions {
   onSuccess?: () => void;
 }
@@ -25,7 +19,7 @@ export function useConnectAccount(options?: UseConnectAccountOptions) {
   const [step, setStep] = React.useState<Step>("start");
   const [accounts, setAccounts] = React.useState<Account[]>([]);
   const [selectedAccountIds, setSelectedAccountIds] = React.useState<Set<string>>(new Set());
-  const [tokenData, setTokenData] = React.useState<TokenData | null>(null);
+  const [oauthState, setOauthState] = React.useState<string | null>(null);
   const [errorMessage, setErrorMessage] = React.useState("");
 
   const generateAuthLinkMutation = useMutation({
@@ -40,15 +34,12 @@ export function useConnectAccount(options?: UseConnectAccountOptions) {
   });
 
   const exchangeCodeMutation = useMutation({
-    mutationFn: (code: string) => orpc.truelayer.exchangeCode.call({ code }),
+    mutationFn: ({ code, state }: { code: string; state: string }) =>
+      orpc.truelayer.exchangeCode.call({ code, state }),
     onSuccess: (data) => {
       setAccounts(data.accounts);
       setSelectedAccountIds(new Set(data.accounts.map((a) => a.accountId)));
-      setTokenData({
-        accessToken: data.accessToken,
-        refreshToken: data.refreshToken,
-        expiresAt: data.expiresAt,
-      });
+      setOauthState(data.state);
       setStep("select-accounts");
     },
     onError: (error) => {
@@ -59,11 +50,9 @@ export function useConnectAccount(options?: UseConnectAccountOptions) {
 
   const saveAccountsMutation = useMutation({
     mutationFn: () => {
-      if (!tokenData) throw new Error("No token data");
+      if (!oauthState) throw new Error("No OAuth state");
       return orpc.truelayer.saveAccounts.call({
-        accessToken: tokenData.accessToken,
-        refreshToken: tokenData.refreshToken,
-        expiresAt: tokenData.expiresAt,
+        state: oauthState,
         accountIds: Array.from(selectedAccountIds),
       });
     },
@@ -78,13 +67,19 @@ export function useConnectAccount(options?: UseConnectAccountOptions) {
   });
 
   React.useEffect(() => {
-    if (search.code && !open) {
+    if (search.code && search.state && !open) {
       setOpen(true);
       setStep("loading");
-      exchangeCodeMutation.mutate(search.code);
+      exchangeCodeMutation.mutate({ code: search.code, state: search.state });
+      navigate({ to: "/accounts/connect", search: {}, replace: true });
+    } else if (search.code && !search.state && !open) {
+      // Missing state parameter - potential CSRF attack
+      setOpen(true);
+      setErrorMessage("Invalid authorization response: missing state parameter");
+      setStep("error");
       navigate({ to: "/accounts/connect", search: {}, replace: true });
     }
-  }, [search.code, open, navigate]);
+  }, [search.code, search.state, open, navigate]);
 
   const handleStartConnection = () => {
     setStep("loading");
@@ -125,7 +120,7 @@ export function useConnectAccount(options?: UseConnectAccountOptions) {
       setStep("start");
       setAccounts([]);
       setSelectedAccountIds(new Set());
-      setTokenData(null);
+      setOauthState(null);
       setErrorMessage("");
     }, 200);
   };
