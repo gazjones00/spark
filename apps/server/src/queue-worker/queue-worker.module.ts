@@ -4,6 +4,7 @@ import { JobsModule } from "../jobs/jobs.module";
 import { DatabaseModule } from "../modules/database";
 import { BullMQDriver, MessageQueueModule } from "../modules/message-queue";
 import { TruelayerModule } from "../providers/truelayer";
+import { CryptoModule } from "../modules/crypto";
 
 const driver = new BullMQDriver({
   connection: {
@@ -24,6 +25,7 @@ const driver = new BullMQDriver({
     MessageQueueModule.register({ driver }),
     MessageQueueModule.registerExplorer(),
     JobsModule,
+    CryptoModule,
   ],
 })
 export class QueueWorkerModule {}

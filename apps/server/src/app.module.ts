@@ -8,6 +8,7 @@ import type { Request } from "express";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { AccountsModule } from "./modules/accounts";
+import { CryptoModule } from "./modules/crypto";
 import { SettingsModule } from "./modules/settings";
 import { BullBoardModule } from "./modules/bull-board";
 import { DatabaseModule } from "./modules/database";
@@ -31,6 +32,7 @@ const messageQueueDriver = new BullMQDriver({
 @Module({
   imports: [
     DatabaseModule,
+    CryptoModule,
     AccountsModule,
     SettingsModule,
     MessageQueueModule.register({ driver: messageQueueDriver }),

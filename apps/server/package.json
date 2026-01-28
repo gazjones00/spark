@@ -29,6 +29,7 @@
     "@orpc/contract": "^1.13.2",
     "@orpc/nest": "^1.13.2",
     "@spark/auth": "workspace:*",
+    "@spark/crypto": "workspace:*",
     "@spark/db": "workspace:*",
     "@spark/orpc": "workspace:*",
     "@spark/truelayer": "workspace:*",
