@@ -4,8 +4,33 @@ import { type Database, eq } from "@spark/db";
 import { truelayerConnections } from "@spark/db/schema";
 import { TruelayerClient } from "./truelayer.client";
 import { DATABASE_CONNECTION } from "../../modules/database";
+import { CryptoService } from "../../modules/crypto";
 
 type TruelayerConnection = typeof truelayerConnections.$inferSelect;
+
+export interface DecryptedConnection {
+  id: string;
+  userId: string;
+  accessToken: string;
+  refreshToken: string | null;
+  expiresAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface CreateConnectionInput {
+  id: string;
+  userId: string;
+  accessToken: string;
+  refreshToken: string | null;
+  expiresAt: Date;
+}
+
+export interface UpdateConnectionTokensInput {
+  accessToken: string;
+  refreshToken: string | null;
+  expiresAt: Date;
+}
 
 /**
  * Permanent errors - extend UnrecoverableError so BullMQ won't retry.
@@ -43,14 +68,35 @@ export class TruelayerConnectionService {
 
   constructor(
     private readonly truelayerClient: TruelayerClient,
+    private readonly cryptoService: CryptoService,
     @Inject(DATABASE_CONNECTION) private readonly db: Database,
   ) {}
 
   /**
-   * Retrieves a connection by ID
+   * Creates a new connection with encrypted tokens
+   */
+  async createConnection(input: CreateConnectionInput): Promise<void> {
+    const keyId = this.cryptoService.getCurrentKeyId();
+    const encryptedAccessToken = await this.cryptoService.encryptToString(input.accessToken, keyId);
+    const encryptedRefreshToken = input.refreshToken
+      ? await this.cryptoService.encryptToString(input.refreshToken, keyId)
+      : null;
+
+    await this.db.insert(truelayerConnections).values({
+      id: input.id,
+      userId: input.userId,
+      encryptedAccessToken,
+      encryptedRefreshToken,
+      tokenKeyId: keyId,
+      expiresAt: input.expiresAt,
+    });
+  }
+
+  /**
+   * Retrieves a connection by ID and decrypts tokens
    * @throws ConnectionNotFoundError if the connection does not exist
    */
-  async getConnection(connectionId: string): Promise<TruelayerConnection> {
+  async getConnection(connectionId: string): Promise<DecryptedConnection> {
     const connection = await this.db.query.truelayerConnections.findFirst({
       where: eq(truelayerConnections.id, connectionId),
     });
@@ -59,7 +105,7 @@ export class TruelayerConnectionService {
       throw new ConnectionNotFoundError(connectionId);
     }
 
-    return connection;
+    return this.decryptConnection(connection);
   }
 
   /**
@@ -70,19 +116,45 @@ export class TruelayerConnectionService {
    */
   async getAccessToken(connectionId: string): Promise<string> {
     const connection = await this.getConnection(connectionId);
-    return this.getValidAccessToken(connection);
+    return this.getValidAccessToken(connectionId, connection);
   }
 
-  private async getValidAccessToken(connection: TruelayerConnection): Promise<string> {
+  private async decryptConnection(connection: TruelayerConnection): Promise<DecryptedConnection> {
+    const accessToken = await this.cryptoService.decryptFromString(
+      connection.encryptedAccessToken,
+      connection.tokenKeyId,
+    );
+    const refreshToken = connection.encryptedRefreshToken
+      ? await this.cryptoService.decryptFromString(
+          connection.encryptedRefreshToken,
+          connection.tokenKeyId,
+        )
+      : null;
+
+    return {
+      id: connection.id,
+      userId: connection.userId,
+      accessToken,
+      refreshToken,
+      expiresAt: connection.expiresAt,
+      createdAt: connection.createdAt,
+      updatedAt: connection.updatedAt,
+    };
+  }
+
+  private async getValidAccessToken(
+    connectionId: string,
+    connection: DecryptedConnection,
+  ): Promise<string> {
     if (connection.expiresAt >= new Date()) {
       return connection.accessToken;
     }
 
     if (!connection.refreshToken) {
-      throw new TokenExpiredError(connection.id);
+      throw new TokenExpiredError(connectionId);
     }
 
-    this.logger.log(`Refreshing token for connection ${connection.id}`);
+    this.logger.log(`Refreshing token for connection ${connectionId}`);
 
     let tokenResponse;
     try {
@@ -90,19 +162,45 @@ export class TruelayerConnectionService {
         refreshToken: connection.refreshToken,
       });
     } catch (error) {
-      throw new TokenRefreshError(connection.id, error instanceof Error ? error : undefined);
+      throw new TokenRefreshError(connectionId, error instanceof Error ? error : undefined);
     }
 
-    await this.db
-      .update(truelayerConnections)
-      .set({
-        accessToken: tokenResponse.accessToken,
-        refreshToken: tokenResponse.refreshToken,
-        expiresAt: tokenResponse.expiresAt,
-        updatedAt: new Date(),
-      })
-      .where(eq(truelayerConnections.id, connection.id));
+    await this.updateConnectionTokens(connectionId, {
+      accessToken: tokenResponse.accessToken,
+      refreshToken: tokenResponse.refreshToken,
+      expiresAt: tokenResponse.expiresAt,
+    });
 
     return tokenResponse.accessToken;
+  }
+
+  private async updateConnectionTokens(
+    connectionId: string,
+    input: UpdateConnectionTokensInput,
+  ): Promise<void> {
+    const keyId = this.cryptoService.getCurrentKeyId();
+    const encryptedAccessToken = await this.cryptoService.encryptToString(input.accessToken, keyId);
+    const encryptedRefreshToken = input.refreshToken
+      ? await this.cryptoService.encryptToString(input.refreshToken, keyId)
+      : null;
+
+    const result = await this.db
+      .update(truelayerConnections)
+      .set({
+        encryptedAccessToken,
+        encryptedRefreshToken,
+        tokenKeyId: keyId,
+        expiresAt: input.expiresAt,
+        updatedAt: new Date(),
+      })
+      .where(eq(truelayerConnections.id, connectionId))
+      .returning({ id: truelayerConnections.id });
+
+    if (result.length === 0) {
+      this.logger.error(
+        `Failed to persist refreshed tokens: connection ${connectionId} no longer exists`,
+      );
+      throw new ConnectionNotFoundError(connectionId);
+    }
   }
 }

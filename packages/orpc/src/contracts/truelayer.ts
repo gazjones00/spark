@@ -13,19 +13,16 @@ export const GenerateAuthLinkInputSchema = z.object({
 
 export const ExchangeCodeInputSchema = z.object({
   code: z.string(),
+  state: z.string(),
 });
 
 export const ExchangeCodeResponseSchema = z.object({
-  accessToken: z.string(),
-  expiresAt: z.string(),
-  refreshToken: z.string().nullable(),
+  state: z.string(),
   accounts: z.array(AccountSchema),
 });
 
 export const SaveAccountsInputSchema = z.object({
-  accessToken: z.string(),
-  refreshToken: z.string().nullable(),
-  expiresAt: z.string(),
+  state: z.string(),
   accountIds: z.array(z.string()),
 });
 

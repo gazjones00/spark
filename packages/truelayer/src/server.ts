@@ -154,6 +154,11 @@ export function createTrueLayerClient(config: TrueLayerConfig): TrueLayerClient 
         params.set("provider_id", options.providerId);
       }
 
+      if (options.codeChallenge) {
+        params.set("code_challenge", options.codeChallenge);
+        params.set("code_challenge_method", "S256");
+      }
+
       return {
         url: `${urls.auth}/?${params.toString()}`,
         state,
@@ -168,6 +173,10 @@ export function createTrueLayerClient(config: TrueLayerConfig): TrueLayerClient 
         redirect_uri: config.redirectUri,
         code: options.code,
       });
+
+      if (options.codeVerifier) {
+        body.set("code_verifier", options.codeVerifier);
+      }
 
       const response = await fetch(`${urls.auth}/connect/token`, {
         method: "POST",

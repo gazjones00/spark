@@ -27,9 +27,13 @@ export class TruelayerController {
   }
 
   @Implement(contract.truelayer.exchangeCode)
-  exchangeCode(@Session() _session: UserSession) {
+  exchangeCode(@Session() session: UserSession) {
     return implement(contract.truelayer.exchangeCode).handler(({ input }) => {
-      return this.truelayerService.exchangeCode({ code: input.code });
+      return this.truelayerService.exchangeCode({
+        code: input.code,
+        state: input.state,
+        userId: session.user.id,
+      });
     });
   }
 
@@ -37,10 +41,8 @@ export class TruelayerController {
   saveAccounts(@Session() session: UserSession) {
     return implement(contract.truelayer.saveAccounts).handler(({ input }) => {
       return this.truelayerService.saveAccounts({
+        state: input.state,
         accountIds: input.accountIds,
-        accessToken: input.accessToken,
-        refreshToken: input.refreshToken,
-        expiresAt: input.expiresAt,
         userId: session.user.id,
       });
     });

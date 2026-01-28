@@ -40,6 +40,8 @@ export interface GenerateAuthLinkOptions {
   responseMode?: "query" | "form_post";
   /** Optional provider ID to skip bank selection */
   providerId?: string;
+  /** PKCE code challenge (Base64Url encoded SHA256 hash of code_verifier) */
+  codeChallenge?: string;
 }
 
 export interface AuthLinkResult {
@@ -49,6 +51,8 @@ export interface AuthLinkResult {
 
 export interface ExchangeCodeOptions {
   code: string;
+  /** PKCE code verifier (required if code_challenge was used in auth link) */
+  codeVerifier?: string;
 }
 
 export interface TokenResponse {
