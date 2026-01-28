@@ -8,6 +8,7 @@ export const env = createEnv({
     BULL_BOARD_USERNAME: z.string().min(1),
     CORS_ORIGIN: z.url(),
     DATABASE_URL: z.string().min(1),
+    ENCRYPTION_KEY: z.string().length(64, "Encryption key must be 64 hex characters (32 bytes)"),
     NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
     REDIS_HOST: z.string(),
     REDIS_PORT: z.coerce.number(),
