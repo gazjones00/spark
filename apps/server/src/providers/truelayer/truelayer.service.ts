@@ -1,6 +1,5 @@
 import { Inject, Injectable, UnauthorizedException } from "@nestjs/common";
-import { eq, and, gt } from "drizzle-orm";
-import type { Database } from "@spark/db";
+import { eq, and, gt, type Database } from "@spark/db";
 import { truelayerAccounts, truelayerOauthStates, SyncStatus } from "@spark/db/schema";
 import { env } from "@spark/env/server";
 import { TruelayerClient } from "./truelayer.client";
