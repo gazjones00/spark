@@ -1,7 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { BalanceService } from "../modules/accounts";
 import { Jobs, MessageQueue, Process, Processor } from "../modules/message-queue";
-import { TransactionSyncService } from "./services/transaction-sync.service";
+import { TransactionSyncService } from "../modules/transactions";
 
 export interface InitialSyncJobData {
   accountId: string;

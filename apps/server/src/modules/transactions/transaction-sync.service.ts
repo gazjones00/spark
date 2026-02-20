@@ -1,5 +1,3 @@
-// TODO: Move to transactions module once it's implemented
-
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { type Database, eq } from "@spark/db";
 import { SyncStatus, truelayerAccounts, truelayerTransactions } from "@spark/db/schema";
@@ -8,7 +6,7 @@ import {
   TruelayerConnectionService,
   TokenExpiredError,
 } from "../../providers/truelayer";
-import { DATABASE_CONNECTION } from "../../modules/database";
+import { DATABASE_CONNECTION } from "../database";
 
 const DEFAULT_SYNC_DAYS = 7;
 const MAX_SYNC_DAYS = 90;
@@ -18,12 +16,10 @@ interface BaseSyncParams {
   connectionId: string;
 }
 
-/** For initial sync - explicitly sync this many days back */
 interface InitialSyncParams extends BaseSyncParams {
   daysToSync: number;
 }
 
-/** For periodic sync - sync from last known sync date */
 interface PeriodicSyncParams extends BaseSyncParams {
   lastSyncedAt: Date | null;
 }
@@ -132,14 +128,12 @@ export class TransactionSyncService {
   }
 
   private calculateFromDate(toDate: Date, params: SyncTransactionsParams): Date {
-    // Initial sync - use explicit daysToSync
     if ("daysToSync" in params) {
       const fromDate = new Date(toDate);
       fromDate.setDate(fromDate.getDate() - params.daysToSync);
       return fromDate;
     }
 
-    // Periodic sync - use lastSyncedAt
     const { lastSyncedAt } = params;
 
     const defaultFromDate = new Date(toDate);
@@ -152,7 +146,6 @@ export class TransactionSyncService {
       return defaultFromDate;
     }
 
-    // If lastSyncedAt is older than max lookback, cap it
     if (lastSyncedAt < maxFromDate) {
       this.logger.warn(
         `lastSyncedAt (${lastSyncedAt.toISOString()}) exceeds max lookback of ${MAX_SYNC_DAYS} days, capping to ${maxFromDate.toISOString()}`,
@@ -160,12 +153,10 @@ export class TransactionSyncService {
       return maxFromDate;
     }
 
-    // If lastSyncedAt is within the default range, use default
     if (lastSyncedAt >= defaultFromDate) {
       return defaultFromDate;
     }
 
-    // Use lastSyncedAt as the from date (with a 1-day overlap for safety)
     const fromDate = new Date(lastSyncedAt);
     fromDate.setDate(fromDate.getDate() - 1);
     return fromDate;

@@ -10,6 +10,7 @@ import { AppService } from "./app.service";
 import { AccountsModule } from "./modules/accounts";
 import { CryptoModule } from "./modules/crypto";
 import { SettingsModule } from "./modules/settings";
+import { TransactionsModule } from "./modules/transactions";
 import { BullBoardModule } from "./modules/bull-board";
 import { DatabaseModule } from "./modules/database";
 import { BullMQDriver, MessageQueueModule } from "./modules/message-queue";
@@ -34,6 +35,7 @@ const messageQueueDriver = new BullMQDriver({
     DatabaseModule,
     CryptoModule,
     AccountsModule,
+    TransactionsModule,
     SettingsModule,
     MessageQueueModule.register({ driver: messageQueueDriver }),
     BullBoardModule.forRoot(messageQueueDriver),

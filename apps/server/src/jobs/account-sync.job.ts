@@ -4,7 +4,7 @@ import { truelayerAccounts } from "@spark/db/schema";
 import { BalanceService } from "../modules/accounts";
 import { DATABASE_CONNECTION } from "../modules/database";
 import { Jobs, MessageQueue, Process, Processor } from "../modules/message-queue";
-import { TransactionSyncService } from "./services/transaction-sync.service";
+import { TransactionSyncService } from "../modules/transactions";
 
 export interface AccountSyncJobData {
   accountId: string;
