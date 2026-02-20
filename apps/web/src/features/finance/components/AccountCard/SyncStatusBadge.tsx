@@ -1,10 +1,10 @@
 import { CheckCircle2, AlertTriangle, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import type { SyncStatus } from "@spark/orpc/contract";
+import type { SyncStatusType } from "@spark/common";
 import { formatDistanceToNow } from "date-fns";
 
 interface SyncStatusBadgeProps {
-  status: SyncStatus;
+  status: SyncStatusType;
   lastSyncedAt: string | null;
 }
 
@@ -24,7 +24,10 @@ const statusConfig = {
     label: "Sync error",
     variant: "destructive" as const,
   },
-};
+} satisfies Record<
+  SyncStatusType,
+  { icon: typeof CheckCircle2; label: string; variant: "secondary" | "destructive" }
+>;
 
 export function SyncStatusBadge({ status, lastSyncedAt }: SyncStatusBadgeProps) {
   const config = statusConfig[status];

@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { type Database, and, eq, inArray, lte, sql } from "@spark/db";
-import { SyncStatus, truelayerAccounts } from "@spark/db/schema";
+import { truelayerAccounts } from "@spark/db/schema";
+import { SyncStatus } from "@spark/common";
 import { DATABASE_CONNECTION } from "../modules/database";
 import { Cron, Jobs, MessageQueue, Process, Processor } from "../modules/message-queue";
 import type { MessageQueueService } from "../modules/message-queue";

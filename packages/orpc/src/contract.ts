@@ -35,10 +35,9 @@ export {
   UpdateAccountResponseSchema,
   DeleteAccountInputSchema,
   DeleteAccountResponseSchema,
-  SyncStatusSchema,
 } from "./contracts/accounts";
 
-export type { Account, SyncStatus } from "./contracts/accounts";
+export type { Account } from "./contracts/accounts";
 
 export { SavedTransactionSchema, GetTransactionsResponseSchema } from "./contracts/transactions";
 

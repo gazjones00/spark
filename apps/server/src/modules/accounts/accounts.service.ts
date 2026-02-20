@@ -3,6 +3,7 @@ import type { Database } from "@spark/db";
 import { eq } from "@spark/db";
 import { truelayerAccounts } from "@spark/db/schema";
 import { DATABASE_CONNECTION } from "../database";
+import { toAccountDto, toAccountsListDto } from "./mappers/account.mapper";
 
 export interface UpdateAccountInput {
   id: string;
@@ -18,24 +19,7 @@ export class AccountsService {
       where: eq(truelayerAccounts.userId, userId),
     });
 
-    return {
-      accounts: accounts.map((account) => ({
-        id: account.id,
-        accountId: account.accountId,
-        accountType: account.accountType,
-        displayName: account.displayName,
-        currency: account.currency,
-        accountNumber: account.accountNumber,
-        provider: account.provider,
-        updatedAt: account.updatedAt.toISOString(),
-        currentBalance: account.currentBalance,
-        availableBalance: account.availableBalance,
-        overdraft: account.overdraft,
-        balanceUpdatedAt: account.balanceUpdatedAt?.toISOString() ?? null,
-        syncStatus: account.syncStatus,
-        lastSyncedAt: account.lastSyncedAt?.toISOString() ?? null,
-      })),
-    };
+    return toAccountsListDto(accounts);
   }
 
   async update(userId: string, input: UpdateAccountInput) {
@@ -61,24 +45,7 @@ export class AccountsService {
       .where(eq(truelayerAccounts.id, input.id))
       .returning();
 
-    return {
-      account: {
-        id: updated.id,
-        accountId: updated.accountId,
-        accountType: updated.accountType,
-        displayName: updated.displayName,
-        currency: updated.currency,
-        accountNumber: updated.accountNumber,
-        provider: updated.provider,
-        updatedAt: updated.updatedAt.toISOString(),
-        currentBalance: updated.currentBalance,
-        availableBalance: updated.availableBalance,
-        overdraft: updated.overdraft,
-        balanceUpdatedAt: updated.balanceUpdatedAt?.toISOString() ?? null,
-        syncStatus: updated.syncStatus,
-        lastSyncedAt: updated.lastSyncedAt?.toISOString() ?? null,
-      },
-    };
+    return { account: toAccountDto(updated) };
   }
 
   async delete(userId: string, id: string) {

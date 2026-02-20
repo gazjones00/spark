@@ -12,6 +12,7 @@
     "@base-ui/react": "^1.0.0",
     "@hookform/resolvers": "^5.2.2",
     "@spark/auth": "workspace:*",
+    "@spark/common": "workspace:*",
     "@spark/env": "workspace:*",
     "@spark/orpc": "workspace:*",
     "@spark/truelayer": "workspace:*",
@@ -51,7 +52,7 @@
     "@vitejs/plugin-react": "^5.0.4",
     "jsdom": "^26.0.0",
     "typescript": "catalog:",
-    "vite": "^7.0.2",
+    "vite": "npm:rolldown-vite@latest",
     "web-vitals": "^5.0.3"
   }
 }

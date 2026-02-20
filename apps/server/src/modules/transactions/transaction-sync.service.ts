@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { type Database, eq } from "@spark/db";
-import { SyncStatus, truelayerAccounts, truelayerTransactions } from "@spark/db/schema";
+import { truelayerAccounts, truelayerTransactions } from "@spark/db/schema";
+import { SyncStatus, type SyncStatusType } from "@spark/common";
 import {
   TruelayerClient,
   TruelayerConnectionService,
@@ -113,7 +114,7 @@ export class TransactionSyncService {
 
   private async updateSyncStatus(
     accountId: string,
-    status: SyncStatus,
+    status: SyncStatusType,
     lastSyncedAt?: Date,
   ): Promise<void> {
     const now = new Date();

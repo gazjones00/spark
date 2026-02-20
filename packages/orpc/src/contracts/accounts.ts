@@ -5,10 +5,8 @@ import {
   AccountTypeSchema,
   CurrencySchema,
 } from "@spark/truelayer/schemas";
+import { SyncStatusSchema } from "@spark/common";
 import { z } from "zod";
-
-export const SyncStatusSchema = z.enum(["OK", "NEEDS_REAUTH", "ERROR"]);
-export type SyncStatus = z.infer<typeof SyncStatusSchema>;
 
 export const SavedAccountSchema = z.object({
   id: z.string(),

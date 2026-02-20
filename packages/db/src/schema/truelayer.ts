@@ -5,6 +5,7 @@ import type {
   RunningBalance,
   TransactionMeta,
 } from "@spark/truelayer/types";
+import { SyncStatus } from "@spark/common";
 import {
   AccountType,
   Currency,
@@ -15,12 +16,6 @@ import { enumValues } from "@spark/common";
 
 import { pgTable, text, timestamp, numeric, jsonb, uniqueIndex, index } from "drizzle-orm/pg-core";
 import { user } from "./auth.ts";
-
-export enum SyncStatus {
-  OK = "OK",
-  NEEDS_REAUTH = "NEEDS_REAUTH",
-  ERROR = "ERROR",
-}
 
 export const truelayerOauthStates = pgTable("truelayer_oauth_states", {
   state: text("state").primaryKey(),
