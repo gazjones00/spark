@@ -27,11 +27,25 @@ export const SavedTransactionSchema = z.object({
   updatedAt: z.string(),
 });
 
-export const GetTransactionsResponseSchema = z.object({
+export const ListTransactionsInputSchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+  cursor: z.string().optional(),
+  accountId: z.string().optional(),
+  category: TransactionCategorySchema.optional(),
+  search: z.string().trim().min(1).max(100).optional(),
+  from: z.string().datetime().optional(),
+  to: z.string().datetime().optional(),
+});
+
+export const ListTransactionsResponseSchema = z.object({
   transactions: z.array(SavedTransactionSchema),
+  nextCursor: z.string().nullable(),
+  hasMore: z.boolean(),
 });
 
 export type SavedTransaction = z.infer<typeof SavedTransactionSchema>;
+export type ListTransactionsInput = z.infer<typeof ListTransactionsInputSchema>;
+export type ListTransactionsResponse = z.infer<typeof ListTransactionsResponseSchema>;
 
 export const transactionsRouter = oc.router({
   list: oc
@@ -39,5 +53,6 @@ export const transactionsRouter = oc.router({
       method: "GET",
       path: "/transactions",
     })
-    .output(GetTransactionsResponseSchema),
+    .input(ListTransactionsInputSchema)
+    .output(ListTransactionsResponseSchema),
 });

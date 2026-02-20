@@ -10,8 +10,8 @@ export class TransactionsController {
 
   @Implement(contract.transactions.list)
   list(@Session() session: UserSession) {
-    return implement(contract.transactions.list).handler(() => {
-      return this.transactionsService.list(session.user.id);
+    return implement(contract.transactions.list).handler(({ input }) => {
+      return this.transactionsService.list(session.user.id, input);
     });
   }
 }

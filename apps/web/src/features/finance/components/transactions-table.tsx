@@ -9,23 +9,21 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { type Transaction, type Account } from "@spark/truelayer/types";
 import { formatCurrency } from "@/lib/utils";
+import { categoryConfig } from "@/lib/mock-data";
+import type { Account, SavedTransaction } from "@spark/orpc/contract";
 
 type SortField = "date" | "description" | "category" | "amount";
 type SortDirection = "asc" | "desc";
 
 interface TransactionsTableProps {
-  transactions: Transaction[];
+  transactions: SavedTransaction[];
   accounts?: Account[];
 }
 
 export function TransactionsTable({ transactions, accounts = [] }: TransactionsTableProps) {
   const [sortField, setSortField] = React.useState<SortField>("date");
   const [sortDirection, setSortDirection] = React.useState<SortDirection>("desc");
-  const [currentPage, setCurrentPage] = React.useState(1);
-  const itemsPerPage = 10;
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -53,19 +51,13 @@ export function TransactionsTable({ transactions, accounts = [] }: TransactionsT
           comparison = a.transactionCategory.localeCompare(b.transactionCategory);
           break;
         case "amount":
-          comparison = a.amount - b.amount;
+          comparison = Number(a.amount) - Number(b.amount);
           break;
       }
 
       return sortDirection === "asc" ? comparison : -comparison;
     });
   }, [transactions, sortField, sortDirection]);
-
-  const totalPages = Math.ceil(sortedTransactions.length / itemsPerPage);
-  const paginatedTransactions = sortedTransactions.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage,
-  );
 
   const SortIcon = ({ field }: { field: SortField }) => {
     if (sortField !== field) return <ArrowUpDown className="ml-1 size-3" />;
@@ -131,21 +123,24 @@ export function TransactionsTable({ transactions, accounts = [] }: TransactionsT
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginatedTransactions.map((transaction) => {
-              const amount = transaction.amount;
+            {sortedTransactions.map((transaction) => {
+              const amount = Number(transaction.amount);
               const isCredit = transaction.transactionType === "CREDIT";
+              const accountName =
+                accounts.find((account) => account.accountId === transaction.accountId)
+                  ?.displayName ?? transaction.accountId;
 
               return (
-                <TableRow key={transaction.transactionId}>
+                <TableRow key={transaction.id}>
                   <TableCell className="text-muted-foreground">
                     {new Date(transaction.timestamp).toLocaleDateString()}
                   </TableCell>
                   <TableCell className="font-medium">
                     {transaction.merchantName ?? transaction.description}
                   </TableCell>
+                  <TableCell className="text-muted-foreground text-xs">{accountName}</TableCell>
                   <TableCell className="text-muted-foreground text-xs">
-                    {accounts.find((a) => a.accountId === transaction.providerTransactionId)
-                      ?.displayName ?? transaction.providerTransactionId}
+                    {categoryConfig[transaction.transactionCategory].label}
                   </TableCell>
                   <TableCell className={`text-right font-medium ${isCredit ? "text-chart-3" : ""}`}>
                     {isCredit ? "+" : "-"}
@@ -157,37 +152,6 @@ export function TransactionsTable({ transactions, accounts = [] }: TransactionsT
           </TableBody>
         </Table>
       </div>
-
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-muted-foreground text-sm">
-            Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
-            {Math.min(currentPage * itemsPerPage, transactions.length)} of {transactions.length}{" "}
-            transactions
-          </p>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-            >
-              Previous
-            </Button>
-            <span className="text-muted-foreground text-sm">
-              Page {currentPage} of {totalPages}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-            >
-              Next
-            </Button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

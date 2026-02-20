@@ -39,9 +39,17 @@ export {
 
 export type { Account } from "./contracts/accounts";
 
-export { SavedTransactionSchema, GetTransactionsResponseSchema } from "./contracts/transactions";
+export {
+  SavedTransactionSchema,
+  ListTransactionsInputSchema,
+  ListTransactionsResponseSchema,
+} from "./contracts/transactions";
 
-export type { SavedTransaction } from "./contracts/transactions";
+export type {
+  SavedTransaction,
+  ListTransactionsInput,
+  ListTransactionsResponse,
+} from "./contracts/transactions";
 
 export {
   ChangePasswordInputSchema,

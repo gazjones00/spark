@@ -9,8 +9,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { type TransactionCategory, categoryConfig } from "@/lib/mock-data";
-import type { Account } from "@spark/truelayer/types";
+import { categoryConfig } from "@/lib/mock-data";
+import type { Account, SavedTransaction } from "@spark/orpc/contract";
+
+type TransactionCategory = SavedTransaction["transactionCategory"];
 
 export interface TransactionFilters {
   search: string;
@@ -27,19 +29,7 @@ interface TransactionFiltersProps {
 
 const categories: (TransactionCategory | "all")[] = [
   "all",
-  "PURCHASE",
-  "TRANSFER",
-  "DIRECT_DEBIT",
-  "STANDING_ORDER",
-  "BILL_PAYMENT",
-  "ATM",
-  "CASH",
-  "CREDIT",
-  "DEBIT",
-  "INTEREST",
-  "DIVIDEND",
-  "FEE_CHARGE",
-  "OTHER",
+  ...(Object.keys(categoryConfig) as TransactionCategory[]),
 ];
 
 export function TransactionFiltersBar({
