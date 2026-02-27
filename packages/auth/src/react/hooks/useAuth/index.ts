@@ -1,2 +1,2 @@
-export { useAuth } from "./useAuth";
-export type { UseAuthReturn } from "./types";
+export { useAuth } from "./useAuth.ts";
+export type { UseAuthReturn } from "./types.ts";

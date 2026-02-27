@@ -5,6 +5,6 @@ export type {
   ProviderId,
   SocialProviderList,
   SocialProviders,
-} from "./types";
-export { socialProviders } from "./config";
+} from "./types.ts";
+export { socialProviders } from "./config.ts";
 export { GoogleIcon } from "./icons";

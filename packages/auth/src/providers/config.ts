@@ -1,4 +1,4 @@
-import type { SocialProviderConfig } from "./types";
+import type { SocialProviderConfig } from "./types.ts";
 import { GoogleIcon } from "./icons";
 import type { SocialProviders } from "better-auth/social-providers";
 

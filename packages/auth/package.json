@@ -11,7 +11,9 @@
     "./react/hooks": "./src/react/hooks/index.ts",
     "./react/components": "./src/react/components/index.ts"
   },
-  "scripts": {},
+  "scripts": {
+    "type:check": "tsc -b"
+  },
   "dependencies": {
     "@spark/db": "workspace:*",
     "better-auth": "catalog:",

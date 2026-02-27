@@ -1,5 +1,5 @@
 import type { Jobs, MessageQueue } from "../constants";
-import type { WorkerOptions as BullMQWorkerOptions } from "bullmq";
+import type { KeepJobs, WorkerOptions as BullMQWorkerOptions } from "bullmq";
 
 export interface MessageQueueJob<T = unknown> {
   id: string;
@@ -12,8 +12,8 @@ export interface QueueJobOptions {
   priority?: number;
   delay?: number;
   attempts?: number;
-  removeOnComplete?: boolean | number | { count?: number };
-  removeOnFail?: boolean | number | { count?: number };
+  removeOnComplete?: boolean | number | KeepJobs;
+  removeOnFail?: boolean | number | KeepJobs;
   backoff?: {
     type: "exponential" | "fixed";
     delay: number;

@@ -1,5 +1,5 @@
 {
-  "extends": "@spark/config/tsconfig.base.json",
+  "extends": "@spark/config/tsconfig.lib.json",
   "compilerOptions": {
     "strictNullChecks": true
   }

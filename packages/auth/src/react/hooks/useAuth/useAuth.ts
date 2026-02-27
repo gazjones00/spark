@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import { useSession, signIn, signUp, signOut } from "@spark/auth/client";
 
-import type { UseAuthReturn } from "./types";
+import type { UseAuthReturn } from "./types.ts";
 
 export function useAuth(): UseAuthReturn {
   const { data: session, isPending, error, refetch } = useSession();

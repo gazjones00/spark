@@ -1,5 +1,5 @@
 {
-  "extends": "@spark/config/tsconfig.base.json",
+  "extends": "@spark/config/tsconfig.lib.json",
   "compilerOptions": {
     "declaration": true,
     "declarationMap": true,
@@ -7,6 +7,7 @@
     "outDir": "dist",
     "composite": true,
     "strictNullChecks": true,
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+    "emitDeclarationOnly": true
   }
 }

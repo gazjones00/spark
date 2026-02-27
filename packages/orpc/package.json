@@ -7,6 +7,9 @@
     ".": "./src/client.ts",
     "./contract": "./src/contract.ts"
   },
+  "scripts": {
+    "type:check": "tsc -b"
+  },
   "dependencies": {
     "@orpc/client": "^1.13.2",
     "@orpc/contract": "^1.13.2",

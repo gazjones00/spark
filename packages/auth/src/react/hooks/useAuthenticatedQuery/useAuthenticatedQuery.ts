@@ -1,5 +1,5 @@
 import { useSession } from "@spark/auth/client";
-import type { UseAuthenticatedQueryResult } from "./types";
+import type { UseAuthenticatedQueryResult } from "./types.ts";
 
 /**
  * Hook that provides authentication state for use with React Query.

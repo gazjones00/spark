@@ -40,10 +40,10 @@ async function importKey(keyHex: string): Promise<CryptoKey> {
   const hexPairs = keyHex.match(/.{2}/g)!;
   const keyBytes = new Uint8Array(hexPairs.length);
 
-  for (let i = 0; i < hexPairs.length; i++) {
-    const byte = parseInt(hexPairs[i], 16);
+  for (const [i, hexPair] of hexPairs.entries()) {
+    const byte = parseInt(hexPair, 16);
     if (Number.isNaN(byte)) {
-      throw new Error(`Invalid hex byte at position ${i * 2}: "${hexPairs[i]}"`);
+      throw new Error(`Invalid hex byte at position ${i * 2}: "${hexPair}"`);
     }
     keyBytes[i] = byte;
   }
@@ -90,7 +90,11 @@ export async function decrypt(encrypted: EncryptedData, keyHex: string): Promise
   const iv = base64UrlDecode(encrypted.iv);
   const ciphertext = base64UrlDecode(encrypted.ciphertext);
 
-  const plaintextBuffer = await crypto.subtle.decrypt({ name: ALGORITHM, iv }, key, ciphertext);
+  const plaintextBuffer = await crypto.subtle.decrypt(
+    { name: ALGORITHM, iv: iv.buffer as ArrayBuffer },
+    key,
+    ciphertext.buffer as ArrayBuffer,
+  );
 
   const decoder = new TextDecoder();
   return decoder.decode(plaintextBuffer);

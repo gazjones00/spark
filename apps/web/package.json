@@ -6,7 +6,7 @@
     "build": "vite build",
     "serve": "vite preview",
     "dev": "vite dev",
-    "check-types": "tsc --noEmit"
+    "type:check": "tsc -b"
   },
   "dependencies": {
     "@base-ui/react": "^1.2.0",
@@ -52,7 +52,7 @@
     "@vitejs/plugin-react": "^5.1.4",
     "jsdom": "^28.1.0",
     "typescript": "^5.9.3",
-    "vite": "npm:rolldown-vite@^7.3.1",
+    "vite": "^7.3.1",
     "web-vitals": "^5.1.0"
   }
 }

@@ -24,7 +24,7 @@
     "dev:worker": "turbo -F @spark/server dev:worker",
     "build": "turbo build",
     "test": "turbo test",
-    "check-types": "turbo check-types",
+    "type:check": "turbo type:check",
     "dev:native": "turbo -F native dev",
     "dev:server": "turbo -F @spark/server dev",
     "dev:web": "turbo -F web dev",

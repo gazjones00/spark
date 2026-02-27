@@ -4,7 +4,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { env } from "@spark/env/server";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 
-import { socialProviders, getSocialProviders } from "./providers/config";
+import { socialProviders, getSocialProviders } from "./providers/config.ts";
 
 const isProduction = env.NODE_ENV === "production";
 

@@ -8,6 +8,9 @@
     "./types": "./src/types.ts",
     "./schemas": "./src/schemas.ts"
   },
+  "scripts": {
+    "type:check": "tsc -b"
+  },
   "dependencies": {
     "@spark/common": "workspace:*",
     "@spark/env": "workspace:*",

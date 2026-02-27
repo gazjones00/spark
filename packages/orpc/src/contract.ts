@@ -1,10 +1,10 @@
 import { oc } from "@orpc/contract";
 
-import { healthRoute } from "./contracts/health";
-import { truelayerRouter } from "./contracts/truelayer";
-import { accountsRouter } from "./contracts/accounts";
-import { settingsRouter } from "./contracts/settings";
-import { transactionsRouter } from "./contracts/transactions";
+import { healthRoute } from "./contracts/health.ts";
+import { truelayerRouter } from "./contracts/truelayer.ts";
+import { accountsRouter } from "./contracts/accounts.ts";
+import { settingsRouter } from "./contracts/settings.ts";
+import { transactionsRouter } from "./contracts/transactions.ts";
 
 export const contract = oc.router({
   health: healthRoute,
@@ -17,7 +17,7 @@ export const contract = oc.router({
 export type Contract = typeof contract;
 
 // Re-export all schemas and types from domain contracts
-export { HelloResponseSchema } from "./contracts/health";
+export { HelloResponseSchema } from "./contracts/health.ts";
 
 export {
   AuthLinkResponseSchema,
@@ -26,7 +26,7 @@ export {
   ExchangeCodeResponseSchema,
   SaveAccountsInputSchema,
   SaveAccountsResponseSchema,
-} from "./contracts/truelayer";
+} from "./contracts/truelayer.ts";
 
 export {
   SavedAccountSchema,
@@ -35,21 +35,21 @@ export {
   UpdateAccountResponseSchema,
   DeleteAccountInputSchema,
   DeleteAccountResponseSchema,
-} from "./contracts/accounts";
+} from "./contracts/accounts.ts";
 
-export type { Account } from "./contracts/accounts";
+export type { Account } from "./contracts/accounts.ts";
 
 export {
   SavedTransactionSchema,
   ListTransactionsInputSchema,
   ListTransactionsResponseSchema,
-} from "./contracts/transactions";
+} from "./contracts/transactions.ts";
 
 export type {
   SavedTransaction,
   ListTransactionsInput,
   ListTransactionsResponse,
-} from "./contracts/transactions";
+} from "./contracts/transactions.ts";
 
 export {
   ChangePasswordInputSchema,
@@ -59,7 +59,7 @@ export {
   ThemeSchema,
   UserPreferencesSchema,
   UpdateUserPreferencesInputSchema,
-} from "./contracts/settings";
+} from "./contracts/settings.ts";
 
 export {
   AccountNumberSchema,
