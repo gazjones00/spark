@@ -10,7 +10,7 @@
     "type:check": "tsc -b"
   },
   "dependencies": {
-    "zod": "catalog:"
+    "@spark/schema": "workspace:*"
   },
   "devDependencies": {
     "@spark/config": "workspace:*",

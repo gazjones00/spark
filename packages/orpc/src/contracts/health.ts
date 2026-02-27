@@ -1,9 +1,5 @@
 import { oc } from "@orpc/contract";
-import { z } from "zod";
-
-export const HelloResponseSchema = z.object({
-  message: z.string(),
-});
+import { HelloResponseSchema } from "@spark/schema";
 
 export const healthRoute = oc
   .route({

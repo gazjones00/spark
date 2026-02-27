@@ -3,6 +3,9 @@ import { Implement, implement } from "@orpc/nest";
 import { AllowAnonymous, Session, type UserSession } from "@thallesp/nestjs-better-auth";
 import { contract } from "@spark/orpc/contract";
 import type { Response } from "express";
+import { TruelayerCallbackQuerySchema } from "@spark/schema";
+import { ZodValidationPipe } from "nestjs-zod";
+import { TruelayerCallbackQueryDto } from "./dto/truelayer-callback-query.dto";
 import { TruelayerService } from "./truelayer.service";
 
 @Controller()
@@ -11,8 +14,12 @@ export class TruelayerController {
 
   @Get("truelayer/callback")
   @AllowAnonymous()
-  callback(@Query("code") code: string, @Query("state") state: string, @Res() res: Response) {
-    const redirectUrl = this.truelayerService.buildCallbackRedirectUrl(code, state);
+  callback(
+    @Query(new ZodValidationPipe(TruelayerCallbackQuerySchema))
+    query: TruelayerCallbackQueryDto,
+    @Res() res: Response,
+  ) {
+    const redirectUrl = this.truelayerService.buildCallbackRedirectUrl(query.code, query.state);
     return res.redirect(redirectUrl);
   }
 

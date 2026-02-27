@@ -1,14 +1,10 @@
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
 import type { Database } from "@spark/db";
 import { eq } from "@spark/db";
+import type { UpdateAccountInput } from "@spark/schema";
 import { truelayerAccounts } from "@spark/db/schema";
 import { DATABASE_CONNECTION } from "../database";
 import { toAccountDto, toAccountsListDto } from "./mappers/account.mapper";
-
-export interface UpdateAccountInput {
-  id: string;
-  displayName?: string;
-}
 
 @Injectable()
 export class AccountsService {

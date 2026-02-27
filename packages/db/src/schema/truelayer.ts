@@ -1,17 +1,17 @@
 import type {
-  Account,
+  TrueLayerAccount,
   AccountNumber,
   AccountProvider,
   RunningBalance,
   TransactionMeta,
-} from "@spark/truelayer/types";
-import { SyncStatus } from "@spark/common";
+} from "@spark/schema";
 import {
   AccountType,
   Currency,
+  SyncStatus,
   TransactionCategory,
   TransactionType,
-} from "@spark/truelayer/schemas";
+} from "@spark/schema";
 import { enumValues } from "@spark/common";
 
 import { pgTable, text, timestamp, numeric, jsonb, uniqueIndex, index } from "drizzle-orm/pg-core";
@@ -28,7 +28,7 @@ export const truelayerOauthStates = pgTable("truelayer_oauth_states", {
   encryptedRefreshToken: text("encrypted_refresh_token"),
   tokenKeyId: text("token_key_id"),
   tokenExpiresAt: timestamp("token_expires_at", { withTimezone: true }),
-  accounts: jsonb("accounts").$type<Account[]>(),
+  accounts: jsonb("accounts").$type<TrueLayerAccount[]>(),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });

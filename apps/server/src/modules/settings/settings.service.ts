@@ -1,6 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import type { Database } from "@spark/db";
 import { eq } from "@spark/db";
+import type { UpdateNotificationPreferencesInput, UpdateUserPreferencesInput } from "@spark/schema";
 import { notificationPreferences, userPreferences } from "@spark/db/schema";
 import { DATABASE_CONNECTION } from "../database/constants";
 
@@ -28,15 +29,7 @@ export class SettingsService {
     return prefs ?? { ...NOTIFICATION_DEFAULTS };
   }
 
-  async updateNotificationPreferences(
-    userId: string,
-    input: Partial<{
-      largeTransactions: boolean;
-      lowBalance: boolean;
-      budgetOverspend: boolean;
-      syncFailures: boolean;
-    }>,
-  ) {
+  async updateNotificationPreferences(userId: string, input: UpdateNotificationPreferencesInput) {
     const existing = await this.db.query.notificationPreferences.findFirst({
       where: eq(notificationPreferences.userId, userId),
     });
@@ -77,10 +70,7 @@ export class SettingsService {
       : { ...USER_PREFERENCES_DEFAULTS };
   }
 
-  async updateUserPreferences(
-    userId: string,
-    input: Partial<{ displayCurrency: string; theme: "system" | "light" | "dark" }>,
-  ) {
+  async updateUserPreferences(userId: string, input: UpdateUserPreferencesInput) {
     const existing = await this.db.query.userPreferences.findFirst({
       where: eq(userPreferences.userId, userId),
     });

@@ -1,52 +1,11 @@
 import { oc } from "@orpc/contract";
 import {
-  AccountNumberSchema,
-  AccountProviderSchema,
-  AccountTypeSchema,
-  CurrencySchema,
-} from "@spark/truelayer/schemas";
-import { SyncStatusSchema } from "@spark/common";
-import { z } from "zod";
-
-export const SavedAccountSchema = z.object({
-  id: z.string(),
-  accountId: z.string(),
-  accountType: AccountTypeSchema.nullable(),
-  displayName: z.string(),
-  currency: CurrencySchema,
-  accountNumber: AccountNumberSchema,
-  provider: AccountProviderSchema,
-  updatedAt: z.string(),
-  currentBalance: z.string().nullable(),
-  availableBalance: z.string().nullable(),
-  overdraft: z.string().nullable(),
-  balanceUpdatedAt: z.string().nullable(),
-  syncStatus: SyncStatusSchema,
-  lastSyncedAt: z.string().nullable(),
-});
-
-export const GetAccountsResponseSchema = z.object({
-  accounts: z.array(SavedAccountSchema),
-});
-
-export const UpdateAccountInputSchema = z.object({
-  id: z.string(),
-  displayName: z.string().optional(),
-});
-
-export const UpdateAccountResponseSchema = z.object({
-  account: SavedAccountSchema,
-});
-
-export const DeleteAccountInputSchema = z.object({
-  id: z.string(),
-});
-
-export const DeleteAccountResponseSchema = z.object({
-  success: z.boolean(),
-});
-
-export type Account = z.infer<typeof SavedAccountSchema>;
+  DeleteAccountInputSchema,
+  DeleteAccountResponseSchema,
+  GetAccountsResponseSchema,
+  UpdateAccountInputSchema,
+  UpdateAccountResponseSchema,
+} from "@spark/schema";
 
 export const accountsRouter = oc.router({
   list: oc

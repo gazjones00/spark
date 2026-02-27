@@ -1,4 +1,11 @@
-import { z } from "zod";
+import {
+  TrueLayerApiAccountsResponseSchema,
+  TrueLayerApiBalanceResponseSchema,
+  TrueLayerApiBalanceSchema,
+  TrueLayerApiTransactionsResponseSchema,
+  TrueLayerErrorResponseSchema,
+  TrueLayerTokenResponseSchema,
+} from "@spark/schema";
 import {
   type TrueLayerConfig,
   type GenerateAuthLinkOptions,
@@ -12,112 +19,9 @@ import {
   type Transaction,
   type GetBalanceOptions,
   type Balance,
-  Currency,
-  AccountType,
-  TransactionCategory,
-  TransactionType,
 } from "./types.ts";
 import { getEnvironmentUrls, DEFAULT_SCOPES, DEFAULT_PROVIDERS } from "./config.ts";
 import { TrueLayerError } from "./errors.ts";
-import { enumValues } from "@spark/common";
-
-const tokenResponseSchema = z.object({
-  access_token: z.string(),
-  expires_in: z.number(),
-  token_type: z.literal("Bearer"),
-  refresh_token: z.string().nullable().optional(),
-});
-
-const errorResponseSchema = z.object({
-  error: z.string(),
-  error_description: z.string().optional(),
-});
-
-const accountNumberSchema = z.object({
-  number: z.string().optional(),
-  sortCode: z.string().optional(),
-  swiftBic: z.string().optional(),
-  iban: z.string().optional(),
-  routingNumber: z.string().optional(),
-  bsb: z.string().optional(),
-});
-
-const accountProviderSchema = z.object({
-  provider_id: z.string().optional(),
-  logo_uri: z.string().optional(),
-  display_name: z.string().optional(),
-});
-
-const accountSchema = z.object({
-  update_timestamp: z.string(),
-  account_id: z.string(),
-  account_type: z.enum(enumValues(AccountType)).optional(),
-  display_name: z.string(),
-  currency: z.enum(enumValues(Currency)),
-  account_number: accountNumberSchema,
-  provider: accountProviderSchema,
-});
-
-const accountsResponseSchema = z.object({
-  results: z.array(accountSchema),
-  status: z.string(),
-});
-
-const runningBalanceSchema = z.object({
-  amount: z.number(),
-  currency: z.enum(enumValues(Currency)),
-});
-
-const transactionMetaSchema = z.object({
-  bank_transaction_id: z.string().optional(),
-  provider_transaction_category: z.string().optional(),
-  provider_reference: z.string().optional(),
-  provider_merchant_name: z.string().optional(),
-  provider_category: z.string().optional(),
-  address: z.string().optional(),
-  provider_id: z.string().optional(),
-  counter_party_preferred_name: z.string().optional(),
-  counter_party_iban: z.string().optional(),
-  user_comments: z.string().optional(),
-  debtor_account_name: z.string().optional(),
-  transaction_type: z.string().optional(),
-  provider_transaction_id: z.string().optional(),
-  provider_source: z.string().optional(),
-});
-
-const transactionSchema = z.object({
-  transaction_id: z.string(),
-  normalised_provider_transaction_id: z.string().optional(),
-  provider_transaction_id: z.string().optional(),
-  timestamp: z.string(),
-  description: z.string(),
-  amount: z.number(),
-  currency: z.enum(enumValues(Currency)),
-  transaction_type: z.enum(enumValues(TransactionType)),
-  transaction_category: z.enum(enumValues(TransactionCategory)),
-  transaction_classification: z.array(z.string()),
-  merchant_name: z.string().optional(),
-  running_balance: runningBalanceSchema.optional(),
-  meta: transactionMetaSchema.optional(),
-});
-
-const transactionsResponseSchema = z.object({
-  results: z.array(transactionSchema),
-  status: z.string(),
-});
-
-const balanceSchema = z.object({
-  currency: z.enum(enumValues(Currency)),
-  available: z.number().optional(),
-  current: z.number(),
-  overdraft: z.number().optional(),
-  update_timestamp: z.string().optional(),
-});
-
-const balanceResponseSchema = z.object({
-  results: z.array(balanceSchema),
-  status: z.string(),
-});
 
 export interface TrueLayerClient {
   generateAuthLink(options?: GenerateAuthLinkOptions): AuthLinkResult;
@@ -189,14 +93,14 @@ export function createTrueLayerClient(config: TrueLayerConfig): TrueLayerClient 
       const data = await response.json();
 
       if (!response.ok) {
-        const errorResult = errorResponseSchema.safeParse(data);
+        const errorResult = TrueLayerErrorResponseSchema.safeParse(data);
         if (errorResult.success) {
           throw TrueLayerError.fromResponse(errorResult.data);
         }
         throw new Error(`TrueLayer request failed: ${response.status}`);
       }
 
-      const result = tokenResponseSchema.parse(data);
+      const result = TrueLayerTokenResponseSchema.parse(data);
 
       return {
         accessToken: result.access_token,
@@ -226,14 +130,14 @@ export function createTrueLayerClient(config: TrueLayerConfig): TrueLayerClient 
       const data = await response.json();
 
       if (!response.ok) {
-        const errorResult = errorResponseSchema.safeParse(data);
+        const errorResult = TrueLayerErrorResponseSchema.safeParse(data);
         if (errorResult.success) {
           throw TrueLayerError.fromResponse(errorResult.data);
         }
         throw new Error(`TrueLayer request failed: ${response.status}`);
       }
 
-      const result = tokenResponseSchema.parse(data);
+      const result = TrueLayerTokenResponseSchema.parse(data);
 
       return {
         accessToken: result.access_token,
@@ -255,14 +159,14 @@ export function createTrueLayerClient(config: TrueLayerConfig): TrueLayerClient 
       const data = await response.json();
 
       if (!response.ok) {
-        const errorResult = errorResponseSchema.safeParse(data);
+        const errorResult = TrueLayerErrorResponseSchema.safeParse(data);
         if (errorResult.success) {
           throw TrueLayerError.fromResponse(errorResult.data);
         }
         throw new Error(`TrueLayer request failed: ${response.status}`);
       }
 
-      const result = accountsResponseSchema.parse(data);
+      const result = TrueLayerApiAccountsResponseSchema.parse(data);
 
       return result.results.map((account) => ({
         updateTimestamp: account.update_timestamp,
@@ -299,14 +203,14 @@ export function createTrueLayerClient(config: TrueLayerConfig): TrueLayerClient 
       const data = await response.json();
 
       if (!response.ok) {
-        const errorResult = errorResponseSchema.safeParse(data);
+        const errorResult = TrueLayerErrorResponseSchema.safeParse(data);
         if (errorResult.success) {
           throw TrueLayerError.fromResponse(errorResult.data);
         }
         throw new Error(`TrueLayer request failed: ${response.status}`);
       }
 
-      const result = transactionsResponseSchema.parse(data);
+      const result = TrueLayerApiTransactionsResponseSchema.parse(data);
 
       return result.results.map((transaction) => ({
         transactionId: transaction.transaction_id,
@@ -353,20 +257,20 @@ export function createTrueLayerClient(config: TrueLayerConfig): TrueLayerClient 
       const data = await response.json();
 
       if (!response.ok) {
-        const errorResult = errorResponseSchema.safeParse(data);
+        const errorResult = TrueLayerErrorResponseSchema.safeParse(data);
         if (errorResult.success) {
           throw TrueLayerError.fromResponse(errorResult.data);
         }
         throw new Error(`TrueLayer request failed: ${response.status}`);
       }
 
-      const result = balanceResponseSchema.parse(data);
+      const result = TrueLayerApiBalanceResponseSchema.parse(data);
 
       if (result.results.length === 0) {
         throw new Error("No balance data returned from TrueLayer");
       }
 
-      const balance = balanceSchema.parse(result.results[0]);
+      const balance = TrueLayerApiBalanceSchema.parse(result.results[0]);
 
       return {
         currency: balance.currency,

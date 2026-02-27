@@ -1,4 +1,10 @@
-import type { Account, Balance, Transaction } from "./schemas.ts";
+import type {
+  AccountsResponse as SchemaAccountsResponse,
+  AuthLinkResponse,
+  BalanceResponse as SchemaBalanceResponse,
+  TransactionsResponse as SchemaTransactionsResponse,
+  TrueLayerErrorResponse as SchemaTrueLayerErrorResponse,
+} from "@spark/schema";
 
 export type {
   Account,
@@ -44,10 +50,7 @@ export interface GenerateAuthLinkOptions {
   codeChallenge?: string;
 }
 
-export interface AuthLinkResult {
-  url: string;
-  state: string;
-}
+export type AuthLinkResult = AuthLinkResponse;
 
 export interface ExchangeCodeOptions {
   code: string;
@@ -80,30 +83,18 @@ export interface GetTransactionsOptions {
   to?: string;
 }
 
-export interface TransactionsResponse {
-  results: Transaction[];
-  status: string;
-}
+export type TransactionsResponse = SchemaTransactionsResponse;
 
-export interface AccountsResponse {
-  results: Account[];
-  status: string;
-}
+export type AccountsResponse = SchemaAccountsResponse;
 
 export interface GetBalanceOptions {
   accessToken: string;
   accountId: string;
 }
 
-export interface BalanceResponse {
-  results: Balance[];
-  status: string;
-}
+export type BalanceResponse = SchemaBalanceResponse;
 
-export interface TrueLayerErrorResponse {
-  error: string;
-  error_description?: string;
-}
+export type TrueLayerErrorResponse = SchemaTrueLayerErrorResponse;
 
 export type TrueLayerErrorCode =
   | "invalid_client"

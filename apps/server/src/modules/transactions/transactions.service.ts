@@ -1,6 +1,6 @@
 import { BadRequestException, Inject, Injectable } from "@nestjs/common";
-import type { ListTransactionsInput } from "@spark/orpc/contract";
 import { type Database, and, desc, eq, gte, lt, lte, or, sql } from "@spark/db";
+import type { ListTransactionsInput } from "@spark/schema";
 import { truelayerAccounts, truelayerTransactions } from "@spark/db/schema";
 import { DATABASE_CONNECTION } from "../database";
 

@@ -1,9 +1,9 @@
 import { truelayerAccounts } from "@spark/db/schema";
-import type { Account as SavedAccount } from "@spark/orpc/contract";
+import type { Account } from "@spark/schema";
 
 type DbAccount = typeof truelayerAccounts.$inferSelect;
 
-export const toAccountDto = (account: DbAccount): SavedAccount => ({
+export const toAccountDto = (account: DbAccount): Account => ({
   id: account.id,
   accountId: account.accountId,
   accountType: account.accountType,

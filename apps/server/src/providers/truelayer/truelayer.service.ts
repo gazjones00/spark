@@ -2,6 +2,13 @@ import { Inject, Injectable, UnauthorizedException } from "@nestjs/common";
 import { eq, and, gt, type Database } from "@spark/db";
 import { truelayerAccounts, truelayerOauthStates } from "@spark/db/schema";
 import { env } from "@spark/env/server";
+import type {
+  ExchangeCodeInput as ExchangeCodePayload,
+  ExchangeCodeResponse,
+  GenerateAuthLinkInput as GenerateAuthLinkPayload,
+  SaveAccountsInput as SaveAccountsPayload,
+  SaveAccountsResponse,
+} from "@spark/schema";
 import { SyncStatus } from "@spark/common";
 import { TruelayerClient } from "./truelayer.client";
 import { TruelayerConnectionService } from "./truelayer.connection.service";
@@ -13,31 +20,21 @@ import type { InitialSyncJobData } from "../../jobs/initial-sync.job";
 
 const STATE_EXPIRY_MINUTES = 10;
 
-export interface GenerateAuthLinkInput {
-  providerId?: string;
+export type GenerateAuthLinkInput = GenerateAuthLinkPayload & {
   userId: string;
-}
+};
 
-export interface ExchangeCodeInput {
-  code: string;
-  state: string;
+export type ExchangeCodeInput = ExchangeCodePayload & {
   userId: string;
-}
+};
 
-export interface ExchangeCodeResult {
-  state: string;
-  accounts: Awaited<ReturnType<TruelayerClient["getAccounts"]>>;
-}
+export type ExchangeCodeResult = ExchangeCodeResponse;
 
-export interface SaveAccountsInput {
-  state: string;
-  accountIds: string[];
+export type SaveAccountsInput = SaveAccountsPayload & {
   userId: string;
-}
+};
 
-export interface SaveAccountsResult {
-  savedCount: number;
-}
+export type SaveAccountsResult = SaveAccountsResponse;
 
 @Injectable()
 export class TruelayerService {

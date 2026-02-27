@@ -1,0 +1,25 @@
+{
+  "name": "@spark/schema",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./account": "./src/account.schema.ts",
+    "./health": "./src/health.schema.ts",
+    "./settings": "./src/settings.schema.ts",
+    "./sync-status": "./src/sync-status.schema.ts",
+    "./transaction": "./src/transaction.schema.ts",
+    "./truelayer": "./src/truelayer.schema.ts"
+  },
+  "scripts": {
+    "type:check": "tsc -b"
+  },
+  "dependencies": {
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@spark/config": "workspace:*",
+    "typescript": "catalog:"
+  }
+}

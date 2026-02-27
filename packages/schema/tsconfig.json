@@ -1,0 +1,12 @@
+{
+  "extends": "@spark/config/tsconfig.lib.json",
+  "compilerOptions": {
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "lib": ["ESNext"],
+    "emitDeclarationOnly": true,
+    "composite": true,
+    "strictNullChecks": true
+  },
+  "include": ["src/**/*"]
+}

@@ -37,10 +37,12 @@
         "@spark/crypto": "workspace:*",
         "@spark/db": "workspace:*",
         "@spark/orpc": "workspace:*",
+        "@spark/schema": "workspace:*",
         "@spark/truelayer": "workspace:*",
         "@thallesp/nestjs-better-auth": "^2.4.0",
         "bullmq": "^5.69.3",
         "ioredis": "^5.9.3",
+        "nestjs-zod": "^4.3.1",
         "reflect-metadata": "^0.2.2",
         "rxjs": "^7.8.2",
         "zod": "^4.3.6",
@@ -145,7 +147,7 @@
       "name": "@spark/common",
       "version": "0.0.0",
       "dependencies": {
-        "zod": "catalog:",
+        "@spark/schema": "workspace:*",
       },
       "devDependencies": {
         "@spark/config": "workspace:*",
@@ -170,7 +172,7 @@
         "@libsql/client": "^0.17.0",
         "@spark/common": "workspace:*",
         "@spark/env": "workspace:*",
-        "@spark/truelayer": "workspace:*",
+        "@spark/schema": "workspace:*",
         "dotenv": "catalog:",
         "drizzle-orm": "catalog:",
         "pg": "^8.16.3",
@@ -204,9 +206,18 @@
         "@orpc/contract": "^1.13.2",
         "@orpc/openapi-client": "^1.13.2",
         "@orpc/tanstack-query": "^1.13.2",
-        "@spark/common": "workspace:*",
         "@spark/env": "workspace:*",
-        "@spark/truelayer": "workspace:*",
+        "@spark/schema": "workspace:*",
+      },
+      "devDependencies": {
+        "@spark/config": "workspace:*",
+        "typescript": "catalog:",
+      },
+    },
+    "packages/schema": {
+      "name": "@spark/schema",
+      "version": "0.0.0",
+      "dependencies": {
         "zod": "catalog:",
       },
       "devDependencies": {
@@ -229,9 +240,7 @@
       "name": "@spark/truelayer",
       "version": "0.0.0",
       "dependencies": {
-        "@spark/common": "workspace:*",
-        "@spark/env": "workspace:*",
-        "zod": "catalog:",
+        "@spark/schema": "workspace:*",
       },
       "devDependencies": {
         "@spark/config": "workspace:*",
@@ -581,6 +590,8 @@
 
     "@neon-rs/load": ["@neon-rs/load@0.0.4", "", {}, "sha512-kTPhdZyTQxB+2wpiRcFWrDcejc4JI6tkPuS7UZCG4l6Zvc5kU/gGQ/ozvHTh1XR5tS+UlfAfGuPajjzQjCiHCw=="],
 
+    "@nest-zod/z": ["@nest-zod/z@2.0.0", "", { "peerDependencies": { "@nestjs/common": "^10.0.0 || ^11.0.0", "@nestjs/core": "^10.0.0 || ^11.0.0", "@nestjs/swagger": "^7.4.2 || ^8.0.0 || ^11.0.0", "zod": ">= 3.14.3" }, "optionalPeers": ["@nestjs/common", "@nestjs/core", "@nestjs/swagger"] }, "sha512-OqmJUZlpcx9ECzPYSIjaR/q/xLKrm9FkV+0FIWLEb9MVc9YeP21GmnQJBxE1dPRlLJ1kybNFBlt4D/PB8YAPkA=="],
+
     "@nestjs/bull-shared": ["@nestjs/bull-shared@11.0.4", "", { "dependencies": { "tslib": "2.8.1" }, "peerDependencies": { "@nestjs/common": "^10.0.0 || ^11.0.0", "@nestjs/core": "^10.0.0 || ^11.0.0" } }, "sha512-VBJcDHSAzxQnpcDfA0kt9MTGUD1XZzfByV70su0W0eDCQ9aqIEBlzWRW21tv9FG9dIut22ysgDidshdjlnczLw=="],
 
     "@nestjs/cli": ["@nestjs/cli@11.0.16", "", { "dependencies": { "@angular-devkit/core": "19.2.19", "@angular-devkit/schematics": "19.2.19", "@angular-devkit/schematics-cli": "19.2.19", "@inquirer/prompts": "7.10.1", "@nestjs/schematics": "^11.0.1", "ansis": "4.2.0", "chokidar": "4.0.3", "cli-table3": "0.6.5", "commander": "4.1.1", "fork-ts-checker-webpack-plugin": "9.1.0", "glob": "13.0.0", "node-emoji": "1.11.0", "ora": "5.4.1", "tsconfig-paths": "4.2.0", "tsconfig-paths-webpack-plugin": "4.2.0", "typescript": "5.9.3", "webpack": "5.104.1", "webpack-node-externals": "3.0.0" }, "peerDependencies": { "@swc/cli": "^0.1.62 || ^0.3.0 || ^0.4.0 || ^0.5.0 || ^0.6.0 || ^0.7.0", "@swc/core": "^1.3.62" }, "optionalPeers": ["@swc/cli", "@swc/core"], "bin": { "nest": "bin/nest.js" } }, "sha512-P0H+Vcjki6P5160E5QnMt3Q0X5FTg4PZkP99Ig4lm/4JWqfw32j3EXv3YBTJ2DmxLwOQ/IS9F7dzKpMAgzKTGg=="],
@@ -806,6 +817,8 @@
     "@spark/env": ["@spark/env@workspace:packages/env"],
 
     "@spark/orpc": ["@spark/orpc@workspace:packages/orpc"],
+
+    "@spark/schema": ["@spark/schema@workspace:packages/schema"],
 
     "@spark/server": ["@spark/server@workspace:apps/server"],
 
@@ -1848,6 +1861,8 @@
     "negotiator": ["negotiator@1.0.0", "", {}, "sha512-8Ofs/AUQh8MaEcrlq5xOX0CQ9ypTF5dl78mjlMNfOK08fzpgTHQRQPBxcPlEtIw0yRpws+Zo/3r+5WRby7u3Gg=="],
 
     "neo-async": ["neo-async@2.6.2", "", {}, "sha512-Yd3UES5mWCSqR+qNT93S3UoYUkqAZ9lLg8a7g9rimsWmYGK8cVToA4/sF3RrshdyV3sAGMXVUmpMYOw+dLpOuw=="],
+
+    "nestjs-zod": ["nestjs-zod@4.3.1", "", { "dependencies": { "@nest-zod/z": "*", "deepmerge": "^4.3.1" }, "peerDependencies": { "@nestjs/common": "^10.0.0 || ^11.0.0", "@nestjs/core": "^10.0.0 || ^11.0.0", "@nestjs/swagger": "^7.4.2 || ^8.0.0 || ^11.0.0", "zod": ">= 3.14.3" }, "optionalPeers": ["@nestjs/common", "@nestjs/core", "@nestjs/swagger"] }, "sha512-gl10NOf/AhWt4HLcnMI1J0WUlBCKyteJBftD6SwNyX71/vzAorr5MJQWiDJoPPkou9QL2CRHHBtyjr55o7++Xw=="],
 
     "next-themes": ["next-themes@0.4.6", "", { "peerDependencies": { "react": "^16.8 || ^17 || ^18 || ^19 || ^19.0.0-rc", "react-dom": "^16.8 || ^17 || ^18 || ^19 || ^19.0.0-rc" } }, "sha512-pZvgD5L0IEvX5/9GWyHMf3m8BKiVQwsCMHfoFosXtXBMnaS0ZnIJ9ST4b4NqLVKDEm8QBxoNNGNaBv2JNF6XNA=="],
 
