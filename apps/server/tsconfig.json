@@ -22,7 +22,9 @@
     "forceConsistentCasingInFileNames": true,
     "noImplicitAny": false,
     "strictBindCallApply": false,
-    "noFallthroughCasesInSwitch": false
+    "noFallthroughCasesInSwitch": false,
+    "allowImportingTsExtensions": true,
+    "emitDeclarationOnly": true
   },
   "references": [{ "path": "../../packages/orpc" }]
 }
