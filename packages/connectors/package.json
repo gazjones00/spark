@@ -1,0 +1,23 @@
+{
+  "name": "@spark/connectors",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./core": "./src/core/index.ts",
+    "./trading212": "./src/trading212/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "type:check": "tsc -b"
+  },
+  "dependencies": {
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@spark/config": "workspace:*",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

@@ -158,6 +158,18 @@
       "name": "@spark/config",
       "version": "0.0.0",
     },
+    "packages/connectors": {
+      "name": "@spark/connectors",
+      "version": "0.0.0",
+      "dependencies": {
+        "zod": "catalog:",
+      },
+      "devDependencies": {
+        "@spark/config": "workspace:*",
+        "typescript": "catalog:",
+        "vitest": "catalog:",
+      },
+    },
     "packages/crypto": {
       "name": "@spark/crypto",
       "version": "0.0.0",
@@ -809,6 +821,8 @@
     "@spark/common": ["@spark/common@workspace:packages/common"],
 
     "@spark/config": ["@spark/config@workspace:packages/config"],
+
+    "@spark/connectors": ["@spark/connectors@workspace:packages/connectors"],
 
     "@spark/crypto": ["@spark/crypto@workspace:packages/crypto"],
 
