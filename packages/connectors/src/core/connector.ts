@@ -33,6 +33,7 @@ export interface ConnectorSyncContext {
   environment: string;
   credentials: Record<string, string>;
   cursors?: readonly ConnectorCursor[];
+  metadata?: Record<string, unknown>;
   requestedAt?: Date;
 }
 

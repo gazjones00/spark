@@ -26,5 +26,5 @@
     "allowImportingTsExtensions": true,
     "emitDeclarationOnly": true
   },
-  "references": [{ "path": "../../packages/orpc" }]
+  "references": [{ "path": "../../packages/connectors" }, { "path": "../../packages/orpc" }]
 }

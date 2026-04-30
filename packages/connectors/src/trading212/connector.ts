@@ -1,12 +1,18 @@
 import {
   emptyConnectorSyncResult,
   ConnectorAuthError,
+  FinancialAccountType,
   type ConnectorSyncContext,
   type ConnectorSyncResult,
   type FinancialConnector,
 } from "../core/index.ts";
 import { Trading212Client, type Trading212Credentials } from "./client.ts";
-import { TRADING212_MANIFEST, TRADING212_PROVIDER_ID } from "./constants.ts";
+import {
+  TRADING212_ENVIRONMENTS,
+  TRADING212_MANIFEST,
+  TRADING212_PROVIDER_ID,
+  type Trading212Environment,
+} from "./constants.ts";
 import {
   createTrading212RawRecord,
   trading212CashTransactionCheckpoint,
@@ -15,7 +21,7 @@ import {
   trading212DividendExternalId,
   trading212HistoricalOrderCheckpoint,
   trading212HistoricalOrderExternalId,
-  mapTrading212Account,
+  mapTrading212AccountWithType,
   mapTrading212BalanceSnapshot,
   mapTrading212CashTransaction,
   mapTrading212DividendTransaction,
@@ -65,7 +71,7 @@ export class Trading212Connector implements FinancialConnector {
       trading212CashTransactionCheckpoint,
     );
 
-    result.accounts.push(mapTrading212Account(accountSummary));
+    result.accounts.push(mapTrading212AccountWithType(accountSummary, this.accountType(context)));
     result.balanceSnapshots.push(mapTrading212BalanceSnapshot(accountSummary, observedAt));
     result.portfolioSnapshots.push(mapTrading212PortfolioSnapshot(accountSummary, observedAt));
 
@@ -148,10 +154,12 @@ export class Trading212Connector implements FinancialConnector {
 
   private client(context: ConnectorSyncContext): Trading212Client {
     const credentials = this.credentials(context);
-    return new Trading212Client({
-      ...credentials,
-      environment: context.environment === "live" ? "live" : "demo",
-    });
+    if (!isTrading212Environment(context.environment)) {
+      throw new ConnectorAuthError(
+        `Trading 212 does not support the ${context.environment} environment.`,
+      );
+    }
+    return new Trading212Client({ ...credentials, environment: context.environment });
   }
 
   private credentials(context: ConnectorSyncContext): Trading212Credentials {
@@ -161,6 +169,12 @@ export class Trading212Connector implements FinancialConnector {
       throw new ConnectorAuthError("Trading 212 requires apiKey and apiSecret credentials.");
     }
     return { apiKey, apiSecret };
+  }
+
+  private accountType(context: ConnectorSyncContext): FinancialAccountType {
+    return context.metadata?.accountType === FinancialAccountType.StocksIsa
+      ? FinancialAccountType.StocksIsa
+      : FinancialAccountType.Invest;
   }
 
   private async collectPages<T>(
@@ -241,4 +255,8 @@ function maxCheckpoint(values: Array<string | null>): string | null {
     return null;
   }
   return normalized.sort().at(-1) ?? null;
+}
+
+function isTrading212Environment(environment: string): environment is Trading212Environment {
+  return environment in TRADING212_ENVIRONMENTS;
 }

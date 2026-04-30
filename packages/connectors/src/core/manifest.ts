@@ -45,6 +45,24 @@ export const ConnectorResourceSchema = z.object({
   syncMode: z.enum(["FULL_REFRESH", "INCREMENTAL", "SNAPSHOT"]),
 });
 
+export const ConnectorConnectionOptionSchema = z.object({
+  key: z.string().min(1),
+  label: z.string().min(1),
+  type: z.enum(["text", "select"]),
+  required: z.boolean().default(false),
+  description: z.string().optional(),
+  defaultValue: z.string().optional(),
+  options: z
+    .array(
+      z.object({
+        value: z.string().min(1),
+        label: z.string().min(1),
+      }),
+    )
+    .readonly()
+    .optional(),
+});
+
 export const ConnectorManifestSchema = z.object({
   id: z.string().min(1),
   displayName: z.string().min(1),
@@ -53,6 +71,7 @@ export const ConnectorManifestSchema = z.object({
   readOnly: z.boolean(),
   auth: ConnectorAuthSchema,
   environments: z.array(ConnectorEnvironmentSchema).min(1).readonly(),
+  connectionOptions: z.array(ConnectorConnectionOptionSchema).readonly().default([]),
   capabilities: ConnectorCapabilitiesSchema,
   resources: z.array(ConnectorResourceSchema).readonly(),
   knownLimitations: z.array(z.string()).readonly().default([]),
@@ -63,5 +82,6 @@ export type ConnectorAuthType = z.infer<typeof ConnectorAuthTypeSchema>;
 export type ConnectorAuthField = z.infer<typeof ConnectorAuthFieldSchema>;
 export type ConnectorAuth = z.infer<typeof ConnectorAuthSchema>;
 export type ConnectorEnvironment = z.infer<typeof ConnectorEnvironmentSchema>;
+export type ConnectorConnectionOption = z.infer<typeof ConnectorConnectionOptionSchema>;
 export type ConnectorResource = z.infer<typeof ConnectorResourceSchema>;
 export type ConnectorManifest = z.infer<typeof ConnectorManifestSchema>;

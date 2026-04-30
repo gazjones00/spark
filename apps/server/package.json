@@ -31,6 +31,7 @@
     "@orpc/nest": "^1.13.5",
     "@spark/auth": "workspace:*",
     "@spark/common": "workspace:*",
+    "@spark/connectors": "workspace:*",
     "@spark/crypto": "workspace:*",
     "@spark/db": "workspace:*",
     "@spark/orpc": "workspace:*",

@@ -37,11 +37,18 @@ export function trading212InstrumentExternalId(ticker: string): string {
 }
 
 export function mapTrading212Account(accountSummary: Trading212AccountSummary): FinancialAccount {
+  return mapTrading212AccountWithType(accountSummary, FinancialAccountType.Invest);
+}
+
+export function mapTrading212AccountWithType(
+  accountSummary: Trading212AccountSummary,
+  accountType: FinancialAccountType,
+): FinancialAccount {
   return FinancialAccountSchema.parse({
     externalId: trading212AccountExternalId(accountSummary),
     providerId: TRADING212_PROVIDER_ID,
     providerName: TRADING212_DISPLAY_NAME,
-    type: FinancialAccountType.Invest,
+    type: accountType,
     displayName: `${TRADING212_DISPLAY_NAME} ${accountSummary.id}`,
     currency: accountSummary.currency,
     metadata: {

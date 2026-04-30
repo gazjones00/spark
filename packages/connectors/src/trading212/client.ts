@@ -49,8 +49,16 @@ export class Trading212Client {
   private readonly credentials: Trading212Credentials;
 
   constructor(config: Trading212ClientConfig) {
-    const environment = config.environment ?? "demo";
-    this.baseUrl = (config.baseUrl ?? TRADING212_ENVIRONMENTS[environment]).replace(/\/$/, "");
+    const baseUrl =
+      config.baseUrl ??
+      (config.environment ? TRADING212_ENVIRONMENTS[config.environment] : undefined);
+    if (!baseUrl) {
+      throw new ConnectorError(
+        "Trading 212 client requires an environment or baseUrl.",
+        "CONNECTOR_CONFIG_ERROR",
+      );
+    }
+    this.baseUrl = baseUrl.replace(/\/$/, "");
     this.fetchFn = config.fetch ?? fetch;
     this.credentials = {
       apiKey: config.apiKey,
@@ -168,7 +176,15 @@ export class Trading212Client {
 
   private url(path: string): string {
     if (path.startsWith("http://") || path.startsWith("https://")) {
-      return path;
+      const url = new URL(path);
+      const baseUrl = new URL(this.baseUrl);
+      if (url.origin !== baseUrl.origin) {
+        throw new ConnectorError(
+          "Trading 212 pagination URL origin did not match the configured API origin.",
+          "CONNECTOR_INVALID_NEXT_PAGE_URL",
+        );
+      }
+      return url.toString();
     }
 
     if (path.startsWith("/api/v0/")) {

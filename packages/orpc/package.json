@@ -15,6 +15,7 @@
     "@orpc/contract": "^1.13.2",
     "@orpc/openapi-client": "^1.13.2",
     "@orpc/tanstack-query": "^1.13.2",
+    "@spark/connectors": "workspace:*",
     "@spark/env": "workspace:*",
     "@spark/schema": "workspace:*"
   },

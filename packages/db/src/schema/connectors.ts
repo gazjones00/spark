@@ -99,6 +99,7 @@ export const rawProviderRecords = pgTable(
       table.connectionId,
       table.resource,
       table.externalId,
+      table.observedAt,
     ),
     index("raw_provider_records_connection_id_idx").on(table.connectionId),
   ],
@@ -241,6 +242,11 @@ export const balanceSnapshots = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
+    uniqueIndex("balance_snapshots_connection_account_observed_idx").on(
+      table.connectionId,
+      table.accountExternalId,
+      table.observedAt,
+    ),
     index("balance_snapshots_connection_observed_idx").on(table.connectionId, table.observedAt),
   ],
 );
@@ -266,6 +272,11 @@ export const portfolioSnapshots = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
+    uniqueIndex("portfolio_snapshots_connection_account_observed_idx").on(
+      table.connectionId,
+      table.accountExternalId,
+      table.observedAt,
+    ),
     index("portfolio_snapshots_connection_observed_idx").on(table.connectionId, table.observedAt),
   ],
 );

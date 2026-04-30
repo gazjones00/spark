@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ConnectorAuthError, ConnectorError } from "../core/index.ts";
 import { Trading212Client } from "./client.ts";
 import {
@@ -48,6 +48,26 @@ describe("Trading212Client", () => {
     expect(requestedUrls[0]).toBe(
       "https://example.test/api/v0/equity/history/orders?limit=50&cursor=abc",
     );
+  });
+
+  it("rejects absolute pagination URLs from a different origin before sending auth", async () => {
+    const fetchMock = vi.fn() as unknown as typeof fetch;
+    const client = new Trading212Client({
+      apiKey: "key",
+      apiSecret: "secret",
+      baseUrl: "https://example.test/api/v0",
+      fetch: fetchMock,
+    });
+
+    await expect(
+      client.getHistoricalOrders({
+        nextPagePath: "https://attacker.test/api/v0/equity/history/orders?cursor=abc",
+      }),
+    ).rejects.toMatchObject({
+      name: ConnectorError.name,
+      code: "CONNECTOR_INVALID_NEXT_PAGE_URL",
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("throws a connector error with the JSON parse cause for invalid JSON responses", async () => {

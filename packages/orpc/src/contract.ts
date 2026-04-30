@@ -1,6 +1,7 @@
 import { oc } from "@orpc/contract";
 
 import { accountsRouter } from "./contracts/accounts.ts";
+import { connectorsRouter } from "./contracts/connectors.ts";
 import { healthRoute } from "./contracts/health.ts";
 import { settingsRouter } from "./contracts/settings.ts";
 import { transactionsRouter } from "./contracts/transactions.ts";
@@ -10,6 +11,7 @@ export const contract = oc.router({
   health: healthRoute,
   truelayer: truelayerRouter,
   accounts: accountsRouter,
+  connectors: connectorsRouter,
   settings: settingsRouter,
   transactions: transactionsRouter,
 });
@@ -47,6 +49,17 @@ export {
   UserPreferencesSchema,
 } from "@spark/schema";
 
+export {
+  ConnectorManifestSchema,
+  CreateConnectorConnectionInputSchema,
+  CreateConnectorConnectionResponseSchema,
+  ListConnectorsResponseSchema,
+  SyncConnectorConnectionInputSchema,
+  SyncConnectorConnectionResponseSchema,
+  TestConnectorConnectionInputSchema,
+  TestConnectorConnectionResponseSchema,
+} from "@spark/connectors";
+
 export type {
   Account,
   ListTransactionsInput,
@@ -54,3 +67,14 @@ export type {
   SavedTransaction,
   TrueLayerAccount,
 } from "@spark/schema";
+
+export type {
+  ConnectorManifest,
+  CreateConnectorConnectionInput,
+  CreateConnectorConnectionResponse,
+  ListConnectorsResponse,
+  SyncConnectorConnectionInput,
+  SyncConnectorConnectionResponse,
+  TestConnectorConnectionInput,
+  TestConnectorConnectionResponse,
+} from "@spark/connectors";

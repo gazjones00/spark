@@ -55,7 +55,7 @@ export const truelayerAccounts = pgTable("truelayer_accounts", {
   accountId: text("account_id").notNull().unique(),
   connectionId: text("connection_id")
     .notNull()
-    .references(() => truelayerConnections.id),
+    .references(() => truelayerConnections.id, { onDelete: "cascade" }),
   userId: text("user_id")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),

@@ -1,4 +1,9 @@
-import { ConnectorCapability, FinancialProviderType, ConnectorAuthType } from "../core/index.ts";
+import {
+  ConnectorCapability,
+  ConnectorAuthType,
+  FinancialAccountType,
+  FinancialProviderType,
+} from "../core/index.ts";
 import type { ConnectorManifest } from "../core/index.ts";
 
 export const TRADING212_PROVIDER_ID = "trading212";
@@ -39,15 +44,28 @@ export const TRADING212_MANIFEST: ConnectorManifest = {
   environments: [
     {
       key: "demo",
-      label: "Demo",
+      label: "Paper Trading",
       baseUrl: TRADING212_ENVIRONMENTS.demo,
-      default: true,
+      default: false,
     },
     {
       key: "live",
       label: "Live",
       baseUrl: TRADING212_ENVIRONMENTS.live,
-      default: false,
+      default: true,
+    },
+  ],
+  connectionOptions: [
+    {
+      key: "accountType",
+      label: "Account type",
+      type: "select",
+      required: false,
+      defaultValue: FinancialAccountType.Invest,
+      options: [
+        { value: FinancialAccountType.Invest, label: "Invest" },
+        { value: FinancialAccountType.StocksIsa, label: "Stocks ISA" },
+      ],
     },
   ],
   capabilities: [
