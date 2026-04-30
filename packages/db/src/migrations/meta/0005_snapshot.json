@@ -110,12 +110,8 @@
           "name": "account_user_id_user_id_fk",
           "tableFrom": "account",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -202,12 +198,8 @@
           "name": "session_user_id_user_id_fk",
           "tableFrom": "session",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -217,9 +209,7 @@
         "session_token_unique": {
           "name": "session_token_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "token"
-          ]
+          "columns": ["token"]
         }
       },
       "policies": {},
@@ -283,9 +273,7 @@
         "user_email_unique": {
           "name": "user_email_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "email"
-          ]
+          "columns": ["email"]
         }
       },
       "policies": {},
@@ -499,12 +487,8 @@
           "name": "balance_snapshots_connection_id_connector_connections_id_fk",
           "tableFrom": "balance_snapshots",
           "tableTo": "connector_connections",
-          "columnsFrom": [
-            "connection_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["connection_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -632,12 +616,8 @@
           "name": "connector_connections_user_id_user_id_fk",
           "tableFrom": "connector_connections",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -725,12 +705,8 @@
           "name": "connector_sync_cursors_connection_id_connector_connections_id_fk",
           "tableFrom": "connector_sync_cursors",
           "tableTo": "connector_connections",
-          "columnsFrom": [
-            "connection_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["connection_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -852,12 +828,8 @@
           "name": "connector_sync_runs_connection_id_connector_connections_id_fk",
           "tableFrom": "connector_sync_runs",
           "tableTo": "connector_connections",
-          "columnsFrom": [
-            "connection_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["connection_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -865,12 +837,8 @@
           "name": "connector_sync_runs_user_id_user_id_fk",
           "tableFrom": "connector_sync_runs",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -998,12 +966,8 @@
           "name": "financial_accounts_connection_id_connector_connections_id_fk",
           "tableFrom": "financial_accounts",
           "tableTo": "connector_connections",
-          "columnsFrom": [
-            "connection_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["connection_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1011,12 +975,8 @@
           "name": "financial_accounts_user_id_user_id_fk",
           "tableFrom": "financial_accounts",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1234,12 +1194,8 @@
           "name": "financial_transactions_connection_id_connector_connections_id_fk",
           "tableFrom": "financial_transactions",
           "tableTo": "connector_connections",
-          "columnsFrom": [
-            "connection_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["connection_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1402,12 +1358,8 @@
           "name": "holdings_connection_id_connector_connections_id_fk",
           "tableFrom": "holdings",
           "tableTo": "connector_connections",
-          "columnsFrom": [
-            "connection_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["connection_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1698,12 +1650,8 @@
           "name": "portfolio_snapshots_connection_id_connector_connections_id_fk",
           "tableFrom": "portfolio_snapshots",
           "tableTo": "connector_connections",
-          "columnsFrom": [
-            "connection_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["connection_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1823,12 +1771,8 @@
           "name": "raw_provider_records_connection_id_connector_connections_id_fk",
           "tableFrom": "raw_provider_records",
           "tableTo": "connector_connections",
-          "columnsFrom": [
-            "connection_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["connection_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1968,12 +1912,8 @@
           "name": "truelayer_accounts_connection_id_truelayer_connections_id_fk",
           "tableFrom": "truelayer_accounts",
           "tableTo": "truelayer_connections",
-          "columnsFrom": [
-            "connection_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["connection_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1981,12 +1921,8 @@
           "name": "truelayer_accounts_user_id_user_id_fk",
           "tableFrom": "truelayer_accounts",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1996,9 +1932,7 @@
         "truelayer_accounts_account_id_unique": {
           "name": "truelayer_accounts_account_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "account_id"
-          ]
+          "columns": ["account_id"]
         }
       },
       "policies": {},
@@ -2082,12 +2016,8 @@
           "name": "truelayer_connections_user_id_user_id_fk",
           "tableFrom": "truelayer_connections",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2170,12 +2100,8 @@
           "name": "truelayer_oauth_states_user_id_user_id_fk",
           "tableFrom": "truelayer_oauth_states",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2323,12 +2249,8 @@
           "name": "truelayer_transactions_account_id_truelayer_accounts_account_id_fk",
           "tableFrom": "truelayer_transactions",
           "tableTo": "truelayer_accounts",
-          "columnsFrom": [
-            "account_id"
-          ],
-          "columnsTo": [
-            "account_id"
-          ],
+          "columnsFrom": ["account_id"],
+          "columnsTo": ["account_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2384,12 +2306,8 @@
           "name": "notification_preferences_user_id_user_id_fk",
           "tableFrom": "notification_preferences",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2432,12 +2350,8 @@
           "name": "user_preferences_user_id_user_id_fk",
           "tableFrom": "user_preferences",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2453,11 +2367,7 @@
     "public.theme": {
       "name": "theme",
       "schema": "public",
-      "values": [
-        "system",
-        "light",
-        "dark"
-      ]
+      "values": ["system", "light", "dark"]
     }
   },
   "schemas": {},
