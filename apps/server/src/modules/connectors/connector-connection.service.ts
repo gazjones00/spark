@@ -15,12 +15,15 @@ import {
 } from "@spark/connectors";
 import { and, eq, type Database } from "@spark/db";
 import { connectorConnections } from "@spark/db/schema";
+import type { SyncStatusType } from "@spark/common";
 import { CryptoService } from "../crypto";
 import { DATABASE_CONNECTION } from "../database";
 import { Jobs, MessageQueue } from "../message-queue";
 import type { MessageQueueService } from "../message-queue";
 import { ConnectorRegistryService } from "./connector-registry.service";
 import { ConnectorSyncService } from "./connector-sync.service";
+
+const INITIAL_SYNC_RESERVATION_MINUTES = 5;
 
 export interface CreateConnectorConnectionInput {
   userId: string;
@@ -45,7 +48,11 @@ export interface ConnectorConnectionSummary {
   environment: string;
   capabilities: string[];
   metadata: Record<string, unknown>;
+  syncStatus: SyncStatusType;
   lastSyncedAt: Date | null;
+  nextSyncAt: Date;
+  lastSyncErrorCode: string | null;
+  lastSyncErrorMessage: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -88,6 +95,7 @@ export class ConnectorConnectionService {
         credentialKeyId: keyId,
         capabilities: [...manifest.capabilities],
         metadata,
+        nextSyncAt: addMinutes(now, INITIAL_SYNC_RESERVATION_MINUTES),
         createdAt: now,
         updatedAt: now,
       })
@@ -256,7 +264,11 @@ export class ConnectorConnectionService {
       environment: row.environment,
       capabilities: row.capabilities,
       metadata: row.metadata,
+      syncStatus: row.syncStatus,
       lastSyncedAt: row.lastSyncedAt,
+      nextSyncAt: row.nextSyncAt,
+      lastSyncErrorCode: row.lastSyncErrorCode,
+      lastSyncErrorMessage: row.lastSyncErrorMessage,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     };
@@ -294,4 +306,8 @@ export class ConnectorConnectionService {
       );
     }
   }
+}
+
+function addMinutes(date: Date, minutes: number): Date {
+  return new Date(date.getTime() + minutes * 60 * 1000);
 }

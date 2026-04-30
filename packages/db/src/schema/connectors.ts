@@ -8,6 +8,8 @@ import {
   index,
   integer,
 } from "drizzle-orm/pg-core";
+import { enumValues, SyncStatus } from "@spark/common";
+import type { SyncStatusType } from "@spark/common";
 import { user } from "./auth.ts";
 
 export const connectorConnections = pgTable(
@@ -24,13 +26,21 @@ export const connectorConnections = pgTable(
     credentialKeyId: text("credential_key_id").notNull(),
     capabilities: jsonb("capabilities").$type<string[]>().notNull(),
     metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default({}),
+    syncStatus: text("sync_status", { enum: enumValues(SyncStatus) })
+      .$type<SyncStatusType>()
+      .notNull()
+      .default(SyncStatus.OK),
     lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }),
+    nextSyncAt: timestamp("next_sync_at", { withTimezone: true }).notNull().defaultNow(),
+    lastSyncErrorCode: text("last_sync_error_code"),
+    lastSyncErrorMessage: text("last_sync_error_message"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
     index("connector_connections_user_id_idx").on(table.userId),
     index("connector_connections_provider_id_idx").on(table.providerId),
+    index("connector_connections_next_sync_idx").on(table.syncStatus, table.nextSyncAt),
   ],
 );
 

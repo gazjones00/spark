@@ -60,7 +60,11 @@ export const ConnectorConnectionSummarySchema = z
     environment: z.string().min(1),
     capabilities: z.array(z.string().min(1)),
     metadata: z.record(z.string(), z.unknown()),
+    syncStatus: z.enum(["OK", "NEEDS_REAUTH", "ERROR"]),
     lastSyncedAt: z.iso.datetime().nullable(),
+    nextSyncAt: z.iso.datetime(),
+    lastSyncErrorCode: z.string().nullable(),
+    lastSyncErrorMessage: z.string().nullable(),
     createdAt: z.iso.datetime(),
     updatedAt: z.iso.datetime(),
   })

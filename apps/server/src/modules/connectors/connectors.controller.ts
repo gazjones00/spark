@@ -62,6 +62,7 @@ export class ConnectorsController {
         connections: connections.map((connection) => ({
           ...connection,
           lastSyncedAt: connection.lastSyncedAt?.toISOString() ?? null,
+          nextSyncAt: connection.nextSyncAt.toISOString(),
           createdAt: connection.createdAt.toISOString(),
           updatedAt: connection.updatedAt.toISOString(),
         })),

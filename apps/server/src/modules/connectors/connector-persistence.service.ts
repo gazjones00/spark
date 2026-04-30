@@ -1,5 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 import type { ConnectorSyncResult } from "@spark/connectors";
+import { SyncStatus } from "@spark/common";
 import { eq, type Database } from "@spark/db";
 import {
   balanceSnapshots,
@@ -14,6 +15,9 @@ import {
   rawProviderRecords,
 } from "@spark/db/schema";
 import { DATABASE_CONNECTION } from "../database";
+
+const CONNECTOR_SYNC_INTERVAL_MINUTES = 5;
+const FAILED_CONNECTOR_RETRY_MINUTES = 30;
 
 export interface PersistConnectorSyncResultInput {
   userId: string;
@@ -56,18 +60,10 @@ export class ConnectorPersistenceService {
     recordsWritten += await this.persistPortfolioSnapshots(db, input);
     recordsWritten += await this.persistCursors(db, input, now);
 
-    if (input.result.status !== "failed") {
-      await db
-        .update(connectorConnections)
-        .set({
-          lastSyncedAt: now,
-          updatedAt: now,
-        })
-        .where(eq(connectorConnections.id, input.connectionId));
-    }
+    const firstError = input.result.errors.at(0);
+    await this.updateConnectionSyncState(db, input, now, firstError);
 
     const syncRunId = crypto.randomUUID();
-    const firstError = input.result.errors.at(0);
     await db.insert(connectorSyncRuns).values({
       id: syncRunId,
       connectionId: input.connectionId,
@@ -87,6 +83,43 @@ export class ConnectorPersistenceService {
       recordsRead: input.result.rawRecords.length,
       recordsWritten,
     };
+  }
+
+  private async updateConnectionSyncState(
+    db: ConnectorPersistenceDb,
+    input: PersistConnectorSyncResultInput,
+    now: Date,
+    firstError: { code: string; message: string } | undefined,
+  ): Promise<void> {
+    const nextSyncAt =
+      input.result.status === "failed"
+        ? addMinutes(now, FAILED_CONNECTOR_RETRY_MINUTES)
+        : addMinutes(now, CONNECTOR_SYNC_INTERVAL_MINUTES);
+    const state =
+      input.result.status === "failed"
+        ? {
+            syncStatus:
+              firstError?.code === "CONNECTOR_AUTH_ERROR"
+                ? SyncStatus.NEEDS_REAUTH
+                : SyncStatus.ERROR,
+            nextSyncAt,
+            lastSyncErrorCode: firstError?.code ?? null,
+            lastSyncErrorMessage: firstError?.message ?? null,
+            updatedAt: now,
+          }
+        : {
+            syncStatus: SyncStatus.OK,
+            lastSyncedAt: now,
+            nextSyncAt,
+            lastSyncErrorCode: null,
+            lastSyncErrorMessage: null,
+            updatedAt: now,
+          };
+
+    await db
+      .update(connectorConnections)
+      .set(state)
+      .where(eq(connectorConnections.id, input.connectionId));
   }
 
   private async persistRawRecords(
@@ -432,4 +465,8 @@ export class ConnectorPersistenceService {
 
 function decimalString(value: number | null): string | null {
   return value === null ? null : value.toString();
+}
+
+function addMinutes(date: Date, minutes: number): Date {
+  return new Date(date.getTime() + minutes * 60 * 1000);
 }
