@@ -84,9 +84,7 @@ export const DeleteConnectorConnectionInputSchema = z
   })
   .meta({ id: "DeleteConnectorConnectionInput" });
 
-export type DeleteConnectorConnectionInput = z.infer<
-  typeof DeleteConnectorConnectionInputSchema
->;
+export type DeleteConnectorConnectionInput = z.infer<typeof DeleteConnectorConnectionInputSchema>;
 
 export const DeleteConnectorConnectionResponseSchema = z
   .object({
