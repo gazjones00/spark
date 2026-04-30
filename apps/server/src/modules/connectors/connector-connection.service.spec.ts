@@ -7,7 +7,7 @@ import {
 } from "@spark/connectors";
 import { chainMock, createMockDb } from "@spark/testing";
 import { describe, expect, it, vi } from "vitest";
-import { CryptoService } from "../crypto";
+import type { CryptoService } from "../crypto";
 import { Jobs } from "../message-queue";
 import type { MessageQueueService } from "../message-queue";
 import { ConnectorConnectionService } from "./connector-connection.service";
