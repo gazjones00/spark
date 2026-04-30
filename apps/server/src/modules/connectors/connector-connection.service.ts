@@ -3,6 +3,7 @@ import {
   Inject,
   Injectable,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
 } from "@nestjs/common";
 import {
@@ -16,6 +17,8 @@ import { and, eq, type Database } from "@spark/db";
 import { connectorConnections } from "@spark/db/schema";
 import { CryptoService } from "../crypto";
 import { DATABASE_CONNECTION } from "../database";
+import { Jobs, MessageQueue } from "../message-queue";
+import type { MessageQueueService } from "../message-queue";
 import { ConnectorRegistryService } from "./connector-registry.service";
 import { ConnectorSyncService } from "./connector-sync.service";
 
@@ -49,10 +52,13 @@ export interface ConnectorConnectionSummary {
 
 @Injectable()
 export class ConnectorConnectionService {
+  private readonly logger = new Logger(ConnectorConnectionService.name);
+
   constructor(
     private readonly registry: ConnectorRegistryService,
     private readonly syncService: ConnectorSyncService,
     private readonly cryptoService: CryptoService,
+    @Inject(`QUEUE_${MessageQueue.DEFAULT}`) private readonly queue: MessageQueueService,
     @Inject(DATABASE_CONNECTION) private readonly db: Database,
   ) {}
 
@@ -92,6 +98,8 @@ export class ConnectorConnectionService {
         `Failed to create connector connection for provider ${manifest.id} and user ${input.userId}.`,
       );
     }
+
+    await this.enqueueInitialSync(row.id, row.userId, now);
 
     return this.toSummary(row);
   }
@@ -252,5 +260,38 @@ export class ConnectorConnectionService {
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     };
+  }
+
+  private async enqueueInitialSync(
+    connectionId: string,
+    userId: string,
+    requestedAt: Date,
+  ): Promise<void> {
+    try {
+      await this.queue.add(
+        Jobs.ConnectorSync,
+        {
+          connectionId,
+          userId,
+          requestedAt: requestedAt.toISOString(),
+        },
+        {
+          jobId: `connector:${connectionId}:initial`,
+          attempts: 3,
+          backoff: {
+            type: "exponential",
+            delay: 60_000,
+          },
+          removeOnComplete: 1_000,
+          removeOnFail: 1_000,
+        },
+      );
+    } catch (error) {
+      this.logger.warn(
+        `Failed to enqueue initial connector sync for connection ${connectionId}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
   }
 }

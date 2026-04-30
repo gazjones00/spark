@@ -8,6 +8,8 @@ import {
 import { chainMock, createMockDb } from "@spark/testing";
 import { describe, expect, it, vi } from "vitest";
 import { CryptoService } from "../crypto";
+import { Jobs } from "../message-queue";
+import type { MessageQueueService } from "../message-queue";
 import { ConnectorConnectionService } from "./connector-connection.service";
 import { ConnectorRegistryService } from "./connector-registry.service";
 import { ConnectorSyncService } from "./connector-sync.service";
@@ -28,16 +30,20 @@ function createService() {
     getCurrentKeyId: vi.fn(() => "key-1"),
     encryptToString: vi.fn(async () => "encrypted-credentials"),
   };
+  const queue = {
+    add: vi.fn(async () => undefined),
+  };
   const db = createMockDb();
 
   const service = new ConnectorConnectionService(
     registry as unknown as ConnectorRegistryService,
     syncService as unknown as ConnectorSyncService,
     cryptoService as unknown as CryptoService,
+    queue as unknown as MessageQueueService,
     db as never,
   );
 
-  return { service, registry, syncService, cryptoService, db };
+  return { service, registry, syncService, cryptoService, queue, db };
 }
 
 describe("ConnectorConnectionService", () => {
@@ -71,7 +77,7 @@ describe("ConnectorConnectionService", () => {
   });
 
   it("verifies and stores only manifest-declared credentials", async () => {
-    const { service, syncService, cryptoService, db } = createService();
+    const { service, syncService, cryptoService, queue, db } = createService();
     const createdAt = new Date("2026-01-30T10:00:00Z");
     const row = {
       id: "connection-1",
@@ -123,6 +129,17 @@ describe("ConnectorConnectionService", () => {
       environment: "demo",
       metadata: { accountType: FinancialAccountType.StocksIsa },
     });
+    expect(queue.add).toHaveBeenCalledWith(
+      Jobs.ConnectorSync,
+      expect.objectContaining({
+        connectionId: "connection-1",
+        userId: "user-1",
+      }),
+      expect.objectContaining({
+        jobId: "connector:connection-1:initial",
+        attempts: 3,
+      }),
+    );
   });
 
   it("lists user connections without exposing encrypted credentials", async () => {

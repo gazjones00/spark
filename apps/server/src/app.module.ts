@@ -35,11 +35,11 @@ const messageQueueDriver = new BullMQDriver({
   imports: [
     DatabaseModule,
     CryptoModule,
+    MessageQueueModule.register({ driver: messageQueueDriver }),
     ConnectorsModule,
     AccountsModule,
     TransactionsModule,
     SettingsModule,
-    MessageQueueModule.register({ driver: messageQueueDriver }),
     BullBoardModule.forRoot(messageQueueDriver),
     // TODO: set up logger module and assign log: () => LoggerService
     AuthModule.forRoot({ auth }),

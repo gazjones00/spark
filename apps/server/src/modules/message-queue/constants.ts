@@ -9,6 +9,7 @@ export enum MessageQueue {
 
 export enum Jobs {
   AccountSync = "AccountSync",
+  ConnectorSync = "ConnectorSync",
   InitialSync = "InitialSync",
   PeriodicSync = "PeriodicSync",
 }
