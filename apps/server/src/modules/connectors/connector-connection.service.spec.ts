@@ -124,4 +124,74 @@ describe("ConnectorConnectionService", () => {
       metadata: { accountType: FinancialAccountType.StocksIsa },
     });
   });
+
+  it("lists user connections without exposing encrypted credentials", async () => {
+    const { service, db } = createService();
+    const createdAt = new Date("2026-01-30T10:00:00Z");
+    const row = {
+      id: "connection-1",
+      userId: "user-1",
+      providerId: TRADING212_PROVIDER_ID,
+      providerName: TRADING212_MANIFEST.displayName,
+      environment: "live",
+      encryptedCredentials: "encrypted-credentials",
+      credentialKeyId: "key-1",
+      capabilities: [...TRADING212_MANIFEST.capabilities],
+      metadata: { accountType: FinancialAccountType.Invest },
+      lastSyncedAt: null,
+      createdAt,
+      updatedAt: createdAt,
+    };
+    const chain = {
+      from: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      orderBy: vi.fn().mockResolvedValue([row]),
+    };
+    (db as unknown as { select: ReturnType<typeof vi.fn> }).select = vi.fn(() => chain);
+
+    const result = await service.listConnections("user-1");
+
+    expect(result).toEqual([
+      {
+        id: "connection-1",
+        providerId: TRADING212_PROVIDER_ID,
+        providerName: TRADING212_MANIFEST.displayName,
+        environment: "live",
+        capabilities: [...TRADING212_MANIFEST.capabilities],
+        metadata: { accountType: FinancialAccountType.Invest },
+        lastSyncedAt: null,
+        createdAt,
+        updatedAt: createdAt,
+      },
+    ]);
+    expect(JSON.stringify(result)).not.toContain("encrypted-credentials");
+    expect(chain.where).toHaveBeenCalledOnce();
+  });
+
+  it("deletes a connection scoped to the current user", async () => {
+    const { service, db } = createService();
+    const chain = {
+      where: vi.fn().mockReturnThis(),
+      returning: vi.fn().mockResolvedValue([{ id: "connection-1" }]),
+    };
+    (db as unknown as { delete: ReturnType<typeof vi.fn> }).delete = vi.fn(() => chain);
+
+    await expect(service.deleteConnection("user-1", "connection-1")).resolves.toBeUndefined();
+
+    expect(chain.where).toHaveBeenCalledOnce();
+    expect(chain.returning).toHaveBeenCalledOnce();
+  });
+
+  it("returns a 404 when deleting a missing connection", async () => {
+    const { service, db } = createService();
+    const chain = {
+      where: vi.fn().mockReturnThis(),
+      returning: vi.fn().mockResolvedValue([]),
+    };
+    (db as unknown as { delete: ReturnType<typeof vi.fn> }).delete = vi.fn(() => chain);
+
+    await expect(service.deleteConnection("user-1", "missing-connection")).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+  });
 });

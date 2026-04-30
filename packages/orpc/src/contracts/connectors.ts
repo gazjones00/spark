@@ -2,6 +2,9 @@ import { oc } from "@orpc/contract";
 import {
   CreateConnectorConnectionInputSchema,
   CreateConnectorConnectionResponseSchema,
+  DeleteConnectorConnectionInputSchema,
+  DeleteConnectorConnectionResponseSchema,
+  ListConnectorConnectionsResponseSchema,
   ListConnectorsResponseSchema,
   SyncConnectorConnectionInputSchema,
   SyncConnectorConnectionResponseSchema,
@@ -32,6 +35,21 @@ export const connectorsRouter = oc.router({
     })
     .input(CreateConnectorConnectionInputSchema)
     .output(CreateConnectorConnectionResponseSchema),
+
+  listConnections: oc
+    .route({
+      method: "GET",
+      path: "/connectors/connections",
+    })
+    .output(ListConnectorConnectionsResponseSchema),
+
+  deleteConnection: oc
+    .route({
+      method: "DELETE",
+      path: "/connectors/connections/{connectionId}",
+    })
+    .input(DeleteConnectorConnectionInputSchema)
+    .output(DeleteConnectorConnectionResponseSchema),
 
   syncConnection: oc
     .route({

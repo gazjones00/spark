@@ -52,6 +52,52 @@ export type CreateConnectorConnectionResponse = z.infer<
   typeof CreateConnectorConnectionResponseSchema
 >;
 
+export const ConnectorConnectionSummarySchema = z
+  .object({
+    id: z.uuid(),
+    providerId: z.string().min(1),
+    providerName: z.string().min(1),
+    environment: z.string().min(1),
+    capabilities: z.array(z.string().min(1)),
+    metadata: z.record(z.string(), z.unknown()),
+    lastSyncedAt: z.iso.datetime().nullable(),
+    createdAt: z.iso.datetime(),
+    updatedAt: z.iso.datetime(),
+  })
+  .meta({ id: "ConnectorConnectionSummary" });
+
+export type ConnectorConnectionSummary = z.infer<typeof ConnectorConnectionSummarySchema>;
+
+export const ListConnectorConnectionsResponseSchema = z
+  .object({
+    connections: z.array(ConnectorConnectionSummarySchema),
+  })
+  .meta({ id: "ListConnectorConnectionsResponse" });
+
+export type ListConnectorConnectionsResponse = z.infer<
+  typeof ListConnectorConnectionsResponseSchema
+>;
+
+export const DeleteConnectorConnectionInputSchema = z
+  .object({
+    connectionId: z.uuid(),
+  })
+  .meta({ id: "DeleteConnectorConnectionInput" });
+
+export type DeleteConnectorConnectionInput = z.infer<
+  typeof DeleteConnectorConnectionInputSchema
+>;
+
+export const DeleteConnectorConnectionResponseSchema = z
+  .object({
+    success: z.literal(true),
+  })
+  .meta({ id: "DeleteConnectorConnectionResponse" });
+
+export type DeleteConnectorConnectionResponse = z.infer<
+  typeof DeleteConnectorConnectionResponseSchema
+>;
+
 export const SyncConnectorConnectionInputSchema = z
   .object({
     connectionId: z.uuid(),

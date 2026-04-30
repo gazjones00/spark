@@ -54,6 +54,29 @@ export class ConnectorsController {
     });
   }
 
+  @Implement(contract.connectors.listConnections)
+  listConnections(@Session() session: UserSession) {
+    return implement(contract.connectors.listConnections).handler(async () => {
+      const connections = await this.connectionService.listConnections(session.user.id);
+      return {
+        connections: connections.map((connection) => ({
+          ...connection,
+          lastSyncedAt: connection.lastSyncedAt?.toISOString() ?? null,
+          createdAt: connection.createdAt.toISOString(),
+          updatedAt: connection.updatedAt.toISOString(),
+        })),
+      };
+    });
+  }
+
+  @Implement(contract.connectors.deleteConnection)
+  deleteConnection(@Session() session: UserSession) {
+    return implement(contract.connectors.deleteConnection).handler(async ({ input }) => {
+      await this.connectionService.deleteConnection(session.user.id, input.connectionId);
+      return { success: true as const };
+    });
+  }
+
   @Implement(contract.connectors.syncConnection)
   syncConnection(@Session() session: UserSession) {
     return implement(contract.connectors.syncConnection).handler(async ({ input }) => {
