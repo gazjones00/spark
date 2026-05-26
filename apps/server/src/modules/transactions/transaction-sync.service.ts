@@ -12,6 +12,12 @@ import { DATABASE_CONNECTION } from "../database";
 
 const DEFAULT_SYNC_DAYS = 7;
 const MAX_SYNC_DAYS = 90;
+/**
+ * Backoff applied to nextSyncAt when an account hits a transient ERROR, so the
+ * periodic scheduler retries it later instead of hammering a flaky connection
+ * every cron tick. NEEDS_REAUTH is terminal and not rescheduled.
+ */
+const ERROR_RETRY_MINUTES = 30;
 
 interface BaseSyncParams {
   accountId: string;
@@ -110,7 +116,14 @@ export class TransactionSyncService {
       );
       const status =
         error instanceof TokenExpiredError ? SyncStatus.NEEDS_REAUTH : SyncStatus.ERROR;
-      await this.updateSyncStatus(accountId, status);
+      // Push out the next attempt for transient errors so the scheduler retries
+      // with backoff rather than every 5 minutes. NEEDS_REAUTH genuinely needs
+      // user action, so it isn't rescheduled.
+      const nextSyncAt =
+        status === SyncStatus.ERROR
+          ? new Date(Date.now() + ERROR_RETRY_MINUTES * 60 * 1000)
+          : undefined;
+      await this.updateSyncStatus(accountId, status, undefined, nextSyncAt);
       throw error;
     }
   }
@@ -119,6 +132,7 @@ export class TransactionSyncService {
     accountId: string,
     status: SyncStatusType,
     lastSyncedAt?: Date,
+    nextSyncAt?: Date,
   ): Promise<void> {
     const now = new Date();
     await this.db
@@ -127,6 +141,7 @@ export class TransactionSyncService {
         syncStatus: status,
         updatedAt: now,
         ...(lastSyncedAt && { lastSyncedAt }),
+        ...(nextSyncAt && { nextSyncAt }),
       })
       .where(eq(truelayerAccounts.accountId, accountId));
   }

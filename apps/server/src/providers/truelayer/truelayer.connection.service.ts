@@ -66,6 +66,15 @@ export class TokenRefreshError extends Error {
 export class TruelayerConnectionService {
   private readonly logger = new Logger(TruelayerConnectionService.name);
 
+  /**
+   * In-flight token refreshes keyed by connection ID. TrueLayer rotates refresh
+   * tokens on use, so two concurrent refreshes with the same token cause the
+   * second to fail with invalid_grant. Sibling syncs (balance + transactions,
+   * or multiple accounts sharing one bank connection) frequently refresh in
+   * parallel, so we coalesce them onto a single refresh per connection.
+   */
+  private readonly inFlightRefreshes = new Map<string, Promise<string>>();
+
   constructor(
     private readonly truelayerClient: TruelayerClient,
     private readonly cryptoService: CryptoService,
@@ -154,6 +163,30 @@ export class TruelayerConnectionService {
       throw new TokenExpiredError(connectionId);
     }
 
+    const existing = this.inFlightRefreshes.get(connectionId);
+    if (existing) {
+      return existing;
+    }
+
+    const refresh = this.refreshAndPersist(connectionId).finally(() => {
+      this.inFlightRefreshes.delete(connectionId);
+    });
+    this.inFlightRefreshes.set(connectionId, refresh);
+    return refresh;
+  }
+
+  private async refreshAndPersist(connectionId: string): Promise<string> {
+    // Re-read the connection in case another worker refreshed while we waited;
+    // this also gives us the freshest refresh token to send.
+    const connection = await this.getConnection(connectionId);
+    if (connection.expiresAt >= new Date()) {
+      return connection.accessToken;
+    }
+
+    if (!connection.refreshToken) {
+      throw new TokenExpiredError(connectionId);
+    }
+
     this.logger.log(`Refreshing token for connection ${connectionId}`);
 
     let tokenResponse;
@@ -167,7 +200,10 @@ export class TruelayerConnectionService {
 
     await this.updateConnectionTokens(connectionId, {
       accessToken: tokenResponse.accessToken,
-      refreshToken: tokenResponse.refreshToken,
+      // OAuth (RFC 6749 §6): an omitted refresh token means keep the existing
+      // one. Never wipe a working refresh token just because the response
+      // didn't rotate it.
+      refreshToken: tokenResponse.refreshToken ?? connection.refreshToken,
       expiresAt: tokenResponse.expiresAt,
     });
 

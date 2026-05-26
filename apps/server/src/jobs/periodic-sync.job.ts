@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
-import { type Database, and, eq, inArray, lte, sql } from "@spark/db";
+import { type Database, and, inArray, lte, sql } from "@spark/db";
 import { truelayerAccounts } from "@spark/db/schema";
 import { SyncStatus } from "@spark/common";
 import { DATABASE_CONNECTION } from "../modules/database";
@@ -55,7 +55,10 @@ export class PeriodicSyncJob {
         .from(truelayerAccounts)
         .where(
           and(
-            eq(truelayerAccounts.syncStatus, SyncStatus.OK),
+            // OK accounts on their normal cadence, plus ERROR accounts whose
+            // backoff window (nextSyncAt) has elapsed — transient failures
+            // self-heal without a manual reconnect. NEEDS_REAUTH is terminal.
+            inArray(truelayerAccounts.syncStatus, [SyncStatus.OK, SyncStatus.ERROR]),
             lte(truelayerAccounts.nextSyncAt, now),
           ),
         )
