@@ -10,7 +10,7 @@ export interface InitialSyncJobData {
   accountType?: AccountType | null;
 }
 
-const HISTORICAL_DAYS = 90;
+export const HISTORICAL_DAYS = 90;
 
 @Processor(MessageQueue.DEFAULT)
 @Injectable()

@@ -6,6 +6,7 @@ import { BalanceService } from "../modules/accounts";
 import { DATABASE_CONNECTION } from "../modules/database";
 import { Jobs, MessageQueue, Process, Processor } from "../modules/message-queue";
 import { TransactionSyncService } from "../modules/transactions";
+import { HISTORICAL_DAYS } from "./initial-sync.job";
 
 export interface AccountSyncJobData {
   accountId: string;
@@ -47,10 +48,14 @@ export class AccountSyncJob {
         accountId,
         connectionId,
         accountType,
+        // A null lastSyncedAt means the account has never completed a sync
+        // (e.g. its initial sync failed and is now being retried via the
+        // ERROR backoff path), so fall back to the full initial-sync window
+        // rather than a short 7-day lookback that would drop days 8-90.
         ...(account?.lastSyncedAt
           ? { lastSyncedAt: account.lastSyncedAt }
           : {
-              daysToSync: 7,
+              daysToSync: HISTORICAL_DAYS,
             }),
       }),
     ]);
