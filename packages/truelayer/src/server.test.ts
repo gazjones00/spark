@@ -81,6 +81,41 @@ describe("createTrueLayerClient", () => {
     expect(accounts[1]?.accountNumber.number).toBe("1234");
   });
 
+  it("returns only bank accounts when the cards fetch fails", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/data/v1/accounts")) {
+        return Promise.resolve(
+          jsonResponse({
+            results: [
+              {
+                update_timestamp: "2026-01-01T00:00:00.000Z",
+                account_id: "account-id",
+                account_type: "TRANSACTION",
+                display_name: "Current Account",
+                currency: "GBP",
+                account_number: { number: "12345678", sortCode: "112233" },
+                provider: { provider_id: "bank", display_name: "Bank" },
+              },
+            ],
+            status: "Succeeded",
+          }),
+        );
+      }
+
+      return Promise.reject(new Error("cards request failed"));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const accounts = await client.getAccounts({ accessToken: "token" });
+
+    expect(accounts.map((account) => [account.accountId, account.accountType])).toEqual([
+      ["account-id", "TRANSACTION"],
+    ]);
+  });
+
   it("uses the card transaction endpoint and preserves cardNumber metadata", async () => {
     const fetchMock = vi.fn((_: RequestInfo | URL) =>
       Promise.resolve(

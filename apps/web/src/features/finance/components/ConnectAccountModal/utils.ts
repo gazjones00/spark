@@ -8,7 +8,8 @@ export function formatAccountNumber(account: Account): string | null {
     account.accountNumber.number &&
     (account.accountType === "CREDIT_CARD" || account.accountType === "CHARGE_CARD")
   ) {
-    return `Card ending ${account.accountNumber.number}`;
+    const lastFour = account.accountNumber.number.replace(/\D/g, "").slice(-4);
+    return `Card ending ••••${lastFour}`;
   }
   if (account.accountNumber.iban) {
     return `IBAN: ...${account.accountNumber.iban.slice(-4)}`;
