@@ -23,6 +23,7 @@ export function getEnvironmentUrls(environment: TrueLayerEnvironment): Environme
 export const DEFAULT_SCOPES: TrueLayerScope[] = [
   "info",
   "accounts",
+  "cards",
   "balance",
   "transactions",
   "offline_access",

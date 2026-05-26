@@ -259,6 +259,7 @@
       "devDependencies": {
         "@spark/config": "workspace:*",
         "typescript": "catalog:",
+        "vitest": "catalog:",
       },
     },
   },

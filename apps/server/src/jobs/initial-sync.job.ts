@@ -1,4 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
+import type { AccountType } from "@spark/schema";
 import { BalanceService } from "../modules/accounts";
 import { Jobs, MessageQueue, Process, Processor } from "../modules/message-queue";
 import { TransactionSyncService } from "../modules/transactions";
@@ -6,6 +7,7 @@ import { TransactionSyncService } from "../modules/transactions";
 export interface InitialSyncJobData {
   accountId: string;
   connectionId: string;
+  accountType?: AccountType | null;
 }
 
 const HISTORICAL_DAYS = 90;
@@ -22,7 +24,7 @@ export class InitialSyncJob {
 
   @Process(Jobs.InitialSync)
   async handle(data: InitialSyncJobData): Promise<void> {
-    const { accountId, connectionId } = data;
+    const { accountId, connectionId, accountType } = data;
 
     this.logger.log(`Starting initial sync for account ${accountId}`);
 
@@ -30,11 +32,13 @@ export class InitialSyncJob {
     await this.balanceService.syncBalance({
       accountId,
       connectionId,
+      accountType,
     });
 
     const count = await this.transactionSyncService.syncTransactions({
       accountId,
       connectionId,
+      accountType,
       daysToSync: HISTORICAL_DAYS,
     });
 

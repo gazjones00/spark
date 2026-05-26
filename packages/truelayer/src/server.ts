@@ -2,6 +2,7 @@ import {
   TrueLayerApiAccountsResponseSchema,
   TrueLayerApiBalanceResponseSchema,
   TrueLayerApiBalanceSchema,
+  TrueLayerApiCardsResponseSchema,
   TrueLayerApiTransactionsResponseSchema,
   TrueLayerErrorResponseSchema,
   TrueLayerTokenResponseSchema,
@@ -15,6 +16,7 @@ import {
   type RefreshTokenOptions,
   type GetAccountsOptions,
   type Account,
+  type AccountType,
   type GetTransactionsOptions,
   type Transaction,
   type GetBalanceOptions,
@@ -22,6 +24,16 @@ import {
 } from "./types.ts";
 import { getEnvironmentUrls, DEFAULT_SCOPES, DEFAULT_PROVIDERS } from "./config.ts";
 import { TrueLayerError } from "./errors.ts";
+
+type TrueLayerResourceType = "accounts" | "cards";
+
+function getResourceType(accountType?: AccountType | null): TrueLayerResourceType {
+  return accountType === "CREDIT_CARD" || accountType === "CHARGE_CARD" ? "cards" : "accounts";
+}
+
+function mapAccountTypeFromCardType(cardType: "CREDIT" | "CHARGE"): AccountType {
+  return cardType === "CHARGE" ? "CHARGE_CARD" : "CREDIT_CARD";
+}
 
 export interface TrueLayerClient {
   generateAuthLink(options?: GenerateAuthLinkOptions): AuthLinkResult;
@@ -149,26 +161,38 @@ export function createTrueLayerClient(config: TrueLayerConfig): TrueLayerClient 
     },
 
     async getAccounts(options: GetAccountsOptions): Promise<Account[]> {
-      const response = await fetch(`${urls.api}/data/v1/accounts`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${options.accessToken}`,
-        },
-      });
+      const [accountsResponse, cardsResponse] = await Promise.all([
+        fetch(`${urls.api}/data/v1/accounts`, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${options.accessToken}`,
+          },
+        }),
+        fetch(`${urls.api}/data/v1/cards`, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${options.accessToken}`,
+          },
+        }),
+      ]);
 
-      const data = await response.json();
+      const accountsData = await accountsResponse.json();
 
-      if (!response.ok) {
-        const errorResult = TrueLayerErrorResponseSchema.safeParse(data);
+      if (!accountsResponse.ok) {
+        const errorResult = TrueLayerErrorResponseSchema.safeParse(accountsData);
         if (errorResult.success) {
           throw TrueLayerError.fromResponse(errorResult.data);
         }
-        throw new Error(`TrueLayer request failed: ${response.status}`);
+        throw new Error(`TrueLayer request failed: ${accountsResponse.status}`);
       }
 
-      const result = TrueLayerApiAccountsResponseSchema.parse(data);
+      const accountsResult = TrueLayerApiAccountsResponseSchema.parse(accountsData);
+      const cardsData = cardsResponse.ok ? await cardsResponse.json() : { results: [] };
+      const cardsResult = cardsResponse.ok
+        ? TrueLayerApiCardsResponseSchema.parse(cardsData)
+        : { results: [] };
 
-      return result.results.map((account) => ({
+      const accounts = accountsResult.results.map((account) => ({
         updateTimestamp: account.update_timestamp,
         accountId: account.account_id,
         accountType: account.account_type,
@@ -181,10 +205,29 @@ export function createTrueLayerClient(config: TrueLayerConfig): TrueLayerClient 
           displayName: account.provider.display_name,
         },
       }));
+
+      const cards = cardsResult.results.map((card) => ({
+        updateTimestamp: card.update_timestamp,
+        accountId: card.account_id,
+        accountType: mapAccountTypeFromCardType(card.card_type),
+        displayName: card.display_name,
+        currency: card.currency,
+        accountNumber: {
+          number: card.partial_card_number,
+        },
+        provider: {
+          providerId: card.provider.provider_id,
+          logoUri: card.provider.logo_uri,
+          displayName: card.provider.display_name,
+        },
+      }));
+
+      return [...accounts, ...cards];
     },
 
     async getTransactions(options: GetTransactionsOptions): Promise<Transaction[]> {
-      const url = new URL(`${urls.api}/data/v1/accounts/${options.accountId}/transactions`);
+      const resourceType = getResourceType(options.accountType);
+      const url = new URL(`${urls.api}/data/v1/${resourceType}/${options.accountId}/transactions`);
 
       if (options.from) {
         url.searchParams.set("from", options.from);
@@ -241,18 +284,25 @@ export function createTrueLayerClient(config: TrueLayerConfig): TrueLayerClient 
               transactionType: transaction.meta.transaction_type,
               providerTransactionId: transaction.meta.provider_transaction_id,
               providerSource: transaction.meta.provider_source,
+              cardNumber: transaction.meta.cardNumber,
+              location: transaction.meta.location,
+              supplementaryCardId: transaction.meta.supplementary_card_id,
             }
           : undefined,
       }));
     },
 
     async getBalance(options: GetBalanceOptions): Promise<Balance> {
-      const response = await fetch(`${urls.api}/data/v1/accounts/${options.accountId}/balance`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${options.accessToken}`,
+      const resourceType = getResourceType(options.accountType);
+      const response = await fetch(
+        `${urls.api}/data/v1/${resourceType}/${options.accountId}/balance`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${options.accessToken}`,
+          },
         },
-      });
+      );
 
       const data = await response.json();
 
@@ -277,6 +327,11 @@ export function createTrueLayerClient(config: TrueLayerConfig): TrueLayerClient 
         available: balance.available,
         current: balance.current,
         overdraft: balance.overdraft,
+        creditLimit: balance.credit_limit,
+        lastStatementBalance: balance.last_statement_balance,
+        lastStatementDate: balance.last_statement_date,
+        paymentDue: balance.payment_due,
+        paymentDueDate: balance.payment_due_date,
         updateTimestamp: balance.update_timestamp,
       };
     },

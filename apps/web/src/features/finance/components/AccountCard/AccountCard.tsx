@@ -1,4 +1,4 @@
-import { Wallet, PiggyBank, Briefcase, Pencil, Trash2, RefreshCw } from "lucide-react";
+import { Wallet, PiggyBank, Briefcase, Pencil, Trash2, RefreshCw, CreditCard } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +14,8 @@ const accountTypeConfig: Record<AccountTypeType, { icon: typeof Wallet; label: s
   SAVINGS: { icon: PiggyBank, label: "Savings" },
   BUSINESS_TRANSACTION: { icon: Briefcase, label: "Business" },
   BUSINESS_SAVINGS: { icon: Briefcase, label: "Business Savings" },
+  CREDIT_CARD: { icon: CreditCard, label: "Credit Card" },
+  CHARGE_CARD: { icon: CreditCard, label: "Charge Card" },
 };
 
 function getAccountNumber(accountNumber: Account["accountNumber"]): string {

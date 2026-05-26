@@ -25,6 +25,8 @@ export const AccountType = {
   SAVINGS: "SAVINGS",
   BUSINESS_TRANSACTION: "BUSINESS_TRANSACTION",
   BUSINESS_SAVINGS: "BUSINESS_SAVINGS",
+  CREDIT_CARD: "CREDIT_CARD",
+  CHARGE_CARD: "CHARGE_CARD",
 } as const;
 
 export const Currency = {
@@ -45,6 +47,8 @@ export const AccountTypeSchema = z
     AccountType.SAVINGS,
     AccountType.BUSINESS_TRANSACTION,
     AccountType.BUSINESS_SAVINGS,
+    AccountType.CREDIT_CARD,
+    AccountType.CHARGE_CARD,
   ])
   .meta({ id: "AccountType" });
 
@@ -135,6 +139,11 @@ export const BalanceSchema = z
     available: z.number().optional(),
     current: z.number(),
     overdraft: z.number().optional(),
+    creditLimit: z.number().optional(),
+    lastStatementBalance: z.number().optional(),
+    lastStatementDate: z.string().optional(),
+    paymentDue: z.number().optional(),
+    paymentDueDate: z.string().optional(),
     updateTimestamp: z.iso.datetime().optional(),
   })
   .meta({ id: "Balance" });
@@ -157,7 +166,11 @@ export const TransactionMetaSchema = z
     transactionType: z.string().optional(),
     providerTransactionId: z.string().optional(),
     providerSource: z.string().optional(),
+    cardNumber: z.string().optional(),
+    location: z.string().optional(),
+    supplementaryCardId: z.string().optional(),
   })
+  .catchall(z.unknown())
   .meta({ id: "TransactionMeta" });
 
 export type TransactionMeta = z.infer<typeof TransactionMetaSchema>;
@@ -336,6 +349,42 @@ export const TrueLayerApiAccountsResponseSchema = z
 
 export type TrueLayerApiAccountsResponse = z.infer<typeof TrueLayerApiAccountsResponseSchema>;
 
+export const CardType = {
+  CREDIT: "CREDIT",
+  CHARGE: "CHARGE",
+} as const;
+
+export const CardTypeSchema = z.enum([CardType.CREDIT, CardType.CHARGE]).meta({ id: "CardType" });
+
+export type CardType = z.infer<typeof CardTypeSchema>;
+
+export const TrueLayerApiCardSchema = z
+  .object({
+    update_timestamp: z.iso.datetime(),
+    account_id: z.string(),
+    card_network: z.string(),
+    card_type: CardTypeSchema,
+    display_name: z.string(),
+    currency: CurrencySchema,
+    partial_card_number: z.string(),
+    name_on_card: z.string().optional(),
+    valid_from: z.string().optional(),
+    valid_to: z.string().optional(),
+    provider: TrueLayerApiAccountProviderSchema,
+  })
+  .meta({ id: "TrueLayerApiCard" });
+
+export type TrueLayerApiCard = z.infer<typeof TrueLayerApiCardSchema>;
+
+export const TrueLayerApiCardsResponseSchema = z
+  .object({
+    results: z.array(TrueLayerApiCardSchema),
+    status: z.string().optional(),
+  })
+  .meta({ id: "TrueLayerApiCardsResponse" });
+
+export type TrueLayerApiCardsResponse = z.infer<typeof TrueLayerApiCardsResponseSchema>;
+
 export const TrueLayerApiRunningBalanceSchema = z
   .object({
     amount: z.number(),
@@ -361,7 +410,11 @@ export const TrueLayerApiTransactionMetaSchema = z
     transaction_type: z.string().optional(),
     provider_transaction_id: z.string().optional(),
     provider_source: z.string().optional(),
+    cardNumber: z.string().optional(),
+    location: z.string().optional(),
+    supplementary_card_id: z.string().optional(),
   })
+  .catchall(z.unknown())
   .meta({ id: "TrueLayerApiTransactionMeta" });
 
 export type TrueLayerApiTransactionMeta = z.infer<typeof TrueLayerApiTransactionMetaSchema>;
@@ -377,7 +430,7 @@ export const TrueLayerApiTransactionSchema = z
     currency: CurrencySchema,
     transaction_type: TransactionTypeSchema,
     transaction_category: TransactionCategorySchema,
-    transaction_classification: z.array(z.string()),
+    transaction_classification: z.array(z.string()).default([]),
     merchant_name: z.string().optional(),
     running_balance: TrueLayerApiRunningBalanceSchema.optional(),
     meta: TrueLayerApiTransactionMetaSchema.optional(),
@@ -389,7 +442,7 @@ export type TrueLayerApiTransaction = z.infer<typeof TrueLayerApiTransactionSche
 export const TrueLayerApiTransactionsResponseSchema = z
   .object({
     results: z.array(TrueLayerApiTransactionSchema),
-    status: z.string(),
+    status: z.string().optional(),
   })
   .meta({ id: "TrueLayerApiTransactionsResponse" });
 
@@ -403,6 +456,11 @@ export const TrueLayerApiBalanceSchema = z
     available: z.number().optional(),
     current: z.number(),
     overdraft: z.number().optional(),
+    credit_limit: z.number().optional(),
+    last_statement_balance: z.number().optional(),
+    last_statement_date: z.string().optional(),
+    payment_due: z.number().optional(),
+    payment_due_date: z.string().optional(),
     update_timestamp: z.iso.datetime().optional(),
   })
   .meta({ id: "TrueLayerApiBalance" });
@@ -412,7 +470,7 @@ export type TrueLayerApiBalance = z.infer<typeof TrueLayerApiBalanceSchema>;
 export const TrueLayerApiBalanceResponseSchema = z
   .object({
     results: z.array(TrueLayerApiBalanceSchema),
-    status: z.string(),
+    status: z.string().optional(),
   })
   .meta({ id: "TrueLayerApiBalanceResponse" });
 

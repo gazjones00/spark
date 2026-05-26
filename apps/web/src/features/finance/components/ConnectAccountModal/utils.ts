@@ -4,6 +4,12 @@ export function formatAccountNumber(account: Account): string | null {
   if (account.accountNumber.number && account.accountNumber.sortCode) {
     return `${account.accountNumber.sortCode} ${account.accountNumber.number}`;
   }
+  if (
+    account.accountNumber.number &&
+    (account.accountType === "CREDIT_CARD" || account.accountType === "CHARGE_CARD")
+  ) {
+    return `Card ending ${account.accountNumber.number}`;
+  }
   if (account.accountNumber.iban) {
     return `IBAN: ...${account.accountNumber.iban.slice(-4)}`;
   }
