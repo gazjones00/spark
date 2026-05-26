@@ -9,6 +9,7 @@
     "./schemas": "./src/schemas.ts"
   },
   "scripts": {
+    "test": "vitest run",
     "type:check": "tsc -b"
   },
   "dependencies": {
@@ -16,6 +17,7 @@
   },
   "devDependencies": {
     "@spark/config": "workspace:*",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }

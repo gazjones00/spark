@@ -50,6 +50,7 @@ export class PeriodicSyncJob {
         .select({
           accountId: truelayerAccounts.accountId,
           connectionId: truelayerAccounts.connectionId,
+          accountType: truelayerAccounts.accountType,
         })
         .from(truelayerAccounts)
         .where(
@@ -101,6 +102,7 @@ export class PeriodicSyncJob {
           {
             accountId: account.accountId,
             connectionId: account.connectionId,
+            accountType: account.accountType,
           },
           {
             jobId: `account:${account.accountId}:${timestamp}`,

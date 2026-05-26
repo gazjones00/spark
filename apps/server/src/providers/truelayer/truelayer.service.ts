@@ -229,6 +229,7 @@ export class TruelayerService {
         this.queue.add<InitialSyncJobData>(Jobs.InitialSync, {
           accountId: account.accountId,
           connectionId,
+          accountType: account.accountType,
         }),
       ),
     );

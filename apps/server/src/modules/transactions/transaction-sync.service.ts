@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger } from "@nestjs/common";
 import { type Database, eq } from "@spark/db";
 import { truelayerAccounts, truelayerTransactions } from "@spark/db/schema";
 import { SyncStatus, type SyncStatusType } from "@spark/common";
+import type { AccountType } from "@spark/schema";
 import {
   TruelayerClient,
   TruelayerConnectionService,
@@ -15,6 +16,7 @@ const MAX_SYNC_DAYS = 90;
 interface BaseSyncParams {
   accountId: string;
   connectionId: string;
+  accountType?: AccountType | null;
 }
 
 interface InitialSyncParams extends BaseSyncParams {
@@ -54,6 +56,7 @@ export class TransactionSyncService {
       const transactions = await this.truelayerClient.getTransactions({
         accessToken,
         accountId,
+        accountType: params.accountType,
         from: formatDate(fromDate),
         to: formatDate(toDate),
       });

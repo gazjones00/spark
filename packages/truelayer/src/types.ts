@@ -1,10 +1,12 @@
 import type {
   AccountsResponse as SchemaAccountsResponse,
+  AccountType as SchemaAccountType,
   AuthLinkResponse,
   BalanceResponse as SchemaBalanceResponse,
   TransactionsResponse as SchemaTransactionsResponse,
   TrueLayerErrorResponse as SchemaTrueLayerErrorResponse,
 } from "@spark/schema";
+import { AccountType as AccountTypeValue } from "./schemas.ts";
 
 export type {
   Account,
@@ -16,7 +18,10 @@ export type {
   TransactionMeta,
 } from "./schemas.ts";
 
-export { AccountType, Currency, TransactionType, TransactionCategory } from "./schemas.ts";
+export { Currency, TransactionType, TransactionCategory } from "./schemas.ts";
+
+export const AccountType = AccountTypeValue;
+export type AccountType = SchemaAccountType;
 
 export type TrueLayerEnvironment = "sandbox" | "production";
 
@@ -36,7 +41,7 @@ export type TrueLayerScope =
   | "offline_access";
 
 export interface GenerateAuthLinkOptions {
-  /** Scopes to request. Defaults to ["info", "accounts", "balance", "transactions", "offline_access"] */
+  /** Scopes to request. Defaults to ["info", "accounts", "cards", "balance", "transactions", "offline_access"] */
   scopes?: TrueLayerScope[];
   /** Provider filter. Defaults to "uk-ob-all" */
   providers?: string;
@@ -77,6 +82,7 @@ export interface GetAccountsOptions {
 export interface GetTransactionsOptions {
   accessToken: string;
   accountId: string;
+  accountType?: SchemaAccountType | null;
   /** ISO 8601 date string for start of range */
   from?: string;
   /** ISO 8601 date string for end of range */
@@ -90,6 +96,7 @@ export type AccountsResponse = SchemaAccountsResponse;
 export interface GetBalanceOptions {
   accessToken: string;
   accountId: string;
+  accountType?: SchemaAccountType | null;
 }
 
 export type BalanceResponse = SchemaBalanceResponse;

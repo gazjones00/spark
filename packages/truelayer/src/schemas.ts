@@ -5,6 +5,8 @@ export {
   AccountType,
   AccountTypeSchema,
   BalanceSchema,
+  CardType,
+  CardTypeSchema,
   Currency,
   CurrencySchema,
   RunningBalanceSchema,

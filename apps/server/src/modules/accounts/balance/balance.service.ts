@@ -1,12 +1,14 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { type Database, eq } from "@spark/db";
 import { truelayerAccounts } from "@spark/db/schema";
+import type { AccountType } from "@spark/schema";
 import { TruelayerClient, TruelayerConnectionService } from "../../../providers/truelayer";
 import { DATABASE_CONNECTION } from "../../database";
 
 export interface SyncBalanceParams {
   accountId: string;
   connectionId: string;
+  accountType?: AccountType | null;
 }
 
 @Injectable()
@@ -30,6 +32,7 @@ export class BalanceService {
       const balance = await this.truelayerClient.getBalance({
         accessToken,
         accountId,
+        accountType: params.accountType,
       });
 
       const now = new Date();
