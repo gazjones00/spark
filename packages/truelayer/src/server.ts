@@ -161,7 +161,7 @@ export function createTrueLayerClient(config: TrueLayerConfig): TrueLayerClient 
     },
 
     async getAccounts(options: GetAccountsOptions): Promise<Account[]> {
-      const [accountsResponse, cardsResponse] = await Promise.all([
+      const [accountsSettled, cardsSettled] = await Promise.allSettled([
         fetch(`${urls.api}/data/v1/accounts`, {
           method: "GET",
           headers: {
@@ -176,6 +176,17 @@ export function createTrueLayerClient(config: TrueLayerConfig): TrueLayerClient 
         }),
       ]);
 
+      if (accountsSettled.status !== "fulfilled") {
+        throw accountsSettled.reason;
+      }
+
+      const accountsResponse = accountsSettled.value;
+      const cardsResponse = cardsSettled.status === "fulfilled" ? cardsSettled.value : null;
+
+      if (cardsSettled.status === "rejected") {
+        console.error("TrueLayer cards fetch failed", cardsSettled.reason);
+      }
+
       const accountsData = await accountsResponse.json();
 
       if (!accountsResponse.ok) {
@@ -187,8 +198,8 @@ export function createTrueLayerClient(config: TrueLayerConfig): TrueLayerClient 
       }
 
       const accountsResult = TrueLayerApiAccountsResponseSchema.parse(accountsData);
-      const cardsData = cardsResponse.ok ? await cardsResponse.json() : { results: [] };
-      const cardsResult = cardsResponse.ok
+      const cardsData = cardsResponse?.ok ? await cardsResponse.json() : { results: [] };
+      const cardsResult = cardsResponse?.ok
         ? TrueLayerApiCardsResponseSchema.parse(cardsData)
         : { results: [] };
 
