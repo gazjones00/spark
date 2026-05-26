@@ -6,6 +6,7 @@ export default defineConfig({
   test: {
     globals: true,
     root: "./",
+    setupFiles: ["./vitest.setup.ts"],
     exclude: ["**/node_modules/**", "**/dist/**"],
   },
   plugins: [
