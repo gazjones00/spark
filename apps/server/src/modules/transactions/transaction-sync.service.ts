@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
-import { type Database, eq } from "@spark/db";
+import { type Database, eq, sql } from "@spark/db";
 import { truelayerAccounts, truelayerTransactions } from "@spark/db/schema";
 import { SyncStatus, type SyncStatusType } from "@spark/common";
 import type { AccountType } from "@spark/schema";
@@ -12,11 +12,7 @@ import { DATABASE_CONNECTION } from "../database";
 
 const DEFAULT_SYNC_DAYS = 7;
 const MAX_SYNC_DAYS = 90;
-/**
- * Backoff applied to nextSyncAt when an account hits a transient ERROR, so the
- * periodic scheduler retries it later instead of hammering a flaky connection
- * every cron tick. NEEDS_REAUTH is terminal and not rescheduled.
- */
+// Transient ERRORs are retried by the scheduler after this backoff.
 const ERROR_RETRY_MINUTES = 30;
 
 interface BaseSyncParams {
@@ -92,33 +88,42 @@ export class TransactionSyncService {
         meta: transaction.meta ?? null,
       }));
 
-      const inserted = await this.db
+      const now = new Date();
+      // Transactions can change upstream, so refresh mutable fields on conflict.
+      const affected = await this.db
         .insert(truelayerTransactions)
         .values(transactionValues)
-        .onConflictDoNothing({
+        .onConflictDoUpdate({
           target: [truelayerTransactions.transactionId, truelayerTransactions.accountId],
+          set: {
+            normalisedProviderTransactionId: sql`excluded.normalised_provider_transaction_id`,
+            providerTransactionId: sql`excluded.provider_transaction_id`,
+            timestamp: sql`excluded.timestamp`,
+            description: sql`excluded.description`,
+            amount: sql`excluded.amount`,
+            currency: sql`excluded.currency`,
+            transactionType: sql`excluded.transaction_type`,
+            transactionCategory: sql`excluded.transaction_category`,
+            transactionClassification: sql`excluded.transaction_classification`,
+            merchantName: sql`excluded.merchant_name`,
+            runningBalance: sql`excluded.running_balance`,
+            meta: sql`excluded.meta`,
+            updatedAt: now,
+          },
         })
         .returning({ id: truelayerTransactions.id });
 
-      const now = new Date();
       await this.updateSyncStatus(accountId, SyncStatus.OK, now);
 
-      if (inserted.length > 0) {
-        this.logger.log(`Inserted ${inserted.length} new transactions for account ${accountId}`);
-      } else {
-        this.logger.log(`No new transactions for account ${accountId}`);
-      }
+      this.logger.log(`Upserted ${affected.length} transactions for account ${accountId}`);
 
-      return inserted.length;
+      return affected.length;
     } catch (error) {
       this.logger.error(
         `Failed to sync transactions for account ${accountId}: ${error instanceof Error ? error.message : String(error)}`,
       );
       const status =
         error instanceof TokenExpiredError ? SyncStatus.NEEDS_REAUTH : SyncStatus.ERROR;
-      // Push out the next attempt for transient errors so the scheduler retries
-      // with backoff rather than every 5 minutes. NEEDS_REAUTH genuinely needs
-      // user action, so it isn't rescheduled.
       const nextSyncAt =
         status === SyncStatus.ERROR
           ? new Date(Date.now() + ERROR_RETRY_MINUTES * 60 * 1000)

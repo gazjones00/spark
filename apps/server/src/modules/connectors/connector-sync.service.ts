@@ -75,17 +75,15 @@ export class ConnectorSyncService {
     try {
       syncResult = await connector.sync(context);
     } catch (error) {
+      // Persist failure state before rethrowing so BullMQ can retry the job.
       syncResult = this.failedSyncResult(connection.providerId, connection.id, error);
-      const persisted = await this.persistence.persistSyncResult({
+      await this.persistence.persistSyncResult({
         userId: connection.userId,
         connectionId: connection.id,
         result: syncResult,
         startedAt,
       });
-      return {
-        syncResult,
-        ...persisted,
-      };
+      throw error;
     }
 
     const persisted = await this.persistence.persistSyncResult({
