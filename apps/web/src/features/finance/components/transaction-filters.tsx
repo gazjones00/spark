@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { categoryConfig } from "@/lib/mock-data";
+import { categoryConfig } from "@spark/common";
 import type { Account, SavedTransaction } from "@spark/orpc/contract";
 
 type TransactionCategory = SavedTransaction["transactionCategory"];

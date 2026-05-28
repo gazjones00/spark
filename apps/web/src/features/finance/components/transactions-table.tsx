@@ -10,7 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatCurrency } from "@/lib/utils";
-import { categoryConfig } from "@/lib/mock-data";
+import { categoryConfig } from "@spark/common";
 import type { Account, SavedTransaction } from "@spark/orpc/contract";
 
 type SortField = "date" | "description" | "category" | "amount";
