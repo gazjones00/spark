@@ -7,9 +7,16 @@ interface QuickStatsProps {
   netWorth: number;
   monthlyIncome: number;
   monthlyExpenses: number;
+  /** Currency to format the figures in; falls back to `formatCurrency`'s default. */
+  currency?: string;
 }
 
-export function QuickStats({ netWorth, monthlyIncome, monthlyExpenses }: QuickStatsProps) {
+export function QuickStats({
+  netWorth,
+  monthlyIncome,
+  monthlyExpenses,
+  currency,
+}: QuickStatsProps) {
   const stats = [
     {
       label: "Net Worth",
@@ -42,7 +49,9 @@ export function QuickStats({ netWorth, monthlyIncome, monthlyExpenses }: QuickSt
               </div>
               <div>
                 <p className="text-muted-foreground text-xs font-medium">{stat.label}</p>
-                <p className={`text-xl font-bold ${stat.color}`}>{formatCurrency(stat.value)}</p>
+                <p className={`text-xl font-bold ${stat.color}`}>
+                  {formatCurrency(stat.value, currency)}
+                </p>
               </div>
             </div>
           </CardContent>

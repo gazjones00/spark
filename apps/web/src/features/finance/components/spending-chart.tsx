@@ -7,13 +7,17 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { type SpendingByCategory, categoryConfig } from "@/lib/mock-data";
+import { categoryConfig } from "@spark/common";
+import { type SpendingByCategory } from "@/features/finance/lib/dashboard-derivations";
+import { formatCurrency } from "@/lib/utils";
 
 interface SpendingChartProps {
   data: SpendingByCategory[];
+  /** Currency to label the tooltip; falls back to the formatter default. */
+  currency?: string;
 }
 
-export function SpendingChart({ data }: SpendingChartProps) {
+export function SpendingChart({ data, currency }: SpendingChartProps) {
   const chartConfig = data.reduce((acc, item) => {
     acc[item.category] = {
       label: categoryConfig[item.category].label,
@@ -34,7 +38,7 @@ export function SpendingChart({ data }: SpendingChartProps) {
               content={
                 <ChartTooltipContent
                   formatter={(value, name) => [
-                    `$${Number(value).toLocaleString()}`,
+                    formatCurrency(Number(value), currency),
                     categoryConfig[name as keyof typeof categoryConfig]?.label || name,
                   ]}
                 />
