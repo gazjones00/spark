@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { SyncStatus } from "@spark/common";
-import { and, eq, inArray, lte, sql, type Database } from "@spark/db";
+import { and, inArray, lte, sql, type Database } from "@spark/db";
 import { connectorConnections } from "@spark/db/schema";
 import { DATABASE_CONNECTION } from "../modules/database";
 import { Cron, Jobs, MessageQueue, Process, Processor } from "../modules/message-queue";
@@ -48,7 +48,8 @@ export class ConnectorPeriodicSyncJob {
         .from(connectorConnections)
         .where(
           and(
-            eq(connectorConnections.syncStatus, SyncStatus.OK),
+            // Retry transient ERRORs after nextSyncAt; NEEDS_REAUTH stays manual.
+            inArray(connectorConnections.syncStatus, [SyncStatus.OK, SyncStatus.ERROR]),
             lte(connectorConnections.nextSyncAt, now),
           ),
         )
