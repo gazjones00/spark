@@ -1,7 +1,11 @@
-import { truelayerTransactions } from "@spark/db/schema";
+import { SyncStatus } from "@spark/common";
+import { truelayerAccounts, truelayerTransactions } from "@spark/db/schema";
 import type { Transaction } from "@spark/schema";
+import { TrueLayerAuthError } from "@spark/truelayer/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { TruelayerClient, TruelayerConnectionService } from "../../providers/truelayer";
+import { TruelayerAccountStatusService } from "../../providers/truelayer";
+import { TokenExpiredError } from "../../providers/truelayer";
 import { TransactionSyncService } from "./transaction-sync.service";
 
 const TRANSACTION: Transaction = {
@@ -20,7 +24,10 @@ const TRANSACTION: Transaction = {
   meta: { providerTransactionId: "prov-1" },
 };
 
-function createService(transactions: Transaction[]) {
+function createService(
+  transactions: Transaction[],
+  options: { getTransactionsError?: unknown } = {},
+) {
   const insertChain = {
     values: vi.fn().mockReturnThis(),
     onConflictDoUpdate: vi.fn().mockReturnThis(),
@@ -36,15 +43,23 @@ function createService(transactions: Transaction[]) {
     update: vi.fn(() => updateChain),
   };
   const truelayerClient = {
-    getTransactions: vi.fn(async () => transactions),
+    getTransactions: options.getTransactionsError
+      ? vi.fn(async () => {
+          throw options.getTransactionsError;
+        })
+      : vi.fn(async () => transactions),
   };
   const connectionService = {
     getAccessToken: vi.fn(async () => "access-token"),
   };
+  // Real status service over the same mock db so its single update() is
+  // exercised through the public sync path (rather than re-mocking the write).
+  const statusService = new TruelayerAccountStatusService(db as never);
 
   const service = new TransactionSyncService(
     truelayerClient as unknown as TruelayerClient,
     connectionService as unknown as TruelayerConnectionService,
+    statusService,
     db as never,
   );
 
@@ -133,5 +148,53 @@ describe("TransactionSyncService.syncTransactions", () => {
 
     expect(count).toBe(0);
     expect(db.insert).not.toHaveBeenCalled();
+  });
+
+  it("maps a TrueLayerAuthError to NEEDS_REAUTH with no backoff and re-throws", async () => {
+    const { service, db, updateChain } = createService([], {
+      getTransactionsError: new TrueLayerAuthError("access_denied", "revoked", 401),
+    });
+
+    await expect(
+      service.syncTransactions({ accountId: "acc-1", connectionId: "conn-1", daysToSync: 7 }),
+    ).rejects.toBeInstanceOf(TrueLayerAuthError);
+
+    expect(db.update).toHaveBeenCalledWith(truelayerAccounts);
+    const set = updateChain.set.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(set.syncStatus).toBe(SyncStatus.NEEDS_REAUTH);
+    // Terminal status must not schedule a retry.
+    expect(set).not.toHaveProperty("nextSyncAt");
+  });
+
+  it("maps a TokenExpiredError to NEEDS_REAUTH", async () => {
+    const { service, updateChain } = createService([], {
+      getTransactionsError: new TokenExpiredError("conn-1"),
+    });
+
+    await expect(
+      service.syncTransactions({ accountId: "acc-1", connectionId: "conn-1", daysToSync: 7 }),
+    ).rejects.toBeInstanceOf(TokenExpiredError);
+
+    const set = updateChain.set.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(set.syncStatus).toBe(SyncStatus.NEEDS_REAUTH);
+    expect(set).not.toHaveProperty("nextSyncAt");
+  });
+
+  it("maps a generic/transient error to ERROR with a 30-minute backoff", async () => {
+    const { service, updateChain } = createService([], {
+      getTransactionsError: new Error("TrueLayer request failed: 500"),
+    });
+
+    const before = Date.now();
+    await expect(
+      service.syncTransactions({ accountId: "acc-1", connectionId: "conn-1", daysToSync: 7 }),
+    ).rejects.toThrow();
+
+    const set = updateChain.set.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(set.syncStatus).toBe(SyncStatus.ERROR);
+    const nextSyncAt = set.nextSyncAt as Date;
+    expect(nextSyncAt).toBeInstanceOf(Date);
+    // ~30 minutes ahead (allow a generous lower bound for execution time).
+    expect(nextSyncAt.getTime()).toBeGreaterThanOrEqual(before + 29 * 60 * 1000);
   });
 });

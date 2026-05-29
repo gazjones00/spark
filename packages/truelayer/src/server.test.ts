@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createTrueLayerClient } from "./server.ts";
+import { TrueLayerAuthError, TrueLayerError } from "./errors.ts";
 
 const client = createTrueLayerClient({
   environment: "production",
@@ -188,4 +189,116 @@ describe("createTrueLayerClient", () => {
     expect(balance.creditLimit).toBe(3300);
     expect(balance.paymentDueDate).toBe("2026-02-24");
   });
+});
+
+describe("createTrueLayerClient data-endpoint error classification", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  // Each endpoint is exercised against the same set of upstream failures so the
+  // classification lives in one shared place and behaves identically.
+  const endpoints = {
+    getAccounts: () => client.getAccounts({ accessToken: "token" }),
+    getTransactions: () =>
+      client.getTransactions({
+        accessToken: "token",
+        accountId: "acc-1",
+        from: "2026-01-01",
+        to: "2026-01-02",
+      }),
+    getBalance: () => client.getBalance({ accessToken: "token", accountId: "acc-1" }),
+  } as const;
+
+  type Expectation = "auth" | "generic";
+
+  // `rawBody` sends the response verbatim (empty/non-JSON) instead of JSON; this
+  // is the revoked-consent case where the body can't be parsed, so the status
+  // alone must drive classification.
+  const cases: Array<{
+    name: string;
+    status: number;
+    body?: unknown;
+    rawBody?: string;
+    expect: Expectation;
+    code?: string;
+  }> = [
+    { name: "401 with empty body", status: 401, rawBody: "", expect: "auth" },
+    {
+      name: "401 with non-JSON (HTML) body",
+      status: 401,
+      rawBody: "<html>Unauthorized</html>",
+      expect: "auth",
+    },
+    { name: "403 with empty body", status: 403, rawBody: "", expect: "auth" },
+    {
+      name: "401 with JSON that does not match the error schema",
+      status: 401,
+      body: { message: "nope" },
+      expect: "auth",
+    },
+    {
+      name: "400 access_denied",
+      status: 400,
+      body: { error: "access_denied", error_description: "consent revoked" },
+      expect: "auth",
+      code: "access_denied",
+    },
+    {
+      name: "400 invalid_grant",
+      status: 400,
+      body: { error: "invalid_grant" },
+      expect: "auth",
+      code: "invalid_grant",
+    },
+    {
+      name: "400 invalid_request",
+      status: 400,
+      body: { error: "invalid_request" },
+      expect: "generic",
+    },
+    { name: "429 with empty body", status: 429, rawBody: "", expect: "generic" },
+    { name: "500 server error", status: 500, body: {}, expect: "generic" },
+  ];
+
+  for (const endpointName of Object.keys(endpoints) as Array<keyof typeof endpoints>) {
+    for (const testCase of cases) {
+      it(`${endpointName}: ${testCase.name} → ${testCase.expect}`, async () => {
+        // getAccounts fans out to /accounts + /cards; a non-ok cards response is
+        // simply treated as empty, so returning the failure for every URL still
+        // exercises the primary-accounts classification.
+        vi.spyOn(console, "error").mockImplementation(() => {});
+        const response =
+          testCase.rawBody !== undefined
+            ? new Response(testCase.rawBody, { status: testCase.status })
+            : jsonResponse(testCase.body, testCase.status);
+        vi.stubGlobal(
+          "fetch",
+          vi.fn(() => Promise.resolve(response.clone())),
+        );
+
+        const error = await endpoints[endpointName]().then(
+          () => {
+            throw new Error("expected the call to reject");
+          },
+          (caught: unknown) => caught,
+        );
+
+        if (testCase.expect === "auth") {
+          expect(error).toBeInstanceOf(TrueLayerAuthError);
+          expect((error as TrueLayerAuthError).status).toBe(testCase.status);
+          if (testCase.code) {
+            expect((error as TrueLayerAuthError).code).toBe(testCase.code);
+          }
+        } else {
+          expect(error).not.toBeInstanceOf(TrueLayerAuthError);
+          if (testCase.code) {
+            // A parseable non-auth OAuth error keeps the typed TrueLayerError.
+            expect(error).toBeInstanceOf(TrueLayerError);
+            expect((error as TrueLayerError).code).toBe(testCase.code);
+          }
+        }
+      });
+    }
+  }
 });

@@ -1,12 +1,13 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
-import { type Database, eq, sql } from "@spark/db";
-import { truelayerAccounts, truelayerTransactions } from "@spark/db/schema";
-import { SyncStatus, type SyncStatusType } from "@spark/common";
+import { type Database, sql } from "@spark/db";
+import { truelayerTransactions } from "@spark/db/schema";
+import { SyncStatus } from "@spark/common";
 import type { AccountType } from "@spark/schema";
 import {
   TruelayerClient,
   TruelayerConnectionService,
-  TokenExpiredError,
+  TruelayerAccountStatusService,
+  syncStatusFromError,
 } from "../../providers/truelayer";
 import { DATABASE_CONNECTION } from "../database";
 
@@ -38,6 +39,7 @@ export class TransactionSyncService {
   constructor(
     private readonly truelayerClient: TruelayerClient,
     private readonly connectionService: TruelayerConnectionService,
+    private readonly statusService: TruelayerAccountStatusService,
     @Inject(DATABASE_CONNECTION) private readonly db: Database,
   ) {}
 
@@ -66,7 +68,7 @@ export class TransactionSyncService {
       this.logger.log(`Fetched ${transactions.length} transactions for account ${accountId}`);
 
       if (transactions.length === 0) {
-        await this.updateSyncStatus(accountId, SyncStatus.OK, new Date());
+        await this.statusService.update(accountId, SyncStatus.OK, { lastSyncedAt: new Date() });
         return 0;
       }
 
@@ -113,7 +115,7 @@ export class TransactionSyncService {
         })
         .returning({ id: truelayerTransactions.id });
 
-      await this.updateSyncStatus(accountId, SyncStatus.OK, now);
+      await this.statusService.update(accountId, SyncStatus.OK, { lastSyncedAt: now });
 
       this.logger.log(`Upserted ${affected.length} transactions for account ${accountId}`);
 
@@ -122,33 +124,16 @@ export class TransactionSyncService {
       this.logger.error(
         `Failed to sync transactions for account ${accountId}: ${error instanceof Error ? error.message : String(error)}`,
       );
-      const status =
-        error instanceof TokenExpiredError ? SyncStatus.NEEDS_REAUTH : SyncStatus.ERROR;
+      // NEEDS_REAUTH is terminal — no backoff is written so the scheduler stops
+      // re-queuing the account. Transient ERRORs retry after the backoff.
+      const status = syncStatusFromError(error);
       const nextSyncAt =
         status === SyncStatus.ERROR
           ? new Date(Date.now() + ERROR_RETRY_MINUTES * 60 * 1000)
           : undefined;
-      await this.updateSyncStatus(accountId, status, undefined, nextSyncAt);
+      await this.statusService.update(accountId, status, { nextSyncAt });
       throw error;
     }
-  }
-
-  private async updateSyncStatus(
-    accountId: string,
-    status: SyncStatusType,
-    lastSyncedAt?: Date,
-    nextSyncAt?: Date,
-  ): Promise<void> {
-    const now = new Date();
-    await this.db
-      .update(truelayerAccounts)
-      .set({
-        syncStatus: status,
-        updatedAt: now,
-        ...(lastSyncedAt && { lastSyncedAt }),
-        ...(nextSyncAt && { nextSyncAt }),
-      })
-      .where(eq(truelayerAccounts.accountId, accountId));
   }
 
   private calculateFromDate(toDate: Date, params: SyncTransactionsParams): Date {
