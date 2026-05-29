@@ -8,8 +8,14 @@ import type {
 import { TruelayerClient } from "./truelayer.client";
 import { TruelayerConnectionService } from "./truelayer.connection.service";
 import { TruelayerService } from "./truelayer.service";
+import { TruelayerAccountStatusService } from "./truelayer-account-status.service";
 
-const PROVIDERS = [TruelayerClient, TruelayerConnectionService, TruelayerService];
+const PROVIDERS = [
+  TruelayerClient,
+  TruelayerConnectionService,
+  TruelayerService,
+  TruelayerAccountStatusService,
+];
 
 @Module({})
 export class TruelayerModule {

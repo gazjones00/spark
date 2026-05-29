@@ -91,30 +91,29 @@ export class ConnectorPersistenceService {
     now: Date,
     firstError: { code: string; message: string } | undefined,
   ): Promise<void> {
-    const nextSyncAt =
-      input.result.status === "failed"
-        ? addMinutes(now, FAILED_CONNECTOR_RETRY_MINUTES)
-        : addMinutes(now, CONNECTOR_SYNC_INTERVAL_MINUTES);
-    const state =
-      input.result.status === "failed"
-        ? {
-            syncStatus:
-              firstError?.code === "CONNECTOR_AUTH_ERROR"
-                ? SyncStatus.NEEDS_REAUTH
-                : SyncStatus.ERROR,
-            nextSyncAt,
-            lastSyncErrorCode: firstError?.code ?? null,
-            lastSyncErrorMessage: firstError?.message ?? null,
-            updatedAt: now,
-          }
-        : {
-            syncStatus: SyncStatus.OK,
-            lastSyncedAt: now,
-            nextSyncAt,
-            lastSyncErrorCode: null,
-            lastSyncErrorMessage: null,
-            updatedAt: now,
-          };
+    let state;
+    if (input.result.status === "failed") {
+      const isAuthError = firstError?.code === "CONNECTOR_AUTH_ERROR";
+      state = {
+        syncStatus: isAuthError ? SyncStatus.NEEDS_REAUTH : SyncStatus.ERROR,
+        // NEEDS_REAUTH is terminal: leave nextSyncAt untouched so no future
+        // retry is scheduled (the scheduler also excludes it by status). Only
+        // transient ERRORs get a backoff and are retried.
+        ...(isAuthError ? {} : { nextSyncAt: addMinutes(now, FAILED_CONNECTOR_RETRY_MINUTES) }),
+        lastSyncErrorCode: firstError?.code ?? null,
+        lastSyncErrorMessage: firstError?.message ?? null,
+        updatedAt: now,
+      };
+    } else {
+      state = {
+        syncStatus: SyncStatus.OK,
+        lastSyncedAt: now,
+        nextSyncAt: addMinutes(now, CONNECTOR_SYNC_INTERVAL_MINUTES),
+        lastSyncErrorCode: null,
+        lastSyncErrorMessage: null,
+        updatedAt: now,
+      };
+    }
 
     await db
       .update(connectorConnections)

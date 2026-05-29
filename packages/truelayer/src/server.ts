@@ -23,9 +23,67 @@ import {
   type Balance,
 } from "./types.ts";
 import { getEnvironmentUrls, DEFAULT_SCOPES, DEFAULT_PROVIDERS } from "./config.ts";
-import { TrueLayerError } from "./errors.ts";
+import { TrueLayerError, TrueLayerAuthError, isTrueLayerAuthCode } from "./errors.ts";
+import type { TrueLayerErrorCode } from "./types.ts";
 
 type TrueLayerResourceType = "accounts" | "cards";
+
+/**
+ * Classifies a non-OK response from a TrueLayer *data* endpoint
+ * (accounts/cards/transactions/balance) and throws the appropriate error.
+ *
+ * - HTTP 401/403 → `TrueLayerAuthError`, regardless of whether the body parses
+ *   as a `TrueLayerErrorResponse`. A live-token 401 is how a bank-side consent
+ *   revocation surfaces, so it must be terminal, not a transient retry.
+ * - A parsed OAuth error whose code is an auth/consent code → `TrueLayerAuthError`.
+ * - Everything else (429, 5xx, `invalid_request`, `server_error`, unparseable
+ *   bodies) → the existing transient `TrueLayerError` / generic `Error`.
+ *
+ * This is intentionally scoped to data endpoints: the token endpoints
+ * (exchangeCode/refreshToken) keep their original behaviour because refresh
+ * failures are funnelled through the connection service's token error types.
+ */
+function throwDataEndpointError(status: number, data: unknown): never {
+  const errorResult = TrueLayerErrorResponseSchema.safeParse(data);
+  const parsed = errorResult.success ? errorResult.data : undefined;
+
+  if (status === 401 || status === 403) {
+    const code = (parsed?.error as TrueLayerErrorCode | undefined) ?? "access_denied";
+    throw new TrueLayerAuthError(code, parsed?.error_description, status);
+  }
+
+  if (parsed) {
+    if (isTrueLayerAuthCode(parsed.error)) {
+      throw new TrueLayerAuthError(
+        parsed.error as TrueLayerErrorCode,
+        parsed.error_description,
+        status,
+      );
+    }
+    throw TrueLayerError.fromResponse(parsed);
+  }
+
+  throw new Error(`TrueLayer request failed: ${status}`);
+}
+
+/**
+ * Reads a response body without throwing. Error responses (especially 401/403
+ * from a revoked consent) frequently arrive with an empty or non-JSON body, so
+ * calling `response.json()` directly would throw a `SyntaxError` and mask the
+ * status the classifier needs. Returns `undefined` when the body is empty or
+ * not valid JSON.
+ */
+async function safeJson(response: Response): Promise<unknown> {
+  const text = await response.text();
+  if (!text) {
+    return undefined;
+  }
+  try {
+    return JSON.parse(text);
+  } catch {
+    return undefined;
+  }
+}
 
 function getResourceType(accountType?: AccountType | null): TrueLayerResourceType {
   return accountType === "CREDIT_CARD" || accountType === "CHARGE_CARD" ? "cards" : "accounts";
@@ -187,16 +245,11 @@ export function createTrueLayerClient(config: TrueLayerConfig): TrueLayerClient 
         console.error("TrueLayer cards fetch failed", cardsSettled.reason);
       }
 
-      const accountsData = await accountsResponse.json();
-
       if (!accountsResponse.ok) {
-        const errorResult = TrueLayerErrorResponseSchema.safeParse(accountsData);
-        if (errorResult.success) {
-          throw TrueLayerError.fromResponse(errorResult.data);
-        }
-        throw new Error(`TrueLayer request failed: ${accountsResponse.status}`);
+        throwDataEndpointError(accountsResponse.status, await safeJson(accountsResponse));
       }
 
+      const accountsData = await accountsResponse.json();
       const accountsResult = TrueLayerApiAccountsResponseSchema.parse(accountsData);
       const cardsData = cardsResponse?.ok ? await cardsResponse.json() : { results: [] };
       const cardsResult = cardsResponse?.ok
@@ -254,16 +307,11 @@ export function createTrueLayerClient(config: TrueLayerConfig): TrueLayerClient 
         },
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
-        const errorResult = TrueLayerErrorResponseSchema.safeParse(data);
-        if (errorResult.success) {
-          throw TrueLayerError.fromResponse(errorResult.data);
-        }
-        throw new Error(`TrueLayer request failed: ${response.status}`);
+        throwDataEndpointError(response.status, await safeJson(response));
       }
 
+      const data = await response.json();
       const result = TrueLayerApiTransactionsResponseSchema.parse(data);
 
       return result.results.map((transaction) => ({
@@ -315,16 +363,11 @@ export function createTrueLayerClient(config: TrueLayerConfig): TrueLayerClient 
         },
       );
 
-      const data = await response.json();
-
       if (!response.ok) {
-        const errorResult = TrueLayerErrorResponseSchema.safeParse(data);
-        if (errorResult.success) {
-          throw TrueLayerError.fromResponse(errorResult.data);
-        }
-        throw new Error(`TrueLayer request failed: ${response.status}`);
+        throwDataEndpointError(response.status, await safeJson(response));
       }
 
+      const data = await response.json();
       const result = TrueLayerApiBalanceResponseSchema.parse(data);
 
       if (result.results.length === 0) {
@@ -377,4 +420,4 @@ export type {
   BalanceResponse,
 } from "./types.ts";
 
-export { TrueLayerError } from "./errors.ts";
+export { TrueLayerError, TrueLayerAuthError, isTrueLayerAuthCode } from "./errors.ts";
