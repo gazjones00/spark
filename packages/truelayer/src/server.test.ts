@@ -133,22 +133,26 @@ describe("createTrueLayerClient", () => {
         );
       }
 
-      return Promise.resolve(
-        jsonResponse({
-          results: [
-            {
-              update_timestamp: "2026-01-01T00:00:00.000Z",
-              account_id: "amex-card-id",
-              card_network: "AMEX",
-              card_type: "CHARGE",
-              display_name: "Amex Card",
-              currency: "GBP",
-              partial_card_number: "5678",
-              provider: { provider_id: "amex" },
-            },
-          ],
-        }),
-      );
+      if (url.endsWith("/data/v1/cards")) {
+        return Promise.resolve(
+          jsonResponse({
+            results: [
+              {
+                update_timestamp: "2026-01-01T00:00:00.000Z",
+                account_id: "amex-card-id",
+                card_network: "AMEX",
+                card_type: "CHARGE",
+                display_name: "Amex Card",
+                currency: "GBP",
+                partial_card_number: "5678",
+                provider: { provider_id: "amex" },
+              },
+            ],
+          }),
+        );
+      }
+
+      return Promise.reject(new Error(`Unexpected URL: ${url}`));
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -178,9 +182,35 @@ describe("createTrueLayerClient", () => {
       if (url.endsWith("/data/v1/accounts")) {
         return Promise.resolve(jsonResponse({ error: "endpoint_not_supported" }, 501));
       }
-      return Promise.resolve(
-        jsonResponse({ error: "access_denied", error_description: "consent revoked" }, 403),
-      );
+      if (url.endsWith("/data/v1/cards")) {
+        return Promise.resolve(
+          jsonResponse({ error: "access_denied", error_description: "consent revoked" }, 403),
+        );
+      }
+      return Promise.reject(new Error(`Unexpected URL: ${url}`));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(client.getAccounts({ accessToken: "token" })).rejects.toBeInstanceOf(
+      TrueLayerAuthError,
+    );
+  });
+
+  it("raises a revoked-consent error even when the other endpoint returns 200 with no rows", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/data/v1/accounts")) {
+        // Some providers answer with 200 and an empty set rather than a 4xx.
+        return Promise.resolve(jsonResponse({ results: [], status: "Succeeded" }));
+      }
+      if (url.endsWith("/data/v1/cards")) {
+        return Promise.resolve(
+          jsonResponse({ error: "access_denied", error_description: "consent revoked" }, 403),
+        );
+      }
+      return Promise.reject(new Error(`Unexpected URL: ${url}`));
     });
     vi.stubGlobal("fetch", fetchMock);
 

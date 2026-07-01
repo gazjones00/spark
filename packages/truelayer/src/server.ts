@@ -291,22 +291,6 @@ export function createTrueLayerClient(config: TrueLayerConfig): TrueLayerClient 
       const accountsOutcome = await classifyDataEndpoint(accountsSettled);
       const cardsOutcome = await classifyDataEndpoint(cardsSettled);
 
-      // A connection can hold accounts, cards, or both, and a provider that lacks
-      // one endpoint answers it with `endpoint_not_supported`. Only when *neither*
-      // endpoint yielded data do we surface a failure — that way a card-only
-      // provider (Amex) syncs on cards alone, while a genuine outage or a revoked
-      // consent (401/403) is never silently flattened into "zero accounts".
-      if (accountsOutcome.kind !== "data" && cardsOutcome.kind !== "data") {
-        if (accountsOutcome.kind === "error") {
-          accountsOutcome.raise();
-        }
-        if (cardsOutcome.kind === "error") {
-          cardsOutcome.raise();
-        }
-        // Both endpoints are `absent`: the connection genuinely has neither.
-        return [];
-      }
-
       const accountsResults =
         accountsOutcome.kind === "data"
           ? TrueLayerApiAccountsResponseSchema.parse(accountsOutcome.body).results
@@ -315,6 +299,24 @@ export function createTrueLayerClient(config: TrueLayerConfig): TrueLayerClient 
         cardsOutcome.kind === "data"
           ? TrueLayerApiCardsResponseSchema.parse(cardsOutcome.body).results
           : [];
+
+      // A connection can hold accounts, cards, or both, and a provider that lacks
+      // one endpoint answers it with `endpoint_not_supported`. Gate on the actual
+      // row counts, not the `kind`: a genuine failure must be surfaced whenever it
+      // left us with no rows — including when the *other* endpoint answered
+      // `200 { results: [] }` — so a revoked consent (401/403) is raised rather
+      // than silently flattened into "zero accounts". A card-only provider (Amex)
+      // still syncs on cards alone, and when both endpoints are simply empty or
+      // absent the connection genuinely has neither, so an empty list is correct.
+      if (accountsResults.length === 0 && cardsResults.length === 0) {
+        if (accountsOutcome.kind === "error") {
+          accountsOutcome.raise();
+        }
+        if (cardsOutcome.kind === "error") {
+          cardsOutcome.raise();
+        }
+        return [];
+      }
 
       const accounts = accountsResults.map((account) => ({
         updateTimestamp: account.update_timestamp,
