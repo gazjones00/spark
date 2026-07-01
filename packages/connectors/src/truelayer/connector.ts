@@ -240,9 +240,11 @@ function classifyError(error: unknown): Error {
   return error instanceof Error ? error : new Error(String(error));
 }
 
+/** UTC day arithmetic — formatDate truncates in UTC, and local setDate would
+ * drift the window by a day across DST transitions. */
 function addDays(date: Date, days: number): Date {
   const result = new Date(date);
-  result.setDate(result.getDate() + days);
+  result.setUTCDate(result.getUTCDate() + days);
   return result;
 }
 

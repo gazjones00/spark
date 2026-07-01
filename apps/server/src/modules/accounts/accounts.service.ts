@@ -1,5 +1,5 @@
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
-import { TRUELAYER_PROVIDER_ID } from "@spark/connectors";
+import { TRUELAYER_PROVIDER_ID, truelayerAccountIdFromExternalId } from "@spark/connectors";
 import type { Database } from "@spark/db";
 import { and, desc, eq, inArray } from "@spark/db";
 import type { UpdateAccountInput } from "@spark/schema";
@@ -49,8 +49,14 @@ export class AccountsService {
   }
 
   async update(userId: string, input: UpdateAccountInput) {
+    // Scoped to TrueLayer rows — this API's semantics (and delete's allow-list
+    // rewrite) are TrueLayer-specific, and other providers' accounts share
+    // these tables.
     const existing = await this.db.query.financialAccounts.findFirst({
-      where: eq(financialAccounts.id, input.id),
+      where: and(
+        eq(financialAccounts.id, input.id),
+        eq(financialAccounts.providerId, TRUELAYER_PROVIDER_ID),
+      ),
     });
 
     if (!existing || existing.userId !== userId) {
@@ -88,7 +94,10 @@ export class AccountsService {
 
   async delete(userId: string, id: string) {
     const existing = await this.db.query.financialAccounts.findFirst({
-      where: eq(financialAccounts.id, id),
+      where: and(
+        eq(financialAccounts.id, id),
+        eq(financialAccounts.providerId, TRUELAYER_PROVIDER_ID),
+      ),
     });
 
     if (!existing || existing.userId !== userId) {
@@ -101,12 +110,22 @@ export class AccountsService {
     // sync doesn't resurrect the deleted one (the connector treats a present
     // allow-list as authoritative).
     const siblings = await this.db
-      .select({ metadata: financialAccounts.metadata })
+      .select({ metadata: financialAccounts.metadata, externalId: financialAccounts.externalId })
       .from(financialAccounts)
-      .where(eq(financialAccounts.connectionId, existing.connectionId));
-    const remainingAccountIds = siblings
-      .map((row) => row.metadata.truelayerAccountId)
-      .filter((value): value is string => typeof value === "string");
+      .where(
+        and(
+          eq(financialAccounts.connectionId, existing.connectionId),
+          eq(financialAccounts.providerId, TRUELAYER_PROVIDER_ID),
+        ),
+      );
+    // externalId deterministically encodes the TrueLayer account id, so a row
+    // with missing metadata still makes it into the allow-list (an omitted id
+    // would silently stop that account syncing).
+    const remainingAccountIds = siblings.map((row) =>
+      typeof row.metadata.truelayerAccountId === "string"
+        ? row.metadata.truelayerAccountId
+        : truelayerAccountIdFromExternalId(row.externalId),
+    );
 
     const connection = await this.db.query.connectorConnections.findFirst({
       where: eq(connectorConnections.id, existing.connectionId),

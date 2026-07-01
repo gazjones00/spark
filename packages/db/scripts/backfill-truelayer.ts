@@ -3,7 +3,9 @@
  * connector tables and parks the bespoke rows so exactly one scheduler owns
  * each connection (docs/adr/0001).
  *
- * Per truelayer_connections row (one transaction each):
+ * Per truelayer_connections row (one transaction each, with the source
+ * connection row locked FOR UPDATE so concurrent bespoke token refreshes and
+ * sync completions block until the copy commits):
  *   1. connector_connections row (same id; tokens re-encrypted as the
  *      connector-standard JSON credential record).
  *   2. financial_accounts rows via the TrueLayer connector mappers (same ids
@@ -12,7 +14,8 @@
  *   4. One balance_snapshots row per account with a stored balance.
  *   5. connector_sync_cursors checkpoints from lastSyncedAt so incremental
  *      windows continue where the bespoke path stopped.
- *   6. Reconciliation (counts must match) — mismatch aborts the transaction.
+ *   6. Reconciliation (every source id must exist canonically) — a missing
+ *      row aborts the transaction.
  *   7. Parks truelayer_accounts (syncStatus = MIGRATED) so PeriodicSyncJob
  *      stops selecting them (NFR-4: no double-sync).
  *
@@ -22,7 +25,10 @@
  * rows (children cascade); bespoke data is never modified beyond the parking
  * flag.
  *
- * Usage: bun run db:backfill:truelayer   (requires DATABASE_URL + ENCRYPTION_KEY)
+ * Usage: bun run db:backfill:truelayer
+ * Requires DATABASE_URL, ENCRYPTION_KEY and TRUELAYER_ENV — TRUELAYER_ENV
+ * becomes connector_connections.environment, so it must match the TrueLayer
+ * environment the bespoke rows were created against.
  */
 
 import {
@@ -31,12 +37,13 @@ import {
   transactionsResource,
   TRUELAYER_MANIFEST,
   truelayerAccountExternalId,
+  truelayerTransactionExternalId,
 } from "@spark/connectors";
 import type { Transaction, TrueLayerAccount } from "@spark/schema";
 import { SyncStatus } from "@spark/common";
 import { decryptFromString, encryptToString } from "@spark/crypto";
 import { env } from "@spark/env/server";
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { db } from "../src/client.ts";
 import {
   balanceSnapshots,
@@ -74,52 +81,67 @@ function toTrueLayerAccount(row: TruelayerAccountRow): TrueLayerAccount {
   };
 }
 
-async function migrateConnection(connection: TruelayerConnectionRow): Promise<void> {
-  const accounts = await db
-    .select()
-    .from(truelayerAccounts)
-    .where(eq(truelayerAccounts.connectionId, connection.id));
-
-  const activeAccounts = accounts.filter((account) => account.syncStatus !== SyncStatus.MIGRATED);
-  if (accounts.length > 0 && activeAccounts.length === 0) {
-    console.log(`~ connection ${connection.id}: already parked, skipping`);
-    return;
-  }
-
-  const accountIds = accounts.map((account) => account.accountId);
-  const transactions =
-    accountIds.length > 0
-      ? await db
-          .select()
-          .from(truelayerTransactions)
-          .where(inArray(truelayerTransactions.accountId, accountIds))
-      : [];
-
-  // Re-encrypt the bespoke token pair as the connector credential record.
-  const accessToken = await decryptFromString(connection.encryptedAccessToken, env.ENCRYPTION_KEY);
-  const refreshToken = connection.encryptedRefreshToken
-    ? await decryptFromString(connection.encryptedRefreshToken, env.ENCRYPTION_KEY)
-    : null;
-  const credentialRecord = {
-    accessToken,
-    ...(refreshToken ? { refreshToken } : {}),
-    expiresAt: connection.expiresAt.toISOString(),
-  };
-  const encryptedCredentials = await encryptToString(
-    JSON.stringify(credentialRecord),
-    env.ENCRYPTION_KEY,
-  );
-
-  const hasNeedsReauth = accounts.some((account) => account.syncStatus === SyncStatus.NEEDS_REAUTH);
-  const lastSyncedAt = accounts.reduce<Date | null>(
-    (latest, account) =>
-      account.lastSyncedAt && (!latest || account.lastSyncedAt > latest)
-        ? account.lastSyncedAt
-        : latest,
-    null,
-  );
-
+async function migrateConnection(staleConnection: TruelayerConnectionRow): Promise<void> {
   await db.transaction(async (tx) => {
+    const [connection] = await tx
+      .select()
+      .from(truelayerConnections)
+      .where(eq(truelayerConnections.id, staleConnection.id))
+      .for("update");
+    if (!connection) {
+      console.log(`~ connection ${staleConnection.id}: no longer exists, skipping`);
+      return;
+    }
+
+    const accounts = await tx
+      .select()
+      .from(truelayerAccounts)
+      .where(eq(truelayerAccounts.connectionId, connection.id));
+
+    const activeAccounts = accounts.filter((account) => account.syncStatus !== SyncStatus.MIGRATED);
+    if (accounts.length > 0 && activeAccounts.length === 0) {
+      console.log(`~ connection ${connection.id}: already parked, skipping`);
+      return;
+    }
+
+    const accountIds = accounts.map((account) => account.accountId);
+    const transactions =
+      accountIds.length > 0
+        ? await tx
+            .select()
+            .from(truelayerTransactions)
+            .where(inArray(truelayerTransactions.accountId, accountIds))
+        : [];
+
+    // Re-encrypt the bespoke token pair as the connector credential record.
+    const accessToken = await decryptFromString(
+      connection.encryptedAccessToken,
+      env.ENCRYPTION_KEY,
+    );
+    const refreshToken = connection.encryptedRefreshToken
+      ? await decryptFromString(connection.encryptedRefreshToken, env.ENCRYPTION_KEY)
+      : null;
+    const credentialRecord = {
+      accessToken,
+      ...(refreshToken ? { refreshToken } : {}),
+      expiresAt: connection.expiresAt.toISOString(),
+    };
+    const encryptedCredentials = await encryptToString(
+      JSON.stringify(credentialRecord),
+      env.ENCRYPTION_KEY,
+    );
+
+    const hasNeedsReauth = accounts.some(
+      (account) => account.syncStatus === SyncStatus.NEEDS_REAUTH,
+    );
+    const lastSyncedAt = accounts.reduce<Date | null>(
+      (latest, account) =>
+        account.lastSyncedAt && (!latest || account.lastSyncedAt > latest)
+          ? account.lastSyncedAt
+          : latest,
+      null,
+    );
+
     const now = new Date();
 
     await tx
@@ -262,28 +284,43 @@ async function migrateConnection(connection: TruelayerConnectionRow): Promise<vo
         });
     }
 
-    // Reconcile before parking: canonical row counts must cover the source.
-    const [accountCount] = await tx
-      .select({ count: sql<number>`count(*)::int` })
+    // Reconcile before parking: every source row must exist in the canonical
+    // tables by id — bare counts could pass on rows the live connector path
+    // wrote while a specific source row was never copied.
+    const canonicalAccounts = await tx
+      .select({ externalId: financialAccounts.externalId })
       .from(financialAccounts)
       .where(eq(financialAccounts.connectionId, connection.id));
-    const [transactionCount] = await tx
-      .select({ count: sql<number>`count(*)::int` })
-      .from(financialTransactions)
-      .where(eq(financialTransactions.connectionId, connection.id));
-
-    if ((accountCount?.count ?? 0) < accounts.length) {
+    const canonicalAccountIds = new Set(canonicalAccounts.map((row) => row.externalId));
+    const missingAccounts = accountIds
+      .map((accountId) => truelayerAccountExternalId(accountId))
+      .filter((externalId) => !canonicalAccountIds.has(externalId));
+    if (missingAccounts.length > 0) {
       throw new Error(
         `Reconciliation failed for connection ${connection.id}: ` +
-          `${accountCount?.count ?? 0} financial_accounts < ${accounts.length} truelayer_accounts`,
+          `financial_accounts is missing ${missingAccounts.join(", ")}`,
       );
     }
-    const distinctSourceTransactions = new Set(transactions.map((row) => `${row.transactionId}`))
-      .size;
-    if ((transactionCount?.count ?? 0) < distinctSourceTransactions) {
+
+    const canonicalTransactions = await tx
+      .select({ externalId: financialTransactions.externalId })
+      .from(financialTransactions)
+      .where(eq(financialTransactions.connectionId, connection.id));
+    const canonicalTransactionIds = new Set(canonicalTransactions.map((row) => row.externalId));
+    // externalId derives from transactionId alone, matching the canonical
+    // (connection_id, external_id) unique key — a transactionId shared across
+    // accounts collapses to one canonical row, as it does on the live path.
+    const expectedTransactionIds = new Set(
+      transactions.map((row) => truelayerTransactionExternalId(row.transactionId)),
+    );
+    const missingTransactions = [...expectedTransactionIds].filter(
+      (externalId) => !canonicalTransactionIds.has(externalId),
+    );
+    if (missingTransactions.length > 0) {
       throw new Error(
-        `Reconciliation failed for connection ${connection.id}: ` +
-          `${transactionCount?.count ?? 0} financial_transactions < ${distinctSourceTransactions} truelayer_transactions`,
+        `Reconciliation failed for connection ${connection.id}: financial_transactions is ` +
+          `missing ${missingTransactions.length} row(s), ` +
+          `e.g. ${missingTransactions.slice(0, 5).join(", ")}`,
       );
     }
 
@@ -302,7 +339,7 @@ async function migrateConnection(connection: TruelayerConnectionRow): Promise<vo
 
     console.log(
       `✓ connection ${connection.id}: ${accounts.length} accounts, ` +
-        `${distinctSourceTransactions} transactions, parked`,
+        `${expectedTransactionIds.size} transactions, parked`,
     );
   });
 }
