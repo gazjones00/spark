@@ -1,25 +1,35 @@
-import { Controller, Get, Query, Res } from "@nestjs/common";
+import { BadRequestException, Controller, Get, Query, Res } from "@nestjs/common";
+import { Throttle } from "@nestjs/throttler";
 import { Implement, implement } from "@orpc/nest";
 import { AllowAnonymous, Session, type UserSession } from "@thallesp/nestjs-better-auth";
 import { contract } from "@spark/orpc/contract";
 import type { Response } from "express";
 import { TruelayerCallbackQuerySchema } from "@spark/schema";
-import { ZodValidationPipe } from "nestjs-zod";
-import { TruelayerCallbackQueryDto } from "./dto/truelayer-callback-query.dto";
-import { TruelayerService } from "./truelayer.service";
+import { InvalidOauthStateError, TruelayerService } from "./truelayer.service";
 
 @Controller()
 export class TruelayerController {
   constructor(private readonly truelayerService: TruelayerService) {}
 
+  /**
+   * The one deliberate non-oRPC HTTP edge: oRPC cannot serve a 302 redirect.
+   * Public (@AllowAnonymous) and internet-facing, so it carries a stricter
+   * rate limit than the global default, and validates its input with a
+   * single explicit Zod parse — oRPC `.input()` schemas are the contract
+   * boundary everywhere else.
+   */
   @Get("truelayer/callback")
   @AllowAnonymous()
-  callback(
-    @Query(new ZodValidationPipe(TruelayerCallbackQuerySchema))
-    query: TruelayerCallbackQueryDto,
-    @Res() res: Response,
-  ) {
-    const redirectUrl = this.truelayerService.buildCallbackRedirectUrl(query.code, query.state);
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  callback(@Query() query: unknown, @Res() res: Response) {
+    const parsed = TruelayerCallbackQuerySchema.safeParse(query);
+    if (!parsed.success) {
+      throw new BadRequestException("Invalid callback parameters");
+    }
+    const redirectUrl = this.truelayerService.buildCallbackRedirectUrl(
+      parsed.data.code,
+      parsed.data.state,
+    );
     return res.redirect(redirectUrl);
   }
 
@@ -35,23 +45,37 @@ export class TruelayerController {
 
   @Implement(contract.truelayer.exchangeCode)
   exchangeCode(@Session() session: UserSession) {
-    return implement(contract.truelayer.exchangeCode).handler(({ input }) => {
-      return this.truelayerService.exchangeCode({
-        code: input.code,
-        state: input.state,
-        userId: session.user.id,
-      });
+    return implement(contract.truelayer.exchangeCode).handler(async ({ input, errors }) => {
+      try {
+        return await this.truelayerService.exchangeCode({
+          code: input.code,
+          state: input.state,
+          userId: session.user.id,
+        });
+      } catch (error) {
+        if (error instanceof InvalidOauthStateError) {
+          throw errors.INVALID_OAUTH_STATE({ message: error.message, cause: error });
+        }
+        throw error;
+      }
     });
   }
 
   @Implement(contract.truelayer.saveAccounts)
   saveAccounts(@Session() session: UserSession) {
-    return implement(contract.truelayer.saveAccounts).handler(({ input }) => {
-      return this.truelayerService.saveAccounts({
-        state: input.state,
-        accountIds: input.accountIds,
-        userId: session.user.id,
-      });
+    return implement(contract.truelayer.saveAccounts).handler(async ({ input, errors }) => {
+      try {
+        return await this.truelayerService.saveAccounts({
+          state: input.state,
+          accountIds: input.accountIds,
+          userId: session.user.id,
+        });
+      } catch (error) {
+        if (error instanceof InvalidOauthStateError) {
+          throw errors.INVALID_OAUTH_STATE({ message: error.message, cause: error });
+        }
+        throw error;
+      }
     });
   }
 }

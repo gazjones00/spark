@@ -1,4 +1,4 @@
-import { Inject, Injectable, UnauthorizedException } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import { eq, and, gt, type Database } from "@spark/db";
 import { truelayerAccounts, truelayerOauthStates } from "@spark/db/schema";
 import { env } from "@spark/env/server";
@@ -19,6 +19,18 @@ import type { MessageQueueService } from "../../modules/message-queue";
 import type { InitialSyncJobData } from "../../jobs/initial-sync.job";
 
 const STATE_EXPIRY_MINUTES = 10;
+
+/**
+ * The OAuth state row is missing, expired, or tokenless. User-recoverable by
+ * restarting the connect flow; mapped to the INVALID_OAUTH_STATE typed error
+ * channel at the controller.
+ */
+export class InvalidOauthStateError extends Error {
+  constructor(message = "Invalid or expired OAuth state") {
+    super(message);
+    this.name = "InvalidOauthStateError";
+  }
+}
 
 export type GenerateAuthLinkInput = GenerateAuthLinkPayload & {
   userId: string;
@@ -90,7 +102,7 @@ export class TruelayerService {
       .limit(1);
 
     if (storedStates.length === 0) {
-      throw new UnauthorizedException("Invalid or expired OAuth state");
+      throw new InvalidOauthStateError();
     }
 
     const { codeVerifier } = storedStates[0];
@@ -124,7 +136,7 @@ export class TruelayerService {
       .returning({ state: truelayerOauthStates.state });
 
     if (updatedRows.length === 0) {
-      throw new UnauthorizedException("Failed to store tokens - OAuth state not found");
+      throw new InvalidOauthStateError("Failed to store tokens - OAuth state not found");
     }
 
     return {
@@ -150,13 +162,13 @@ export class TruelayerService {
       .limit(1);
 
     if (storedStates.length === 0) {
-      throw new UnauthorizedException("Invalid or expired OAuth state");
+      throw new InvalidOauthStateError();
     }
 
     const oauthState = storedStates[0];
 
     if (!oauthState.encryptedAccessToken || !oauthState.tokenKeyId || !oauthState.tokenExpiresAt) {
-      throw new UnauthorizedException(
+      throw new InvalidOauthStateError(
         "OAuth state has no tokens - code exchange may not have completed",
       );
     }

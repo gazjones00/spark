@@ -1,3 +1,4 @@
+import { DecimalSchema } from "@spark/schema/money";
 import { z } from "zod";
 
 export const FinancialProviderType = {
@@ -55,6 +56,11 @@ export const InstrumentType = {
 
 const CurrencyCodeSchema = z.string().trim().length(3).toUpperCase();
 const JsonRecordSchema = z.record(z.string(), z.unknown());
+
+// Money is a decimal STRING in the domain model (parse-don't-validate at the
+// provider boundary; see @spark/schema/money). Quantities/share counts stay
+// numeric — they are not money and are never written to numeric money columns.
+const MoneySchema = DecimalSchema;
 
 export const FinancialProviderTypeSchema = z.enum([
   FinancialProviderType.Broker,
@@ -139,14 +145,14 @@ export const FinancialTransactionSchema = z.object({
   occurredAt: z.iso.datetime(),
   settledAt: z.iso.datetime().nullable(),
   description: z.string().min(1),
-  amount: z.number(),
+  amount: MoneySchema,
   currency: CurrencyCodeSchema,
   instrumentExternalId: z.string().nullable(),
   quantity: z.number().nullable(),
-  price: z.number().nullable(),
-  fees: z.number().nullable(),
-  tax: z.number().nullable(),
-  fxRate: z.number().nullable(),
+  price: MoneySchema.nullable(),
+  fees: MoneySchema.nullable(),
+  tax: MoneySchema.nullable(),
+  fxRate: MoneySchema.nullable(),
   metadata: JsonRecordSchema.default({}),
 });
 
@@ -157,12 +163,12 @@ export const HoldingSchema = z.object({
   instrumentExternalId: z.string().min(1),
   quantity: z.number(),
   availableQuantity: z.number().nullable(),
-  averagePrice: z.number().nullable(),
-  currentPrice: z.number().nullable(),
+  averagePrice: MoneySchema.nullable(),
+  currentPrice: MoneySchema.nullable(),
   currency: CurrencyCodeSchema,
-  value: z.number().nullable(),
-  costBasis: z.number().nullable(),
-  unrealizedProfitLoss: z.number().nullable(),
+  value: MoneySchema.nullable(),
+  costBasis: MoneySchema.nullable(),
+  unrealizedProfitLoss: MoneySchema.nullable(),
   observedAt: z.iso.datetime(),
   metadata: JsonRecordSchema.default({}),
 });
@@ -171,11 +177,11 @@ export const BalanceSnapshotSchema = z.object({
   accountExternalId: z.string().min(1),
   providerId: z.string().min(1),
   currency: CurrencyCodeSchema,
-  cash: z.number(),
-  availableCash: z.number().nullable(),
-  blockedCash: z.number().nullable(),
-  invested: z.number().nullable(),
-  total: z.number(),
+  cash: MoneySchema,
+  availableCash: MoneySchema.nullable(),
+  blockedCash: MoneySchema.nullable(),
+  invested: MoneySchema.nullable(),
+  total: MoneySchema,
   observedAt: z.iso.datetime(),
   metadata: JsonRecordSchema.default({}),
 });
@@ -184,12 +190,12 @@ export const PortfolioSnapshotSchema = z.object({
   accountExternalId: z.string().min(1),
   providerId: z.string().min(1),
   currency: CurrencyCodeSchema,
-  cashValue: z.number(),
-  investmentValue: z.number(),
-  totalValue: z.number(),
-  costBasis: z.number().nullable(),
-  realizedProfitLoss: z.number().nullable(),
-  unrealizedProfitLoss: z.number().nullable(),
+  cashValue: MoneySchema,
+  investmentValue: MoneySchema,
+  totalValue: MoneySchema,
+  costBasis: MoneySchema.nullable(),
+  realizedProfitLoss: MoneySchema.nullable(),
+  unrealizedProfitLoss: MoneySchema.nullable(),
   observedAt: z.iso.datetime(),
   metadata: JsonRecordSchema.default({}),
 });

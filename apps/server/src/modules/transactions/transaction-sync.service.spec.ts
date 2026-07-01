@@ -14,7 +14,7 @@ const TRANSACTION: Transaction = {
   providerTransactionId: "prov-1",
   timestamp: "2026-01-30T10:00:00.000Z",
   description: "Coffee",
-  amount: -3.5,
+  amount: "-3.5",
   currency: "GBP",
   transactionType: "DEBIT",
   transactionCategory: "PURCHASE",

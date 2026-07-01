@@ -3,16 +3,22 @@ import { DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/co
 
 interface ErrorStepProps {
   message: string;
+  /** True when restarting the connect flow fixes it (expired session, reauth). */
+  recoverable?: boolean;
   onClose: () => void;
   onRetry: () => void;
 }
 
-export function ErrorStep({ message, onClose, onRetry }: ErrorStepProps) {
+export function ErrorStep({ message, recoverable = false, onClose, onRetry }: ErrorStepProps) {
   return (
     <>
       <DialogHeader>
-        <DialogTitle>Connection Failed</DialogTitle>
-        <DialogDescription>There was an error connecting your bank account.</DialogDescription>
+        <DialogTitle>{recoverable ? "Reconnection Needed" : "Connection Failed"}</DialogTitle>
+        <DialogDescription>
+          {recoverable
+            ? "Your bank needs you to authorise this connection again."
+            : "There was an error connecting your bank account."}
+        </DialogDescription>
       </DialogHeader>
       <div className="py-4">
         <p className="text-destructive text-sm">{message}</p>
@@ -21,7 +27,7 @@ export function ErrorStep({ message, onClose, onRetry }: ErrorStepProps) {
         <Button variant="outline" onClick={onClose}>
           Cancel
         </Button>
-        <Button onClick={onRetry}>Try Again</Button>
+        <Button onClick={onRetry}>{recoverable ? "Reconnect" : "Try Again"}</Button>
       </DialogFooter>
     </>
   );

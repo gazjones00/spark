@@ -1,12 +1,10 @@
 import { Injectable, Logger } from "@nestjs/common";
+import type { z } from "zod";
 import { ConnectorSyncService } from "../modules/connectors";
 import { Jobs, MessageQueue, Process, Processor } from "../modules/message-queue";
+import { ConnectorSyncJobDataSchema } from "../modules/message-queue/job-schemas";
 
-export interface ConnectorSyncJobData {
-  connectionId: string;
-  userId?: string;
-  requestedAt?: string;
-}
+export type ConnectorSyncJobData = z.infer<typeof ConnectorSyncJobDataSchema>;
 
 @Processor(MessageQueue.DEFAULT)
 @Injectable()

@@ -1,18 +1,15 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { type Database, eq } from "@spark/db";
 import { truelayerAccounts } from "@spark/db/schema";
-import type { AccountType } from "@spark/schema";
+import type { z } from "zod";
 import { BalanceService } from "../modules/accounts";
 import { DATABASE_CONNECTION } from "../modules/database";
 import { Jobs, MessageQueue, Process, Processor } from "../modules/message-queue";
+import { AccountSyncJobDataSchema } from "../modules/message-queue/job-schemas";
 import { TransactionSyncService } from "../modules/transactions";
 import { HISTORICAL_DAYS } from "./initial-sync.job";
 
-export interface AccountSyncJobData {
-  accountId: string;
-  connectionId: string;
-  accountType?: AccountType | null;
-}
+export type AccountSyncJobData = z.infer<typeof AccountSyncJobDataSchema>;
 
 @Processor(MessageQueue.DEFAULT)
 @Injectable()

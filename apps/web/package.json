@@ -16,6 +16,7 @@
     "@fontsource-variable/space-grotesk": "^5.2.10",
     "@fontsource/ibm-plex-mono": "^5.2.7",
     "@hookform/resolvers": "^5.2.2",
+    "@orpc/client": "^1.13.2",
     "@spark/auth": "workspace:*",
     "@spark/common": "workspace:*",
     "@spark/env": "workspace:*",

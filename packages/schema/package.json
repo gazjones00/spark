@@ -7,12 +7,14 @@
     ".": "./src/index.ts",
     "./account": "./src/account.schema.ts",
     "./health": "./src/health.schema.ts",
+    "./money": "./src/money.ts",
     "./settings": "./src/settings.schema.ts",
     "./sync-status": "./src/sync-status.schema.ts",
     "./transaction": "./src/transaction.schema.ts",
     "./truelayer": "./src/truelayer.schema.ts"
   },
   "scripts": {
+    "test": "vitest run",
     "type:check": "tsc -b"
   },
   "dependencies": {
@@ -20,6 +22,7 @@
   },
   "devDependencies": {
     "@spark/config": "workspace:*",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }

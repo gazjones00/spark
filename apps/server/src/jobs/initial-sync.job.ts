@@ -1,14 +1,11 @@
 import { Injectable, Logger } from "@nestjs/common";
-import type { AccountType } from "@spark/schema";
+import type { z } from "zod";
 import { BalanceService } from "../modules/accounts";
 import { Jobs, MessageQueue, Process, Processor } from "../modules/message-queue";
+import { InitialSyncJobDataSchema } from "../modules/message-queue/job-schemas";
 import { TransactionSyncService } from "../modules/transactions";
 
-export interface InitialSyncJobData {
-  accountId: string;
-  connectionId: string;
-  accountType?: AccountType | null;
-}
+export type InitialSyncJobData = z.infer<typeof InitialSyncJobDataSchema>;
 
 export const HISTORICAL_DAYS = 90;
 

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { DecimalSchema } from "./money.ts";
 
 export const TransactionCategory = {
   ATM: "ATM",
@@ -124,6 +125,9 @@ export const TrueLayerAccountSchema = z
 
 export type TrueLayerAccount = z.infer<typeof TrueLayerAccountSchema>;
 
+// Running balance is stored verbatim inside a jsonb column (never a numeric
+// money column), so it deliberately keeps the provider's number type — the
+// decimal-string codec applies only to values bound for numeric(19,4).
 export const RunningBalanceSchema = z
   .object({
     amount: z.number(),
@@ -136,13 +140,13 @@ export type RunningBalance = z.infer<typeof RunningBalanceSchema>;
 export const BalanceSchema = z
   .object({
     currency: CurrencySchema,
-    available: z.number().optional(),
-    current: z.number(),
-    overdraft: z.number().optional(),
-    creditLimit: z.number().optional(),
-    lastStatementBalance: z.number().optional(),
+    available: DecimalSchema.optional(),
+    current: DecimalSchema,
+    overdraft: DecimalSchema.optional(),
+    creditLimit: DecimalSchema.optional(),
+    lastStatementBalance: DecimalSchema.optional(),
     lastStatementDate: z.string().optional(),
-    paymentDue: z.number().optional(),
+    paymentDue: DecimalSchema.optional(),
     paymentDueDate: z.string().optional(),
     updateTimestamp: z.iso.datetime().optional(),
   })
@@ -182,7 +186,7 @@ export const TransactionSchema = z
     providerTransactionId: z.string().optional(),
     timestamp: z.iso.datetime(),
     description: z.string(),
-    amount: z.number(),
+    amount: DecimalSchema,
     currency: CurrencySchema,
     transactionType: TransactionTypeSchema,
     transactionCategory: TransactionCategorySchema,
@@ -426,7 +430,7 @@ export const TrueLayerApiTransactionSchema = z
     provider_transaction_id: z.string().optional(),
     timestamp: z.iso.datetime(),
     description: z.string(),
-    amount: z.number(),
+    amount: DecimalSchema,
     currency: CurrencySchema,
     transaction_type: TransactionTypeSchema,
     transaction_category: TransactionCategorySchema,
@@ -453,13 +457,13 @@ export type TrueLayerApiTransactionsResponse = z.infer<
 export const TrueLayerApiBalanceSchema = z
   .object({
     currency: CurrencySchema,
-    available: z.number().optional(),
-    current: z.number(),
-    overdraft: z.number().optional(),
-    credit_limit: z.number().optional(),
-    last_statement_balance: z.number().optional(),
+    available: DecimalSchema.optional(),
+    current: DecimalSchema,
+    overdraft: DecimalSchema.optional(),
+    credit_limit: DecimalSchema.optional(),
+    last_statement_balance: DecimalSchema.optional(),
     last_statement_date: z.string().optional(),
-    payment_due: z.number().optional(),
+    payment_due: DecimalSchema.optional(),
     payment_due_date: z.string().optional(),
     update_timestamp: z.iso.datetime().optional(),
   })

@@ -2,7 +2,12 @@ import { Controller } from "@nestjs/common";
 import { Implement, implement } from "@orpc/nest";
 import { Session, type UserSession } from "@thallesp/nestjs-better-auth";
 import { contract } from "@spark/orpc/contract";
-import { ListConnectorsResponseSchema } from "@spark/connectors";
+import {
+  ConnectorAuthError,
+  ConnectorError,
+  ConnectorRateLimitError,
+  ListConnectorsResponseSchema,
+} from "@spark/connectors";
 import { ConnectorConnectionService } from "./connector-connection.service";
 import { ConnectorRegistryService } from "./connector-registry.service";
 import { ConnectorSyncService } from "./connector-sync.service";
@@ -80,18 +85,36 @@ export class ConnectorsController {
 
   @Implement(contract.connectors.syncConnection)
   syncConnection(@Session() session: UserSession) {
-    return implement(contract.connectors.syncConnection).handler(async ({ input }) => {
-      const result = await this.syncService.syncConnection({
-        connectionId: input.connectionId,
-        userId: session.user.id,
-      });
+    return implement(contract.connectors.syncConnection).handler(async ({ input, errors }) => {
+      try {
+        const result = await this.syncService.syncConnection({
+          connectionId: input.connectionId,
+          userId: session.user.id,
+        });
 
-      return {
-        syncRunId: result.syncRunId,
-        status: result.syncResult.status,
-        recordsRead: result.recordsRead,
-        recordsWritten: result.recordsWritten,
-      };
+        return {
+          syncRunId: result.syncRunId,
+          status: result.syncResult.status,
+          recordsRead: result.recordsRead,
+          recordsWritten: result.recordsWritten,
+        };
+      } catch (error) {
+        // Translate the connector error taxonomy into the contract's typed
+        // channels so the web can branch on error.code structurally.
+        if (error instanceof ConnectorAuthError) {
+          throw errors.NEEDS_REAUTH({
+            data: { connectionId: input.connectionId },
+            cause: error,
+          });
+        }
+        if (error instanceof ConnectorRateLimitError) {
+          throw errors.RATE_LIMITED({ cause: error });
+        }
+        if (error instanceof ConnectorError) {
+          throw errors.CONNECTOR_ERROR({ data: { code: error.code }, cause: error });
+        }
+        throw error;
+      }
     });
   }
 }

@@ -256,7 +256,7 @@ export class ConnectorPersistenceService {
           occurredAt: new Date(transaction.occurredAt),
           settledAt: transaction.settledAt ? new Date(transaction.settledAt) : null,
           description: transaction.description,
-          amount: transaction.amount.toString(),
+          amount: transaction.amount,
           currency: transaction.currency,
           instrumentExternalId: transaction.instrumentExternalId,
           quantity: decimalString(transaction.quantity),
@@ -276,7 +276,7 @@ export class ConnectorPersistenceService {
             occurredAt: new Date(transaction.occurredAt),
             settledAt: transaction.settledAt ? new Date(transaction.settledAt) : null,
             description: transaction.description,
-            amount: transaction.amount.toString(),
+            amount: transaction.amount,
             currency: transaction.currency,
             instrumentExternalId: transaction.instrumentExternalId,
             quantity: decimalString(transaction.quantity),
@@ -366,11 +366,11 @@ export class ConnectorPersistenceService {
           accountExternalId: snapshot.accountExternalId,
           providerId: snapshot.providerId,
           currency: snapshot.currency,
-          cash: snapshot.cash.toString(),
+          cash: snapshot.cash,
           availableCash: decimalString(snapshot.availableCash),
           blockedCash: decimalString(snapshot.blockedCash),
           invested: decimalString(snapshot.invested),
-          total: snapshot.total.toString(),
+          total: snapshot.total,
           observedAt: new Date(snapshot.observedAt),
           metadata: snapshot.metadata,
         })),
@@ -404,9 +404,9 @@ export class ConnectorPersistenceService {
           accountExternalId: snapshot.accountExternalId,
           providerId: snapshot.providerId,
           currency: snapshot.currency,
-          cashValue: snapshot.cashValue.toString(),
-          investmentValue: snapshot.investmentValue.toString(),
-          totalValue: snapshot.totalValue.toString(),
+          cashValue: snapshot.cashValue,
+          investmentValue: snapshot.investmentValue,
+          totalValue: snapshot.totalValue,
           costBasis: decimalString(snapshot.costBasis),
           realizedProfitLoss: decimalString(snapshot.realizedProfitLoss),
           unrealizedProfitLoss: decimalString(snapshot.unrealizedProfitLoss),
@@ -462,8 +462,11 @@ export class ConnectorPersistenceService {
   }
 }
 
-function decimalString(value: number | null): string | null {
-  return value === null ? null : value.toString();
+// Money fields arrive as canonical decimal strings (see @spark/schema/money);
+// quantity fields are still numbers. Either way the numeric column gets the
+// value's exact string form.
+function decimalString(value: number | string | null): string | null {
+  return value === null ? null : typeof value === "number" ? value.toString() : value;
 }
 
 function addMinutes(date: Date, minutes: number): Date {

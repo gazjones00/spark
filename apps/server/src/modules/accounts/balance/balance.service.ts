@@ -52,9 +52,9 @@ export class BalanceService {
       await this.db
         .update(truelayerAccounts)
         .set({
-          currentBalance: balance.current.toString(),
-          availableBalance: balance.available?.toString() ?? null,
-          overdraft: balance.overdraft?.toString() ?? null,
+          currentBalance: balance.current,
+          availableBalance: balance.available ?? null,
+          overdraft: balance.overdraft ?? null,
           balanceUpdatedAt: balanceTimestamp,
           updatedAt: now,
         })

@@ -1,8 +1,11 @@
 import { Injectable, Logger, type OnModuleInit } from "@nestjs/common";
 import { DiscoveryService, MetadataScanner, ModuleRef } from "@nestjs/core";
 import { InstanceWrapper } from "@nestjs/core/injector/instance-wrapper";
+import { UnrecoverableError } from "bullmq";
+import { z } from "zod";
 import { type Jobs } from "./constants";
 import type { MessageQueueJob } from "./drivers/message-queue-driver.interface";
+import { JOB_SCHEMAS } from "./job-schemas";
 import { MessageQueueMetadataAccessor } from "./message-queue-metadata.accessor";
 import { MessageQueueService } from "./services/message-queue.service";
 
@@ -54,29 +57,54 @@ export class MessageQueueExplorer implements OnModuleInit {
 
       const { handlers, cronJobs } = this.buildQueueHandlers(processorInstances);
 
-      queueService.work(async (job: MessageQueueJob) => {
-        const handler = handlers.get(job.name);
-        if (!handler) {
-          this.logger.warn(`No handler registered for job "${job.name}"`);
-          return;
-        }
-
-        this.logger.log(`Processing job "${job.name}" (id: ${job.id})`);
-        try {
-          await handler(job.data);
-        } catch (error) {
-          this.logger.error(
-            `Job "${job.name}" (id: ${job.id}) failed: ${
-              error instanceof Error ? error.message : String(error)
-            }`,
-          );
-          throw error;
-        }
-      });
+      queueService.work((job: MessageQueueJob) => this.dispatch(handlers, job));
 
       this.logger.log(`Worker registered for queue "${queueName}" (${handlers.size} handlers)`);
 
       await this.registerCronJobs(queueService, cronJobs);
+    }
+  }
+
+  /**
+   * Validates the payload against the job's schema before the handler runs
+   * (parse-don't-validate at the queue trust boundary). Invalid payloads are
+   * permanent failures: `UnrecoverableError` makes BullMQ skip the remaining
+   * retry attempts, so the job fails immediately and is dead-lettered by the
+   * driver instead of burning through the backoff schedule.
+   */
+  async dispatch(
+    handlers: Map<Jobs, (data: unknown) => Promise<void>>,
+    job: MessageQueueJob,
+  ): Promise<void> {
+    const handler = handlers.get(job.name);
+    if (!handler) {
+      this.logger.warn(`No handler registered for job "${job.name}"`);
+      return;
+    }
+
+    const schema = JOB_SCHEMAS[job.name];
+    const parsed = schema.safeParse(job.data);
+    if (!parsed.success) {
+      this.logger.error(
+        `Rejecting job "${job.name}" (id: ${job.id}): payload does not match schema`,
+      );
+      throw new UnrecoverableError(
+        `Invalid payload for job "${job.name}": ${z.prettifyError(parsed.error)}`,
+      );
+    }
+
+    this.logger.log(`Processing job "${job.name}" (id: ${job.id})`);
+    try {
+      // Handler failures (unlike validation failures) are legitimately
+      // retryable, so they propagate as plain errors.
+      await handler(parsed.data);
+    } catch (error) {
+      this.logger.error(
+        `Job "${job.name}" (id: ${job.id}) failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+      throw error;
     }
   }
 

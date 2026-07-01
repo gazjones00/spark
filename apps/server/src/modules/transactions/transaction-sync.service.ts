@@ -80,7 +80,7 @@ export class TransactionSyncService {
         providerTransactionId: transaction.providerTransactionId ?? null,
         timestamp: new Date(transaction.timestamp),
         description: transaction.description,
-        amount: transaction.amount.toString(),
+        amount: transaction.amount,
         currency: transaction.currency,
         transactionType: transaction.transactionType,
         transactionCategory: transaction.transactionCategory,

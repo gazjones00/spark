@@ -5,6 +5,7 @@ import { Inject, Module, type OnModuleInit } from "@nestjs/common";
 import { HttpAdapterHost } from "@nestjs/core";
 import { env } from "@spark/env/server";
 import type { Express, NextFunction, Request, Response } from "express";
+import { rateLimit } from "express-rate-limit";
 import type { BullMQDriver } from "../message-queue";
 
 function basicAuthMiddleware(req: Request, res: Response, next: NextFunction) {
@@ -61,6 +62,16 @@ export class BullBoardModule implements OnModuleInit {
     });
 
     const app = this.adapterHost.httpAdapter.getInstance<Express>();
-    app.use("/queues", basicAuthMiddleware, serverAdapter.getRouter());
+    // The dashboard router bypasses Nest's request pipeline (plain Express
+    // middleware), so the Nest ThrottlerGuard never sees it. Rate-limit it
+    // here — in front of basic auth — so credentials can't be brute-forced.
+    const queuesRateLimiter = rateLimit({
+      windowMs: 60_000,
+      limit: 60,
+      standardHeaders: true,
+      legacyHeaders: false,
+      skip: () => env.NODE_ENV === "test",
+    });
+    app.use("/queues", queuesRateLimiter, basicAuthMiddleware, serverAdapter.getRouter());
   }
 }
