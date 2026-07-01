@@ -1,5 +1,6 @@
 import { HttpAdapterHost, NestFactory } from "@nestjs/core";
 import { env } from "@spark/env/server";
+import type { NextFunction, Request, Response } from "express";
 import helmet from "helmet";
 import { Logger } from "nestjs-pino";
 import { AppModule } from "./app.module";
@@ -14,9 +15,16 @@ async function bootstrap() {
     bufferLogs: true,
   });
   app.useLogger(app.get(Logger));
-  // CSP is disabled because the Bull Board dashboard (/queues) serves its
-  // own inline-scripted UI; every other helmet header applies.
-  app.use(helmet({ contentSecurityPolicy: false }));
+  // The Bull Board dashboard (/queues) serves its own inline-scripted UI,
+  // so only that path opts out of CSP; every other route keeps helmet's
+  // default CSP alongside the rest of the headers.
+  const helmetWithCsp = helmet();
+  const helmetWithoutCsp = helmet({ contentSecurityPolicy: false });
+  app.use((req: Request, res: Response, next: NextFunction) =>
+    req.path.startsWith("/queues")
+      ? helmetWithoutCsp(req, res, next)
+      : helmetWithCsp(req, res, next),
+  );
   app.enableCors({
     origin: env.CORS_ORIGIN,
     credentials: true,

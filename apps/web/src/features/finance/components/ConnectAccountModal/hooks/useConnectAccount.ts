@@ -76,6 +76,7 @@ export function useConnectAccount(options?: UseConnectAccountOptions) {
       // Missing state parameter - potential CSRF attack
       setOpen(true);
       setErrorMessage("Invalid authorization response: missing state parameter");
+      setErrorRecoverable(false);
       setStep("error");
       navigate({ to: "/accounts/connect", search: {}, replace: true });
     }

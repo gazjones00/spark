@@ -26,6 +26,13 @@ describe("JOB_SCHEMAS", () => {
       JOB_SCHEMAS[Jobs.AccountSync].safeParse({ accountId: "", connectionId: "" }).success,
     ).toBe(false);
     expect(
+      JOB_SCHEMAS[Jobs.AccountSync].safeParse({
+        accountId: "acc-1",
+        connectionId: "conn-1",
+        legacyField: true,
+      }).success,
+    ).toBe(false);
+    expect(
       JOB_SCHEMAS[Jobs.ConnectorSync].safeParse({ connection: "old-field-name" }).success,
     ).toBe(false);
     expect(
@@ -77,13 +84,6 @@ describe("MessageQueueExplorer.dispatch (TASK-006 FR-1)", () => {
 
   it("propagates handler failures as plain (retryable) errors", async () => {
     handler.mockRejectedValueOnce(new Error("transient"));
-    await expect(
-      explorer.dispatch(handlers, {
-        id: "job-3",
-        name: Jobs.AccountSync,
-        data: { accountId: "acc-1", connectionId: "conn-1" },
-      }),
-    ).rejects.toThrow("transient");
     const error = await explorer
       .dispatch(handlers, {
         id: "job-3",
@@ -91,6 +91,8 @@ describe("MessageQueueExplorer.dispatch (TASK-006 FR-1)", () => {
         data: { accountId: "acc-1", connectionId: "conn-1" },
       })
       .catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toBe("transient");
     expect(error).not.toBeInstanceOf(UnrecoverableError);
   });
 

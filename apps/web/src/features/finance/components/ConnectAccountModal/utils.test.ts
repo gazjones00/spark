@@ -28,6 +28,17 @@ describe("describeConnectError", () => {
     expect(described.message).toContain("try again");
   });
 
+  it("maps CONNECTOR_ERROR to a non-recoverable retry-later message", () => {
+    const error = new ORPCError("CONNECTOR_ERROR", {
+      defined: true,
+      status: 502,
+      data: { code: "PROVIDER_UNAVAILABLE" },
+    });
+    const described = describeConnectError(error);
+    expect(described.recoverable).toBe(false);
+    expect(described.message).toContain("try again");
+  });
+
   it("falls back to error.message for undefined errors", () => {
     const described = describeConnectError(new Error("network exploded"));
     expect(described).toEqual({ message: "network exploded", recoverable: false });

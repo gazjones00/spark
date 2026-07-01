@@ -25,6 +25,11 @@ export function describeConnectError(error: unknown): { message: string; recover
           message: "Your bank is receiving too many requests. Please try again in a few minutes.",
           recoverable: false,
         };
+      case "CONNECTOR_ERROR":
+        return {
+          message: "We couldn't sync this connection. Please try again later.",
+          recoverable: false,
+        };
     }
   }
   return {

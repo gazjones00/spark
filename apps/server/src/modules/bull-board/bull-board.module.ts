@@ -70,6 +70,7 @@ export class BullBoardModule implements OnModuleInit {
       limit: 60,
       standardHeaders: true,
       legacyHeaders: false,
+      skipSuccessfulRequests: true,
       skip: () => env.NODE_ENV === "test",
     });
     app.use("/queues", queuesRateLimiter, basicAuthMiddleware, serverAdapter.getRouter());

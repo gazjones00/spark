@@ -465,8 +465,8 @@ export class ConnectorPersistenceService {
 // Money fields arrive as canonical decimal strings (see @spark/schema/money);
 // quantity fields are still numbers. Either way the numeric column gets the
 // value's exact string form.
-function decimalString(value: number | string | null): string | null {
-  return value === null ? null : typeof value === "number" ? value.toString() : value;
+function decimalString(value: number | string | null | undefined): string | null {
+  return value == null ? null : typeof value === "number" ? value.toString() : value;
 }
 
 function addMinutes(date: Date, minutes: number): Date {

@@ -15,7 +15,7 @@ import { Jobs } from "./constants";
  * schemas (see the `*JobData` re-exports in `src/jobs/*.job.ts`).
  */
 
-export const AccountSyncJobDataSchema = z.object({
+export const AccountSyncJobDataSchema = z.strictObject({
   accountId: z.string().min(1),
   connectionId: z.string().min(1),
   accountType: AccountTypeSchema.nullish(),
@@ -24,7 +24,7 @@ export const AccountSyncJobDataSchema = z.object({
 // Same shape today; kept separate so the two can diverge safely.
 export const InitialSyncJobDataSchema = AccountSyncJobDataSchema;
 
-export const ConnectorSyncJobDataSchema = z.object({
+export const ConnectorSyncJobDataSchema = z.strictObject({
   connectionId: z.string().min(1),
   userId: z.string().min(1).optional(),
   requestedAt: z.iso.datetime().optional(),

@@ -54,7 +54,9 @@ export class TruelayerController {
         });
       } catch (error) {
         if (error instanceof InvalidOauthStateError) {
-          throw errors.INVALID_OAUTH_STATE({ message: error.message, cause: error });
+          // Contract default message only — error.message carries internal
+          // detail (e.g. token-storage failures) that must not reach clients.
+          throw errors.INVALID_OAUTH_STATE({ cause: error });
         }
         throw error;
       }
@@ -72,7 +74,7 @@ export class TruelayerController {
         });
       } catch (error) {
         if (error instanceof InvalidOauthStateError) {
-          throw errors.INVALID_OAUTH_STATE({ message: error.message, cause: error });
+          throw errors.INVALID_OAUTH_STATE({ cause: error });
         }
         throw error;
       }

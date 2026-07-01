@@ -17,6 +17,13 @@ import { z } from "zod";
  * `value.toString()` behaviour), and (b) the domain type is a string, so
  * accidental arithmetic downstream is a compile-time error rather than a
  * silent precision bug. Prefer string transport where a provider offers it.
+ *
+ * Scale is deliberately NOT enforced here: destination columns round to
+ * their declared scale (`numeric(19,4)` amounts, `numeric(19,8)` fx rates)
+ * on insert, exactly as they did before this codec existed. Rejecting
+ * over-precision at parse time would turn benign provider precision into
+ * sync failures, and per-column scale is the destination's contract, not
+ * the parse boundary's.
  */
 
 const DECIMAL_PATTERN = /^-?\d+(\.\d+)?$/;
