@@ -132,7 +132,7 @@ export function TransactionsTable({ transactions, accounts = [] }: TransactionsT
 
               return (
                 <TableRow key={transaction.id}>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="text-muted-foreground font-mono text-xs tabular-nums">
                     {new Date(transaction.timestamp).toLocaleDateString()}
                   </TableCell>
                   <TableCell className="font-medium">
@@ -140,10 +140,20 @@ export function TransactionsTable({ transactions, accounts = [] }: TransactionsT
                   </TableCell>
                   <TableCell className="text-muted-foreground text-xs">{accountName}</TableCell>
                   <TableCell className="text-muted-foreground text-xs">
-                    {categoryConfig[transaction.transactionCategory].label}
+                    <span className="inline-flex items-center gap-2">
+                      <span
+                        className="size-2 shrink-0"
+                        style={{
+                          backgroundColor: categoryConfig[transaction.transactionCategory].color,
+                        }}
+                      />
+                      {categoryConfig[transaction.transactionCategory].label}
+                    </span>
                   </TableCell>
-                  <TableCell className={`text-right font-medium ${isCredit ? "text-chart-3" : ""}`}>
-                    {isCredit ? "+" : "-"}
+                  <TableCell
+                    className={`text-right font-mono font-medium tabular-nums ${isCredit ? "text-success" : ""}`}
+                  >
+                    {isCredit ? "+" : "−"}
                     {formatCurrency(Math.abs(amount), transaction.currency)}
                   </TableCell>
                 </TableRow>

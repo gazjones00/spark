@@ -56,7 +56,10 @@ export function AccountCard({ account, onEdit, onDelete, onReauth }: AccountCard
             <div>
               <p className="font-medium line-clamp-1">{account.displayName}</p>
               <p className="text-muted-foreground text-xs">
-                {account.provider.displayName} • {getAccountNumber(account.accountNumber)}
+                {account.provider.displayName}{" "}
+                <span className="font-mono tabular-nums">
+                  {getAccountNumber(account.accountNumber)}
+                </span>
               </p>
             </div>
           </div>
@@ -66,13 +69,16 @@ export function AccountCard({ account, onEdit, onDelete, onReauth }: AccountCard
         </div>
         <div className="mt-4 space-y-2">
           {account.currentBalance && (
-            <p className="text-xl font-semibold">
+            <p className="font-display text-2xl font-semibold tabular-nums">
               {formatCurrency(parseFloat(account.currentBalance), account.currency)}
             </p>
           )}
           {account.availableBalance && account.availableBalance !== account.currentBalance && (
             <p className="text-muted-foreground text-xs">
-              Available: {formatCurrency(parseFloat(account.availableBalance), account.currency)}
+              Available:{" "}
+              <span className="font-mono tabular-nums">
+                {formatCurrency(parseFloat(account.availableBalance), account.currency)}
+              </span>
             </p>
           )}
           <div className="flex items-center gap-2">

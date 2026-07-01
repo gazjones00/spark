@@ -1,6 +1,5 @@
-import { TrendingUp, TrendingDown, Wallet } from "lucide-react";
-
 import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils";
 
 interface QuickStatsProps {
@@ -17,46 +16,54 @@ export function QuickStats({
   monthlyExpenses,
   currency,
 }: QuickStatsProps) {
-  const stats = [
-    {
-      label: "Net Worth",
-      value: netWorth,
-      icon: Wallet,
-      color: "text-foreground",
-    },
-    {
-      label: "Income (This Month)",
-      value: monthlyIncome,
-      icon: TrendingUp,
-      color: "text-chart-3",
-    },
-    {
-      label: "Expenses (This Month)",
-      value: monthlyExpenses,
-      icon: TrendingDown,
-      color: "text-chart-1",
-    },
-  ];
-
   return (
     <div className="grid gap-4 md:grid-cols-3">
-      {stats.map((stat) => (
-        <Card key={stat.label}>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="bg-muted rounded-none p-2">
-                <stat.icon className={`size-5 ${stat.color}`} />
-              </div>
-              <div>
-                <p className="text-muted-foreground text-xs font-medium">{stat.label}</p>
-                <p className={`text-xl font-bold ${stat.color}`}>
-                  {formatCurrency(stat.value, currency)}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+      <StatCard label="Net worth" value={formatCurrency(netWorth, currency)} primary />
+      <StatCard
+        label="Income · this month"
+        value={`+${formatCurrency(monthlyIncome, currency)}`}
+        valueClassName="text-success"
+      />
+      <StatCard
+        label="Expenses · this month"
+        value={`−${formatCurrency(monthlyExpenses, currency)}`}
+      />
     </div>
+  );
+}
+
+function StatCard({
+  label,
+  value,
+  primary = false,
+  valueClassName,
+}: {
+  label: string;
+  value: string;
+  /** The lead instrument — rendered as a dark panel in both themes. */
+  primary?: boolean;
+  valueClassName?: string;
+}) {
+  return (
+    <Card className={cn(primary && "bg-[#141415] text-[#eff0f1] ring-[#2f3032] dark:bg-[#141415]")}>
+      <CardContent className="py-1">
+        <p
+          className={cn(
+            "font-mono text-[10px] font-medium uppercase tracking-[0.14em]",
+            primary ? "text-[#a3a3a4]" : "text-muted-foreground",
+          )}
+        >
+          {label}
+        </p>
+        <p
+          className={cn(
+            "font-display mt-2 text-2xl font-semibold tabular-nums sm:text-3xl",
+            valueClassName,
+          )}
+        >
+          {value}
+        </p>
+      </CardContent>
+    </Card>
   );
 }
