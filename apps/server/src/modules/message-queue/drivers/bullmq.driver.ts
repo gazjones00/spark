@@ -1,5 +1,6 @@
-import { Queue, Worker } from "bullmq";
-import type { Jobs, MessageQueue } from "../constants";
+import { type Job, Queue, UnrecoverableError, Worker } from "bullmq";
+import { normalizeError, redactSensitive } from "../../../observability/redaction";
+import { type Jobs, MessageQueue } from "../constants";
 import type {
   MessageQueueDriver,
   MessageQueueJob,
@@ -7,23 +8,50 @@ import type {
   WorkerOptions,
 } from "./message-queue-driver.interface";
 
+/** Minimal structured-logger surface; satisfied by a pino logger. */
+export interface MessageQueueLogger {
+  info(obj: Record<string, unknown>, msg?: string): void;
+  warn(obj: Record<string, unknown>, msg?: string): void;
+  error(obj: Record<string, unknown>, msg?: string): void;
+}
+
 export interface BullMQDriverOptions {
   connection: {
     host: string;
     port: number;
   };
+  logger?: MessageQueueLogger;
+  /** Invoked once per terminally-failed job (e.g. to report to Sentry). */
+  onTerminalFailure?: (error: unknown, context: Record<string, unknown>) => void;
 }
 
 export class BullMQDriver implements MessageQueueDriver {
   private queueMap: Record<string, Queue> = {};
   private workerMap: Record<string, Worker> = {};
+  private readonly connection: BullMQDriverOptions["connection"];
+  private readonly logger?: MessageQueueLogger;
+  private readonly onTerminalFailure?: BullMQDriverOptions["onTerminalFailure"];
 
-  constructor(private options: BullMQDriverOptions) {}
+  constructor(options: BullMQDriverOptions) {
+    this.connection = options.connection;
+    this.logger = options.logger;
+    this.onTerminalFailure = options.onTerminalFailure;
+  }
 
   register(queueName: MessageQueue): void {
     if (!this.queueMap[queueName]) {
-      this.queueMap[queueName] = new Queue(queueName, this.options);
+      this.queueMap[queueName] = this.createQueue(queueName);
     }
+  }
+
+  private createQueue(queueName: MessageQueue): Queue {
+    const queue = new Queue(queueName, { connection: this.connection });
+    // Without a listener, connection failures surface as unhandled 'error'
+    // events and dump raw objects to stderr.
+    queue.on("error", (error) => {
+      this.logger?.error({ queue: queueName, err: normalizeError(error) }, "queue error");
+    });
+    return queue;
   }
 
   async add<T>(
@@ -68,7 +96,7 @@ export class BullMQDriver implements MessageQueueDriver {
       throw new Error(`Worker for queue "${queueName}" already exists.`);
     }
 
-    this.workerMap[queueName] = new Worker(
+    const worker = new Worker(
       queueName,
       async (job) => {
         await handler({
@@ -77,8 +105,32 @@ export class BullMQDriver implements MessageQueueDriver {
           data: job.data as T,
         });
       },
-      { ...this.options, ...options },
+      { connection: this.connection, ...options },
     );
+
+    worker.on("failed", (job, error) => {
+      this.logger?.error(
+        {
+          queue: queueName,
+          jobId: job?.id,
+          jobName: job?.name,
+          attemptsMade: job?.attemptsMade,
+          err: normalizeError(error),
+        },
+        "job failed",
+      );
+      if (job && this.isTerminalFailure(job, error)) {
+        void this.deadLetter(queueName, job, error);
+      }
+    });
+    worker.on("error", (error) => {
+      this.logger?.error({ queue: queueName, err: normalizeError(error) }, "worker error");
+    });
+    worker.on("stalled", (jobId) => {
+      this.logger?.warn({ queue: queueName, jobId }, "job stalled");
+    });
+
+    this.workerMap[queueName] = worker;
   }
 
   async close(): Promise<void> {
@@ -97,5 +149,57 @@ export class BullMQDriver implements MessageQueueDriver {
 
   getQueues(): Queue[] {
     return Object.values(this.queueMap);
+  }
+
+  /**
+   * Final retry exhausted, or the handler flagged the job as permanently
+   * unprocessable (BullMQ skips remaining attempts on UnrecoverableError).
+   */
+  private isTerminalFailure(job: Job, error: unknown): boolean {
+    return job.attemptsMade >= (job.opts.attempts ?? 1) || error instanceof UnrecoverableError;
+  }
+
+  private deadLetterQueue(): Queue {
+    if (!this.queueMap[MessageQueue.DEAD_LETTER]) {
+      this.queueMap[MessageQueue.DEAD_LETTER] = this.createQueue(MessageQueue.DEAD_LETTER);
+    }
+    return this.queueMap[MessageQueue.DEAD_LETTER];
+  }
+
+  private async deadLetter(sourceQueue: MessageQueue, job: Job, error: unknown): Promise<void> {
+    const normalized = normalizeError(error);
+    try {
+      // attempts: 1 so the DLQ itself never retries (no amplification);
+      // entries are kept until handled by an operator.
+      await this.deadLetterQueue().add(
+        job.name,
+        {
+          sourceQueue,
+          jobId: job.id,
+          jobName: job.name,
+          attemptsMade: job.attemptsMade,
+          failedAt: new Date().toISOString(),
+          data: redactSensitive(job.data),
+          error: {
+            name: normalized.name,
+            message: normalized.message,
+            ...(normalized.code !== undefined ? { code: normalized.code } : {}),
+            ...(normalized.status !== undefined ? { status: normalized.status } : {}),
+          },
+        },
+        { attempts: 1, removeOnComplete: false, removeOnFail: false },
+      );
+      this.onTerminalFailure?.(error, {
+        sourceQueue,
+        jobId: job.id,
+        jobName: job.name,
+        attemptsMade: job.attemptsMade,
+      });
+    } catch (dlqError) {
+      this.logger?.error(
+        { queue: sourceQueue, jobId: job.id, err: normalizeError(dlqError) },
+        "failed to write dead-letter entry",
+      );
+    }
   }
 }

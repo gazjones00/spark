@@ -5,6 +5,11 @@ export const QUEUE_DRIVER = Symbol("message-queue:queue_driver");
 
 export enum MessageQueue {
   DEFAULT = "DEFAULT",
+  /**
+   * Terminal job failures are parked here (payload + normalised error) by
+   * the BullMQ driver. No worker consumes it; inspect via Bull Board.
+   */
+  DEAD_LETTER = "DEAD_LETTER",
 }
 
 export enum Jobs {
