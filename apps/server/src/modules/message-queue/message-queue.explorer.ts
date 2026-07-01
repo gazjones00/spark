@@ -1,6 +1,7 @@
 import { Injectable, Logger, type OnModuleInit } from "@nestjs/common";
 import { DiscoveryService, MetadataScanner, ModuleRef } from "@nestjs/core";
 import { InstanceWrapper } from "@nestjs/core/injector/instance-wrapper";
+import { env } from "@spark/env/server";
 import { UnrecoverableError } from "bullmq";
 import { z } from "zod";
 import { type Jobs } from "./constants";
@@ -57,7 +58,11 @@ export class MessageQueueExplorer implements OnModuleInit {
 
       const { handlers, cronJobs } = this.buildQueueHandlers(processorInstances);
 
-      queueService.work((job: MessageQueueJob) => this.dispatch(handlers, job));
+      queueService.work((job: MessageQueueJob) => this.dispatch(handlers, job), {
+        // Bound the pool: at most WORKER_CONCURRENCY jobs (financial syncs)
+        // run in parallel per worker process.
+        concurrency: env.WORKER_CONCURRENCY,
+      });
 
       this.logger.log(`Worker registered for queue "${queueName}" (${handlers.size} handlers)`);
 

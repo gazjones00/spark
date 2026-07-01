@@ -1,18 +1,19 @@
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
 import { ConnectorRegistry } from "@spark/connectors";
 import type { ConnectorManifest, FinancialConnector } from "@spark/connectors";
+import { CONNECTORS } from "./connector.tokens";
 
 /**
- * Registry over the available connectors. Instantiated via the factory
- * provider in ConnectorsModule so connectors with injected dependencies
- * (e.g. the TrueLayer connector's client + token provider) can register;
- * TASK-007 generalises this into a fully DI-driven registry.
+ * Registry over the connectors registered under the CONNECTORS token in
+ * ConnectorsModule. Each connector is a DI provider, so connectors with
+ * dependencies (e.g. the TrueLayer connector's client + token provider)
+ * receive them through the container.
  */
 @Injectable()
 export class ConnectorRegistryService {
   private readonly registry = new ConnectorRegistry();
 
-  constructor(connectors: readonly FinancialConnector[] = []) {
+  constructor(@Optional() @Inject(CONNECTORS) connectors: readonly FinancialConnector[] = []) {
     for (const connector of connectors) {
       this.registry.register(connector);
     }

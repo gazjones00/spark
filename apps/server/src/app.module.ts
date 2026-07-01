@@ -15,7 +15,7 @@ import { SettingsModule } from "./modules/settings";
 import { TransactionsModule } from "./modules/transactions";
 import { BullBoardModule } from "./modules/bull-board";
 import { DatabaseModule } from "./modules/database";
-import { BullMQDriver, MessageQueueModule } from "./modules/message-queue";
+import { createBullMQDriver, MessageQueueModule } from "./modules/message-queue";
 import { rootLogger } from "./observability/logging.config";
 import { reportError } from "./observability/sentry";
 import { TruelayerModule } from "./providers/truelayer";
@@ -26,15 +26,6 @@ declare module "@orpc/nest" {
     request: Request;
   }
 }
-
-const messageQueueDriver = new BullMQDriver({
-  connection: {
-    host: env.REDIS_HOST,
-    port: env.REDIS_PORT,
-  },
-  logger: rootLogger.child({ context: "BullMQDriver" }),
-  onTerminalFailure: reportError,
-});
 
 @Module({
   imports: [
@@ -48,13 +39,17 @@ const messageQueueDriver = new BullMQDriver({
     }),
     DatabaseModule,
     CryptoModule,
-    MessageQueueModule.register({ driver: messageQueueDriver }),
+    // The driver is constructed inside the container so Nest owns its
+    // lifecycle (onModuleDestroy drains queues/workers on shutdown).
+    MessageQueueModule.registerAsync({
+      useFactory: () => ({ driver: createBullMQDriver() }),
+    }),
     ConnectorsModule,
     AccountsModule,
     TransactionsModule,
     SettingsModule,
     HealthModule,
-    BullBoardModule.forRoot(messageQueueDriver),
+    BullBoardModule.forRoot(),
     AuthModule.forRoot({ auth }),
     TruelayerModule.forRoot({
       environment: env.TRUELAYER_ENV,

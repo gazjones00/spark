@@ -17,6 +17,8 @@ export const env = createEnv({
     REDIS_HOST: z.string(),
     REDIS_PORT: z.coerce.number(),
     TRUELAYER_ENV: z.enum(["sandbox", "production"]).default("sandbox"),
+    /** Max parallel jobs (i.e. financial syncs) per worker process. */
+    WORKER_CONCURRENCY: z.coerce.number().int().positive().default(5),
     TRUELAYER_CLIENT_ID: z.string().min(1),
     TRUELAYER_CLIENT_SECRET: z.string().min(1),
     TRUELAYER_REDIRECT_URI: z.url(),

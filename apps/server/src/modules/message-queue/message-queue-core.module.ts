@@ -18,13 +18,7 @@ export const { ConfigurableModuleClass, MODULE_OPTIONS_TOKEN, OPTIONS_TYPE, ASYN
 function createQueueServiceProvider(queueName: MessageQueue): Provider {
   return {
     provide: `QUEUE_${queueName}`,
-    useFactory: (driver: MessageQueueDriver) => {
-      const service = Object.create(MessageQueueService.prototype);
-      service.driver = driver;
-      service.queueName = queueName;
-      driver.register?.(queueName);
-      return service;
-    },
+    useFactory: (driver: MessageQueueDriver) => new MessageQueueService(driver, queueName),
     inject: [QUEUE_DRIVER],
   };
 }

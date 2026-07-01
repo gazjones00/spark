@@ -1,7 +1,12 @@
+import "reflect-metadata";
+import { MetadataScanner, Reflector } from "@nestjs/core";
+import { env } from "@spark/env/server";
 import { UnrecoverableError } from "bullmq";
 import { beforeEach, describe, expect, it, type Mock, vi } from "vitest";
-import { Jobs } from "./constants";
+import { Jobs, MessageQueue } from "./constants";
+import { Cron, Process, Processor } from "./decorators";
 import { JOB_SCHEMAS } from "./job-schemas";
+import { MessageQueueMetadataAccessor } from "./message-queue-metadata.accessor";
 import { MessageQueueExplorer } from "./message-queue.explorer";
 
 describe("JOB_SCHEMAS", () => {
@@ -100,5 +105,78 @@ describe("MessageQueueExplorer.dispatch (TASK-006 FR-1)", () => {
     await expect(
       explorer.dispatch(handlers, { id: "job-4", name: Jobs.ConnectorSync, data: {} }),
     ).resolves.toBeUndefined();
+  });
+});
+
+describe("MessageQueueExplorer.explore (TASK-007 FR-6)", () => {
+  @Processor(MessageQueue.DEFAULT)
+  class TestProcessor {
+    @Process(Jobs.AccountSync)
+    async handleAccountSync(_data: unknown) {}
+
+    @Process(Jobs.PeriodicSync)
+    @Cron("*/5 * * * *")
+    async handlePeriodicSync(_data: unknown) {}
+  }
+
+  function buildExplorer(instances: object[]) {
+    const queueService = {
+      work: vi.fn(),
+      addCron: vi.fn().mockResolvedValue(undefined),
+    };
+    const moduleRef = { get: vi.fn().mockReturnValue(queueService) };
+    const discovery = {
+      getProviders: () =>
+        instances.map((instance) => ({ metatype: instance.constructor, instance })),
+    };
+    const explorer = new MessageQueueExplorer(
+      moduleRef as never,
+      discovery as never,
+      new MessageQueueMetadataAccessor(new Reflector()),
+      new MetadataScanner(),
+    );
+    return { explorer, queueService, moduleRef };
+  }
+
+  it("registers the worker with the configured concurrency bound", async () => {
+    const { explorer, queueService, moduleRef } = buildExplorer([new TestProcessor()]);
+
+    await explorer.explore();
+
+    expect(moduleRef.get).toHaveBeenCalledWith(`QUEUE_${MessageQueue.DEFAULT}`, {
+      strict: false,
+    });
+    expect(queueService.work).toHaveBeenCalledTimes(1);
+    expect(queueService.work).toHaveBeenCalledWith(expect.any(Function), {
+      concurrency: env.WORKER_CONCURRENCY,
+    });
+  });
+
+  it("registers cron jobs with the derived scheduler id", async () => {
+    const { explorer, queueService } = buildExplorer([new TestProcessor()]);
+
+    await explorer.explore();
+
+    expect(queueService.addCron).toHaveBeenCalledTimes(1);
+    expect(queueService.addCron).toHaveBeenCalledWith(
+      "periodic-sync",
+      "*/5 * * * *",
+      Jobs.PeriodicSync,
+      {},
+    );
+  });
+
+  it("throws when two processors register the same job", async () => {
+    @Processor(MessageQueue.DEFAULT)
+    class DuplicateProcessor {
+      @Process(Jobs.AccountSync)
+      async handle(_data: unknown) {}
+    }
+
+    const { explorer } = buildExplorer([new TestProcessor(), new DuplicateProcessor()]);
+
+    await expect(explorer.explore()).rejects.toThrow(
+      `Duplicate job handler registered for "${Jobs.AccountSync}"`,
+    );
   });
 });
