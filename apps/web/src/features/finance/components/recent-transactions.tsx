@@ -18,7 +18,9 @@ export function RecentTransactions({ transactions }: RecentTransactionsProps) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-base">Recent Transactions</CardTitle>
+        <CardTitle className="font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+          Recent transactions
+        </CardTitle>
         <Link
           to="/transactions"
           className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "gap-1")}
@@ -58,9 +60,9 @@ export function RecentTransactions({ transactions }: RecentTransactionsProps) {
                   </div>
                 </div>
                 <p
-                  className={`text-sm font-medium ${isCredit ? "text-chart-3" : "text-foreground"}`}
+                  className={`font-mono text-sm font-medium tabular-nums ${isCredit ? "text-success" : "text-foreground"}`}
                 >
-                  {isCredit ? "+" : "-"}
+                  {isCredit ? "+" : "−"}
                   {formatCurrency(amount, transaction.currency)}
                 </p>
               </div>

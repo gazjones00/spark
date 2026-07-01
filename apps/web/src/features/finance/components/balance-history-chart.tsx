@@ -33,7 +33,9 @@ export function BalanceHistoryChart({ data, currency }: BalanceHistoryChartProps
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Balance Over Time</CardTitle>
+        <CardTitle className="font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+          Balance over time
+        </CardTitle>
       </CardHeader>
       <CardContent>
         {data.length === 0 ? (
@@ -46,21 +48,23 @@ export function BalanceHistoryChart({ data, currency }: BalanceHistoryChartProps
         ) : (
           <ChartContainer config={chartConfig} className="h-[200px] w-full">
             <AreaChart data={data} margin={{ left: 0, right: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <CartesianGrid strokeDasharray="2 4" vertical={false} />
               <XAxis
                 dataKey="date"
                 tickLine={false}
                 axisLine={false}
                 tickMargin={8}
+                tick={{ fontSize: 10, fontFamily: "var(--font-mono)" }}
                 tickFormatter={(value) => {
                   const date = new Date(value);
-                  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+                  return date.toLocaleDateString("en-GB", { month: "short", day: "numeric" });
                 }}
               />
               <YAxis
                 tickLine={false}
                 axisLine={false}
                 tickMargin={8}
+                tick={{ fontSize: 10, fontFamily: "var(--font-mono)" }}
                 tickFormatter={(value) => compactCurrency.format(value)}
               />
               <ChartTooltip
@@ -71,11 +75,11 @@ export function BalanceHistoryChart({ data, currency }: BalanceHistoryChartProps
                 }
               />
               <Area
-                type="monotone"
+                type="linear"
                 dataKey="balance"
                 stroke="var(--chart-1)"
                 fill="var(--chart-1)"
-                fillOpacity={0.2}
+                fillOpacity={0.12}
                 strokeWidth={2}
               />
             </AreaChart>

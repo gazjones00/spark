@@ -3,6 +3,7 @@ import { Plus, RefreshCw, Wallet } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { PageHeader } from "@/components/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { QuickStats } from "@/features/finance/components/quick-stats";
 import { BalanceHistoryChart } from "@/features/finance/components/balance-history-chart";
@@ -22,12 +23,11 @@ function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground text-sm">
-          Welcome back{user?.name ? `, ${user.name}` : ""}! Here's your financial overview.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Overview"
+        title="Dashboard"
+        description={`Welcome back${user?.name ? `, ${user.name}` : ""}. Here's your financial overview.`}
+      />
 
       <DashboardContent data={data} />
     </div>
