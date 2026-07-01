@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/page-header";
 import { AccountsList } from "@/features/finance/components/AccountList";
 import { AccountsAttentionBanner } from "@/features/finance/components/AccountsAttentionBanner";
 import { ConnectAccountModal } from "@/features/finance/components/ConnectAccountModal";
@@ -53,20 +54,21 @@ function AccountsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Accounts</h1>
-          <p className="text-muted-foreground text-sm">Manage your connected bank accounts</p>
-        </div>
-        <ConnectAccountModal
-          trigger={
-            <Button className="gap-2">
-              <Plus className="size-4" />
-              Connect Account
-            </Button>
-          }
-        />
-      </div>
+      <PageHeader
+        eyebrow="Connections"
+        title="Accounts"
+        description="Manage your connected bank accounts"
+        action={
+          <ConnectAccountModal
+            trigger={
+              <Button className="gap-2">
+                <Plus className="size-4" />
+                Connect Account
+              </Button>
+            }
+          />
+        }
+      />
 
       <AccountsAttentionBanner
         accounts={accountsNeedingAttention}

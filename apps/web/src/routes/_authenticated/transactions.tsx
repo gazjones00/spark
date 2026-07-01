@@ -3,6 +3,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/page-header";
 
 import {
   TransactionFiltersBar,
@@ -103,17 +104,18 @@ function TransactionsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Transactions</h1>
-        <p className="text-muted-foreground text-sm">View and search your transaction history</p>
-      </div>
+      <PageHeader
+        eyebrow="Ledger"
+        title="Transactions"
+        description="View and search your transaction history"
+      />
 
       <TransactionFiltersBar filters={filters} onFiltersChange={setFilters} accounts={accounts} />
 
       <TransactionsTable transactions={transactionsData?.transactions ?? []} accounts={accounts} />
 
       <div className="flex items-center justify-between">
-        <p className="text-muted-foreground text-sm">
+        <p className="text-muted-foreground font-mono text-[11px] font-medium uppercase tracking-[0.1em]">
           Showing {transactionsData?.transactions.length ?? 0} transactions
         </p>
         <div className="flex items-center gap-2">
