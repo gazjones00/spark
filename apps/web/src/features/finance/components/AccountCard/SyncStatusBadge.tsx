@@ -24,6 +24,13 @@ const statusConfig = {
     label: "Sync error",
     variant: "destructive" as const,
   },
+  // Internal parking state for backfilled bespoke rows (docs/adr/0001);
+  // never served by the accounts read path, but the record is exhaustive.
+  MIGRATED: {
+    icon: CheckCircle2,
+    label: "Migrated",
+    variant: "secondary" as const,
+  },
 } satisfies Record<
   SyncStatusType,
   { icon: typeof CheckCircle2; label: string; variant: "secondary" | "destructive" }

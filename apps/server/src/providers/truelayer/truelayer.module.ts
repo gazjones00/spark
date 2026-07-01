@@ -5,16 +5,19 @@ import type {
   TruelayerModuleAsyncOptions,
   TruelayerOptionsFactory,
 } from "./truelayer.interfaces";
+import { ConnectorsModule } from "../../modules/connectors";
 import { TruelayerClient } from "./truelayer.client";
 import { TruelayerConnectionService } from "./truelayer.connection.service";
 import { TruelayerService } from "./truelayer.service";
 import { TruelayerAccountStatusService } from "./truelayer-account-status.service";
+import { TruelayerConnectorTokenService } from "./truelayer-connector-token.service";
 
 const PROVIDERS = [
   TruelayerClient,
   TruelayerConnectionService,
   TruelayerService,
   TruelayerAccountStatusService,
+  TruelayerConnectorTokenService,
 ];
 
 @Module({})
@@ -23,6 +26,9 @@ export class TruelayerModule {
     return {
       module: TruelayerModule,
       global: true,
+      // TruelayerService routes new connections through the connector path
+      // (ConnectorConnectionService) — see docs/adr/0001.
+      imports: [ConnectorsModule],
       providers: [
         {
           provide: TRUELAYER_MODULE_OPTIONS,
@@ -38,7 +44,7 @@ export class TruelayerModule {
     return {
       module: TruelayerModule,
       global: true,
-      imports: options.imports ?? [],
+      imports: [...(options.imports ?? []), ConnectorsModule],
       providers: [...this.createAsyncProviders(options), ...PROVIDERS],
       exports: PROVIDERS,
     };

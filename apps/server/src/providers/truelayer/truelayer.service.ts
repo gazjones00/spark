@@ -1,6 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
+import { TRUELAYER_PROVIDER_ID } from "@spark/connectors";
 import { eq, and, gt, type Database } from "@spark/db";
-import { truelayerAccounts, truelayerOauthStates } from "@spark/db/schema";
+import { truelayerOauthStates } from "@spark/db/schema";
 import { env } from "@spark/env/server";
 import type {
   ExchangeCodeInput as ExchangeCodePayload,
@@ -9,14 +10,10 @@ import type {
   SaveAccountsInput as SaveAccountsPayload,
   SaveAccountsResponse,
 } from "@spark/schema";
-import { SyncStatus } from "@spark/common";
 import { TruelayerClient } from "./truelayer.client";
-import { TruelayerConnectionService } from "./truelayer.connection.service";
 import { DATABASE_CONNECTION } from "../../modules/database";
+import { ConnectorConnectionService } from "../../modules/connectors";
 import { CryptoService } from "../../modules/crypto";
-import { Jobs, MessageQueue } from "../../modules/message-queue";
-import type { MessageQueueService } from "../../modules/message-queue";
-import type { InitialSyncJobData } from "../../jobs/initial-sync.job";
 
 const STATE_EXPIRY_MINUTES = 10;
 
@@ -53,9 +50,8 @@ export class TruelayerService {
   constructor(
     private readonly client: TruelayerClient,
     private readonly cryptoService: CryptoService,
-    private readonly connectionService: TruelayerConnectionService,
+    private readonly connectorConnectionService: ConnectorConnectionService,
     @Inject(DATABASE_CONNECTION) private readonly db: Database,
-    @Inject(`QUEUE_${MessageQueue.DEFAULT}`) private readonly queue: MessageQueueService,
   ) {}
 
   buildCallbackRedirectUrl(code: string, state?: string): string {
@@ -189,65 +185,29 @@ export class TruelayerService {
     const accounts = oauthState.accounts ?? [];
     const accountsToSave = accounts.filter((account) => accountIds.includes(account.accountId));
 
-    const connectionId = crypto.randomUUID();
-    await this.connectionService.createConnection({
-      id: connectionId,
+    // New connections land on the connector path (docs/adr/0001): the token
+    // record becomes the encrypted connector credential blob, the selected
+    // accounts become the connection's allow-list, and the connector
+    // scheduler owns syncing. No truelayer_* rows are written.
+    await this.connectorConnectionService.createOAuthConnection({
       userId,
-      accessToken,
-      refreshToken,
-      expiresAt: oauthState.tokenExpiresAt,
+      providerId: TRUELAYER_PROVIDER_ID,
+      environment: env.TRUELAYER_ENV,
+      credentials: {
+        accessToken,
+        ...(refreshToken ? { refreshToken } : {}),
+        expiresAt: oauthState.tokenExpiresAt.toISOString(),
+      },
+      metadata: {
+        accountIds: accountsToSave.map((account) => account.accountId),
+      },
     });
-
-    const savedAccounts = await Promise.all(
-      accountsToSave.map(async (account) => {
-        const id = crypto.randomUUID();
-        await this.db
-          .insert(truelayerAccounts)
-          .values({
-            id,
-            accountId: account.accountId,
-            connectionId,
-            userId,
-            accountType: account.accountType,
-            displayName: account.displayName,
-            currency: account.currency,
-            accountNumber: account.accountNumber,
-            provider: account.provider,
-            updateTimestamp: new Date(account.updateTimestamp),
-          })
-          .onConflictDoUpdate({
-            target: truelayerAccounts.accountId,
-            set: {
-              connectionId,
-              displayName: account.displayName,
-              accountType: account.accountType,
-              currency: account.currency,
-              accountNumber: account.accountNumber,
-              provider: account.provider,
-              updateTimestamp: new Date(account.updateTimestamp),
-              updatedAt: new Date(),
-              syncStatus: SyncStatus.OK,
-            },
-          });
-        return account;
-      }),
-    );
 
     // Delete the oauth state row now that tokens have been used
     await this.db.delete(truelayerOauthStates).where(eq(truelayerOauthStates.state, state));
 
-    await Promise.all(
-      savedAccounts.map((account) =>
-        this.queue.add<InitialSyncJobData>(Jobs.InitialSync, {
-          accountId: account.accountId,
-          connectionId,
-          accountType: account.accountType,
-        }),
-      ),
-    );
-
     return {
-      savedCount: savedAccounts.length,
+      savedCount: accountsToSave.length,
     };
   }
 }

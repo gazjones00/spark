@@ -177,6 +177,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@spark/schema": "workspace:*",
+        "@spark/truelayer": "workspace:*",
         "zod": "catalog:",
       },
       "devDependencies": {
@@ -207,6 +208,8 @@
       },
       "devDependencies": {
         "@spark/config": "workspace:*",
+        "@spark/connectors": "workspace:*",
+        "@spark/crypto": "workspace:*",
         "@types/pg": "^8.15.6",
         "drizzle-kit": "catalog:",
         "typescript": "catalog:",

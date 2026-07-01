@@ -24,7 +24,8 @@
     "db:watch": "docker compose up",
     "db:stop": "docker compose stop",
     "db:down": "docker compose down",
-    "type:check": "tsc -b"
+    "type:check": "tsc -b",
+    "db:backfill:truelayer": "bun ./scripts/backfill-truelayer.ts"
   },
   "dependencies": {
     "@libsql/client": "^0.17.0",
@@ -38,6 +39,8 @@
   },
   "devDependencies": {
     "@spark/config": "workspace:*",
+    "@spark/connectors": "workspace:*",
+    "@spark/crypto": "workspace:*",
     "@types/pg": "^8.15.6",
     "drizzle-kit": "catalog:",
     "typescript": "catalog:"
