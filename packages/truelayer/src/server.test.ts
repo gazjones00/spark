@@ -163,6 +163,44 @@ describe("createTrueLayerClient", () => {
     ]);
   });
 
+  it("corrects TrueLayer's broken Amex logo_uri and passes other logos through", async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/data/v1/accounts")) {
+        return Promise.resolve(jsonResponse({ error: "endpoint_not_supported" }, 501));
+      }
+
+      return Promise.resolve(
+        jsonResponse({
+          results: [
+            {
+              update_timestamp: "2026-01-01T00:00:00.000Z",
+              account_id: "amex-card-id",
+              card_network: "AMEX",
+              card_type: "CHARGE",
+              display_name: "Amex Card",
+              currency: "GBP",
+              partial_card_number: "5678",
+              provider: {
+                provider_id: "ob-amex",
+                display_name: "American Express",
+                logo_uri:
+                  "https://truelayer-client-logos.s3-eu-west-1.amazonaws.com/banks/banks-icons/ob-amex-icon.svg",
+              },
+            },
+          ],
+        }),
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const accounts = await client.getAccounts({ accessToken: "token" });
+
+    expect(accounts[0]?.provider.logoUri).toBe(
+      "https://truelayer-client-logos.s3-eu-west-1.amazonaws.com/banks/banks-icons/amex-icon.svg",
+    );
+  });
+
   it("returns an empty list when neither endpoint is supported", async () => {
     vi.stubGlobal(
       "fetch",

@@ -6,6 +6,7 @@ import { formatRelative } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ProviderLogo } from "@/components/provider-logo";
 import { orpc } from "@spark/orpc";
 
 export function ConnectedAccounts() {
@@ -65,15 +66,12 @@ export function ConnectedAccounts() {
               <CardContent className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="bg-muted flex size-10 items-center justify-center rounded-none">
-                    {account.provider.logoUri ? (
-                      <img
-                        src={account.provider.logoUri}
-                        alt={account.provider.displayName}
-                        className="size-5"
-                      />
-                    ) : (
-                      <ExternalLink className="text-muted-foreground size-4" />
-                    )}
+                    <ProviderLogo
+                      logoUri={account.provider.logoUri}
+                      alt={account.provider.displayName}
+                      className="size-5"
+                      fallback={<ExternalLink className="text-muted-foreground size-4" />}
+                    />
                   </div>
                   <div>
                     <p className="text-sm font-medium">{account.displayName}</p>
