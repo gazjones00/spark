@@ -85,6 +85,60 @@ async function safeJson(response: Response): Promise<unknown> {
   }
 }
 
+/**
+ * TrueLayer error code returned when a provider does not expose a given data
+ * endpoint at all. Card-only providers (e.g. Amex) answer `/data/v1/accounts`
+ * with this; account-only providers answer `/data/v1/cards` with it. It means
+ * "this connection has none of this resource type", not a failure.
+ */
+const ENDPOINT_NOT_SUPPORTED = "endpoint_not_supported";
+
+function isEndpointNotSupported(data: unknown): boolean {
+  const parsed = TrueLayerErrorResponseSchema.safeParse(data);
+  return parsed.success && parsed.data.error === ENDPOINT_NOT_SUPPORTED;
+}
+
+/**
+ * Outcome of reading one data endpoint that a connection may or may not expose:
+ * - `data`   — HTTP OK; `body` holds the parsed JSON.
+ * - `absent` — the provider does not support this endpoint (`endpoint_not_supported`).
+ * - `error`  — a genuine failure (network reject, 401/403, 5xx, …). `raise()`
+ *   throws it with the correct classification, deferred so the caller can prefer
+ *   whichever endpoint actually carries this connection's data.
+ */
+type DataEndpointOutcome =
+  | { kind: "data"; body: unknown }
+  | { kind: "absent" }
+  | { kind: "error"; raise: () => never };
+
+async function classifyDataEndpoint(
+  settled: PromiseSettledResult<Response>,
+): Promise<DataEndpointOutcome> {
+  if (settled.status === "rejected") {
+    const { reason } = settled;
+    console.error("TrueLayer data endpoint fetch failed", reason);
+    return {
+      kind: "error",
+      raise: () => {
+        throw reason;
+      },
+    };
+  }
+
+  const response = settled.value;
+  if (response.ok) {
+    return { kind: "data", body: await response.json() };
+  }
+
+  const errorBody = await safeJson(response);
+  if (isEndpointNotSupported(errorBody)) {
+    return { kind: "absent" };
+  }
+
+  const { status } = response;
+  return { kind: "error", raise: () => throwDataEndpointError(status, errorBody) };
+}
+
 function getResourceType(accountType?: AccountType | null): TrueLayerResourceType {
   return accountType === "CREDIT_CARD" || accountType === "CHARGE_CARD" ? "cards" : "accounts";
 }
@@ -234,29 +288,37 @@ export function createTrueLayerClient(config: TrueLayerConfig): TrueLayerClient 
         }),
       ]);
 
-      if (accountsSettled.status !== "fulfilled") {
-        throw accountsSettled.reason;
+      const accountsOutcome = await classifyDataEndpoint(accountsSettled);
+      const cardsOutcome = await classifyDataEndpoint(cardsSettled);
+
+      const accountsResults =
+        accountsOutcome.kind === "data"
+          ? TrueLayerApiAccountsResponseSchema.parse(accountsOutcome.body).results
+          : [];
+      const cardsResults =
+        cardsOutcome.kind === "data"
+          ? TrueLayerApiCardsResponseSchema.parse(cardsOutcome.body).results
+          : [];
+
+      // A connection can hold accounts, cards, or both, and a provider that lacks
+      // one endpoint answers it with `endpoint_not_supported`. Gate on the actual
+      // row counts, not the `kind`: a genuine failure must be surfaced whenever it
+      // left us with no rows — including when the *other* endpoint answered
+      // `200 { results: [] }` — so a revoked consent (401/403) is raised rather
+      // than silently flattened into "zero accounts". A card-only provider (Amex)
+      // still syncs on cards alone, and when both endpoints are simply empty or
+      // absent the connection genuinely has neither, so an empty list is correct.
+      if (accountsResults.length === 0 && cardsResults.length === 0) {
+        if (accountsOutcome.kind === "error") {
+          accountsOutcome.raise();
+        }
+        if (cardsOutcome.kind === "error") {
+          cardsOutcome.raise();
+        }
+        return [];
       }
 
-      const accountsResponse = accountsSettled.value;
-      const cardsResponse = cardsSettled.status === "fulfilled" ? cardsSettled.value : null;
-
-      if (cardsSettled.status === "rejected") {
-        console.error("TrueLayer cards fetch failed", cardsSettled.reason);
-      }
-
-      if (!accountsResponse.ok) {
-        throwDataEndpointError(accountsResponse.status, await safeJson(accountsResponse));
-      }
-
-      const accountsData = await accountsResponse.json();
-      const accountsResult = TrueLayerApiAccountsResponseSchema.parse(accountsData);
-      const cardsData = cardsResponse?.ok ? await cardsResponse.json() : { results: [] };
-      const cardsResult = cardsResponse?.ok
-        ? TrueLayerApiCardsResponseSchema.parse(cardsData)
-        : { results: [] };
-
-      const accounts = accountsResult.results.map((account) => ({
+      const accounts = accountsResults.map((account) => ({
         updateTimestamp: account.update_timestamp,
         accountId: account.account_id,
         accountType: account.account_type,
@@ -270,7 +332,7 @@ export function createTrueLayerClient(config: TrueLayerConfig): TrueLayerClient 
         },
       }));
 
-      const cards = cardsResult.results.map((card) => ({
+      const cards = cardsResults.map((card) => ({
         updateTimestamp: card.update_timestamp,
         accountId: card.account_id,
         accountType: mapAccountTypeFromCardType(card.card_type),

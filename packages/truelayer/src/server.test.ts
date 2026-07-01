@@ -117,6 +117,108 @@ describe("createTrueLayerClient", () => {
     ]);
   });
 
+  it("returns only cards when the provider does not support the accounts endpoint (e.g. Amex)", async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/data/v1/accounts")) {
+        // Card-only providers answer /accounts with endpoint_not_supported.
+        return Promise.resolve(
+          jsonResponse(
+            {
+              error: "endpoint_not_supported",
+              error_description: "Feature not supported by the provider",
+            },
+            501,
+          ),
+        );
+      }
+
+      if (url.endsWith("/data/v1/cards")) {
+        return Promise.resolve(
+          jsonResponse({
+            results: [
+              {
+                update_timestamp: "2026-01-01T00:00:00.000Z",
+                account_id: "amex-card-id",
+                card_network: "AMEX",
+                card_type: "CHARGE",
+                display_name: "Amex Card",
+                currency: "GBP",
+                partial_card_number: "5678",
+                provider: { provider_id: "amex" },
+              },
+            ],
+          }),
+        );
+      }
+
+      return Promise.reject(new Error(`Unexpected URL: ${url}`));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const accounts = await client.getAccounts({ accessToken: "token" });
+
+    expect(accounts.map((account) => [account.accountId, account.accountType])).toEqual([
+      ["amex-card-id", "CHARGE_CARD"],
+    ]);
+  });
+
+  it("returns an empty list when neither endpoint is supported", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(jsonResponse({ error: "endpoint_not_supported" }, 501))),
+    );
+
+    const accounts = await client.getAccounts({ accessToken: "token" });
+
+    expect(accounts).toEqual([]);
+  });
+
+  it("surfaces a card-endpoint failure when accounts is unsupported (cards is the sole source)", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/data/v1/accounts")) {
+        return Promise.resolve(jsonResponse({ error: "endpoint_not_supported" }, 501));
+      }
+      if (url.endsWith("/data/v1/cards")) {
+        return Promise.resolve(
+          jsonResponse({ error: "access_denied", error_description: "consent revoked" }, 403),
+        );
+      }
+      return Promise.reject(new Error(`Unexpected URL: ${url}`));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(client.getAccounts({ accessToken: "token" })).rejects.toBeInstanceOf(
+      TrueLayerAuthError,
+    );
+  });
+
+  it("raises a revoked-consent error even when the other endpoint returns 200 with no rows", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/data/v1/accounts")) {
+        // Some providers answer with 200 and an empty set rather than a 4xx.
+        return Promise.resolve(jsonResponse({ results: [], status: "Succeeded" }));
+      }
+      if (url.endsWith("/data/v1/cards")) {
+        return Promise.resolve(
+          jsonResponse({ error: "access_denied", error_description: "consent revoked" }, 403),
+        );
+      }
+      return Promise.reject(new Error(`Unexpected URL: ${url}`));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(client.getAccounts({ accessToken: "token" })).rejects.toBeInstanceOf(
+      TrueLayerAuthError,
+    );
+  });
+
   it("uses the card transaction endpoint and preserves cardNumber metadata", async () => {
     const fetchMock = vi.fn((_: RequestInfo | URL) =>
       Promise.resolve(
