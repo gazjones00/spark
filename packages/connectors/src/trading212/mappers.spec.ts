@@ -41,9 +41,9 @@ describe("Trading 212 mappers", () => {
     const portfolio = mapTrading212PortfolioSnapshot(trading212AccountSummaryFixture, observedAt);
 
     expect(account.externalId).toBe("trading212:account:123456");
-    expect(balance.cash).toBe(1035);
-    expect(balance.total).toBe(6285);
-    expect(portfolio.investmentValue).toBe(5250);
+    expect(balance.cash).toBe("1035");
+    expect(balance.total).toBe("6285");
+    expect(portfolio.investmentValue).toBe("5250");
   });
 
   it("maps positions into instruments and holdings", () => {
@@ -56,8 +56,8 @@ describe("Trading 212 mappers", () => {
 
     expect(instrument.type).toBe(InstrumentType.Stock);
     expect(holding.instrumentExternalId).toBe("trading212:instrument:AAPL_US_EQ");
-    expect(holding.value).toBe(360);
-    expect(holding.unrealizedProfitLoss).toBe(60);
+    expect(holding.value).toBe("360");
+    expect(holding.unrealizedProfitLoss).toBe("60");
   });
 
   it("maps orders, dividends and cash movements into the unified ledger", () => {
@@ -75,11 +75,11 @@ describe("Trading 212 mappers", () => {
     );
 
     expect(order.type).toBe(FinancialTransactionType.Buy);
-    expect(order.amount).toBe(-300);
-    expect(order.fees).toBe(1.5);
-    expect(order.tax).toBe(0.5);
+    expect(order.amount).toBe("-300");
+    expect(order.fees).toBe("1.5");
+    expect(order.tax).toBe("0.5");
     expect(dividend.type).toBe(FinancialTransactionType.Dividend);
-    expect(dividend.price).toBe(2.1);
+    expect(dividend.price).toBe("2.1");
     expect(cashTransaction.type).toBe(FinancialTransactionType.Deposit);
   });
 });

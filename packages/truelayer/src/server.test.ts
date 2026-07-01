@@ -326,7 +326,7 @@ describe("createTrueLayerClient", () => {
 
     expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/data/v1/cards/credit-card-id/balance");
     expect(balance.overdraft).toBeUndefined();
-    expect(balance.creditLimit).toBe(3300);
+    expect(balance.creditLimit).toBe("3300");
     expect(balance.paymentDueDate).toBe("2026-02-24");
   });
 });

@@ -7,6 +7,9 @@ import { contract, type Contract } from "./contract.ts";
 
 export type { Contract } from "./contract.ts";
 export { contract } from "./contract.ts";
+// Typed-error helpers: branch on defined contract errors (error.code) instead
+// of string-matching error.message.
+export { isDefinedError, safe } from "@orpc/client";
 
 export type AppRouterClient = ContractRouterClient<Contract>;
 

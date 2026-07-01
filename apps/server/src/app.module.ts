@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
-import { REQUEST } from "@nestjs/core";
+import { APP_GUARD, REQUEST } from "@nestjs/core";
+import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import { ORPCModule, onError } from "@orpc/nest";
 import { AuthModule } from "@thallesp/nestjs-better-auth";
 import { auth } from "@spark/auth/server";
@@ -38,6 +39,13 @@ const messageQueueDriver = new BullMQDriver({
 @Module({
   imports: [
     LoggerModule.forRoot({ pinoHttp: { logger: rootLogger } }),
+    // Default rate limit for every Nest-routed endpoint (oRPC included).
+    // Internal sync traffic is unaffected — the schedulers dispatch via the
+    // queue, not HTTP. Disabled under test so suites aren't throttled.
+    ThrottlerModule.forRoot({
+      throttlers: [{ name: "default", ttl: 60_000, limit: 100 }],
+      skipIf: () => env.NODE_ENV === "test",
+    }),
     DatabaseModule,
     CryptoModule,
     MessageQueueModule.register({ driver: messageQueueDriver }),
@@ -74,5 +82,6 @@ const messageQueueDriver = new BullMQDriver({
     }),
   ],
   controllers: [TruelayerController],
+  providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule {}

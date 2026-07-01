@@ -3,6 +3,7 @@ import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { orpc } from "@spark/orpc";
 import type { Account } from "@spark/truelayer/types";
+import { describeConnectError } from "../utils";
 
 export type Step = "start" | "loading" | "select-accounts" | "saving" | "success" | "error";
 
@@ -21,16 +22,21 @@ export function useConnectAccount(options?: UseConnectAccountOptions) {
   const [selectedAccountIds, setSelectedAccountIds] = React.useState<Set<string>>(new Set());
   const [oauthState, setOauthState] = React.useState<string | null>(null);
   const [errorMessage, setErrorMessage] = React.useState("");
+  const [errorRecoverable, setErrorRecoverable] = React.useState(false);
+
+  const handleMutationError = React.useCallback((error: unknown) => {
+    const described = describeConnectError(error);
+    setErrorMessage(described.message);
+    setErrorRecoverable(described.recoverable);
+    setStep("error");
+  }, []);
 
   const generateAuthLinkMutation = useMutation({
     mutationFn: () => orpc.truelayer.generateAuthLink.call({}),
     onSuccess: (data) => {
       window.location.href = data.url;
     },
-    onError: (error) => {
-      setErrorMessage(error.message);
-      setStep("error");
-    },
+    onError: handleMutationError,
   });
 
   const exchangeCodeMutation = useMutation({
@@ -42,10 +48,7 @@ export function useConnectAccount(options?: UseConnectAccountOptions) {
       setOauthState(data.state);
       setStep("select-accounts");
     },
-    onError: (error) => {
-      setErrorMessage(error.message);
-      setStep("error");
-    },
+    onError: handleMutationError,
   });
 
   const saveAccountsMutation = useMutation({
@@ -60,10 +63,7 @@ export function useConnectAccount(options?: UseConnectAccountOptions) {
       queryClient.invalidateQueries({ queryKey: ["accounts"] });
       setStep("success");
     },
-    onError: (error) => {
-      setErrorMessage(error.message);
-      setStep("error");
-    },
+    onError: handleMutationError,
   });
 
   React.useEffect(() => {
@@ -76,6 +76,7 @@ export function useConnectAccount(options?: UseConnectAccountOptions) {
       // Missing state parameter - potential CSRF attack
       setOpen(true);
       setErrorMessage("Invalid authorization response: missing state parameter");
+      setErrorRecoverable(false);
       setStep("error");
       navigate({ to: "/accounts/connect", search: {}, replace: true });
     }
@@ -122,6 +123,7 @@ export function useConnectAccount(options?: UseConnectAccountOptions) {
       setSelectedAccountIds(new Set());
       setOauthState(null);
       setErrorMessage("");
+      setErrorRecoverable(false);
     }, 200);
   };
 
@@ -136,6 +138,7 @@ export function useConnectAccount(options?: UseConnectAccountOptions) {
     accounts,
     selectedAccountIds,
     errorMessage,
+    errorRecoverable,
     handleStartConnection,
     handleAccountToggle,
     handleSelectAll,

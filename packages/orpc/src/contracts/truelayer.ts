@@ -8,6 +8,15 @@ import {
   SaveAccountsResponseSchema,
 } from "@spark/schema";
 
+// The OAuth state row expires 10 minutes after the auth link is generated;
+// a stale/invalid state is user-recoverable by restarting the connect flow.
+const oauthStateErrors = {
+  INVALID_OAUTH_STATE: {
+    status: 401,
+    message: "Your bank connection session is invalid or has expired.",
+  },
+} as const;
+
 export const truelayerRouter = oc.router({
   generateAuthLink: oc
     .route({
@@ -22,6 +31,7 @@ export const truelayerRouter = oc.router({
       method: "POST",
       path: "/truelayer/exchange-code",
     })
+    .errors(oauthStateErrors)
     .input(ExchangeCodeInputSchema)
     .output(ExchangeCodeResponseSchema),
 
@@ -30,6 +40,7 @@ export const truelayerRouter = oc.router({
       method: "POST",
       path: "/truelayer/save-accounts",
     })
+    .errors(oauthStateErrors)
     .input(SaveAccountsInputSchema)
     .output(SaveAccountsResponseSchema),
 });
