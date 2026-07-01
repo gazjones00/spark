@@ -8,6 +8,7 @@ import {
 } from "@nestjs/common";
 import {
   ConnectorAuthError,
+  ConnectorAuthType,
   ConnectorError,
   type ConnectorAuthField,
   type ConnectorConnectionOption,
@@ -39,6 +40,16 @@ export interface TestConnectorConnectionInput {
   environment: string;
   credentials: Record<string, string>;
   connectionOptions?: Record<string, unknown>;
+}
+
+export interface CreateOAuthConnectionInput {
+  userId: string;
+  providerId: string;
+  environment: string;
+  /** Token record from OUR OAuth exchange — never user-supplied input. */
+  credentials: Record<string, string>;
+  /** Server-derived metadata, e.g. the accountIds allow-list. */
+  metadata?: Record<string, unknown>;
 }
 
 export interface ConnectorConnectionSummary {
@@ -74,7 +85,52 @@ export class ConnectorConnectionService {
   ): Promise<ConnectorConnectionSummary> {
     const { manifest, metadata, credentials } = this.validateConnectionInput(input);
     await this.verifyConnection(input, manifest, metadata, credentials);
+    return this.insertConnection(input.userId, input.environment, manifest, metadata, credentials);
+  }
 
+  /**
+   * Creates a connection for an OAuth2 provider whose credentials come from
+   * OUR token exchange (e.g. the TrueLayer redirect flow) rather than from
+   * user-entered manifest auth fields. Not exposed via the public contract:
+   * the public createConnection path rejects credentials for OAUTH2 manifests
+   * (they declare no auth fields), which keeps token injection impossible.
+   */
+  async createOAuthConnection(
+    input: CreateOAuthConnectionInput,
+  ): Promise<ConnectorConnectionSummary> {
+    const connector = this.registry.get(input.providerId);
+    if (!connector) {
+      throw new NotFoundException(`Connector provider not found: ${input.providerId}`);
+    }
+    const manifest = connector.manifest;
+    if (manifest.auth.type !== ConnectorAuthType.OAuth2) {
+      throw new BadRequestException(`Provider ${manifest.id} does not use OAuth2 credentials.`);
+    }
+    this.assertEnvironment(manifest.environments, input.environment);
+
+    const metadata = input.metadata ?? {};
+    await this.verifyConnection(
+      { ...input, connectionOptions: undefined },
+      manifest,
+      metadata,
+      input.credentials,
+    );
+    return this.insertConnection(
+      input.userId,
+      input.environment,
+      manifest,
+      metadata,
+      input.credentials,
+    );
+  }
+
+  private async insertConnection(
+    userId: string,
+    environment: string,
+    manifest: ConnectorManifest,
+    metadata: Record<string, unknown>,
+    credentials: Record<string, string>,
+  ): Promise<ConnectorConnectionSummary> {
     const keyId = this.cryptoService.getCurrentKeyId();
     const encryptedCredentials = await this.cryptoService.encryptToString(
       JSON.stringify(credentials),
@@ -87,10 +143,10 @@ export class ConnectorConnectionService {
       .insert(connectorConnections)
       .values({
         id,
-        userId: input.userId,
+        userId,
         providerId: manifest.id,
         providerName: manifest.displayName,
-        environment: input.environment,
+        environment,
         encryptedCredentials,
         credentialKeyId: keyId,
         capabilities: [...manifest.capabilities],
@@ -103,7 +159,7 @@ export class ConnectorConnectionService {
 
     if (!row) {
       throw new InternalServerErrorException(
-        `Failed to create connector connection for provider ${manifest.id} and user ${input.userId}.`,
+        `Failed to create connector connection for provider ${manifest.id} and user ${userId}.`,
       );
     }
 

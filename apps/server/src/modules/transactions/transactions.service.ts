@@ -1,7 +1,8 @@
 import { BadRequestException, Inject, Injectable } from "@nestjs/common";
+import { TRUELAYER_PROVIDER_ID, truelayerAccountExternalId } from "@spark/connectors";
 import { type Database, and, desc, eq, gte, lt, lte, or, sql } from "@spark/db";
-import type { ListTransactionsInput } from "@spark/schema";
-import { truelayerAccounts, truelayerTransactions } from "@spark/db/schema";
+import type { ListTransactionsInput, SavedTransaction } from "@spark/schema";
+import { financialAccounts, financialTransactions } from "@spark/db/schema";
 import { DATABASE_CONNECTION } from "../database";
 
 const DEFAULT_LIMIT = 25;
@@ -12,28 +13,41 @@ interface CursorPayload {
   id: string;
 }
 
+/**
+ * Banking transaction reads, served from the canonical connector tables
+ * (financial_transactions; banking detail from row metadata written by the
+ * TrueLayer connector mappers) — see docs/adr/0001. The API contract shape
+ * (SavedTransaction) is unchanged.
+ */
 @Injectable()
 export class TransactionsService {
   constructor(@Inject(DATABASE_CONNECTION) private readonly db: Database) {}
 
   async list(userId: string, input: ListTransactionsInput = {}) {
     const limit = this.getLimit(input.limit);
-    const conditions = [eq(truelayerAccounts.userId, userId)];
+    const conditions = [
+      eq(financialAccounts.userId, userId),
+      eq(financialTransactions.providerId, TRUELAYER_PROVIDER_ID),
+    ];
 
     if (input.accountId) {
-      conditions.push(eq(truelayerTransactions.accountId, input.accountId));
+      conditions.push(
+        eq(financialTransactions.accountExternalId, truelayerAccountExternalId(input.accountId)),
+      );
     }
 
     if (input.category) {
-      conditions.push(eq(truelayerTransactions.transactionCategory, input.category));
+      conditions.push(
+        sql`${financialTransactions.metadata}->>'transactionCategory' = ${input.category}`,
+      );
     }
 
     if (input.search) {
       const searchPattern = `%${input.search.toLowerCase()}%`;
       conditions.push(
         sql`(
-          lower(${truelayerTransactions.description}) like ${searchPattern}
-          or lower(coalesce(${truelayerTransactions.merchantName}, '')) like ${searchPattern}
+          lower(${financialTransactions.description}) like ${searchPattern}
+          or lower(coalesce(${financialTransactions.metadata}->>'merchantName', '')) like ${searchPattern}
         )`,
       );
     }
@@ -45,80 +59,107 @@ export class TransactionsService {
     }
 
     if (fromDate) {
-      conditions.push(gte(truelayerTransactions.timestamp, fromDate));
+      conditions.push(gte(financialTransactions.occurredAt, fromDate));
     }
 
     if (toDate) {
-      conditions.push(lte(truelayerTransactions.timestamp, toDate));
+      conditions.push(lte(financialTransactions.occurredAt, toDate));
     }
 
     const cursor = input.cursor ? this.decodeCursor(input.cursor) : null;
     if (cursor) {
       conditions.push(
         or(
-          lt(truelayerTransactions.timestamp, cursor.timestamp),
+          lt(financialTransactions.occurredAt, cursor.timestamp),
           and(
-            eq(truelayerTransactions.timestamp, cursor.timestamp),
-            lt(truelayerTransactions.id, cursor.id),
+            eq(financialTransactions.occurredAt, cursor.timestamp),
+            lt(financialTransactions.id, cursor.id),
           ),
         )!,
       );
     }
 
-    const transactions = await this.db
+    const rows = await this.db
       .select({
-        id: truelayerTransactions.id,
-        transactionId: truelayerTransactions.transactionId,
-        accountId: truelayerTransactions.accountId,
-        normalisedProviderTransactionId: truelayerTransactions.normalisedProviderTransactionId,
-        providerTransactionId: truelayerTransactions.providerTransactionId,
-        timestamp: truelayerTransactions.timestamp,
-        description: truelayerTransactions.description,
-        amount: truelayerTransactions.amount,
-        currency: truelayerTransactions.currency,
-        transactionType: truelayerTransactions.transactionType,
-        transactionCategory: truelayerTransactions.transactionCategory,
-        transactionClassification: truelayerTransactions.transactionClassification,
-        merchantName: truelayerTransactions.merchantName,
-        runningBalance: truelayerTransactions.runningBalance,
-        meta: truelayerTransactions.meta,
-        updatedAt: truelayerTransactions.updatedAt,
+        id: financialTransactions.id,
+        externalId: financialTransactions.externalId,
+        accountExternalId: financialTransactions.accountExternalId,
+        occurredAt: financialTransactions.occurredAt,
+        description: financialTransactions.description,
+        amount: financialTransactions.amount,
+        currency: financialTransactions.currency,
+        metadata: financialTransactions.metadata,
+        updatedAt: financialTransactions.updatedAt,
       })
-      .from(truelayerTransactions)
+      .from(financialTransactions)
       .innerJoin(
-        truelayerAccounts,
-        eq(truelayerTransactions.accountId, truelayerAccounts.accountId),
+        financialAccounts,
+        and(
+          eq(financialTransactions.connectionId, financialAccounts.connectionId),
+          eq(financialTransactions.accountExternalId, financialAccounts.externalId),
+        ),
       )
       .where(and(...conditions))
-      .orderBy(desc(truelayerTransactions.timestamp), desc(truelayerTransactions.id))
+      .orderBy(desc(financialTransactions.occurredAt), desc(financialTransactions.id))
       .limit(limit + 1);
 
-    const hasMore = transactions.length > limit;
-    const currentPageTransactions = hasMore ? transactions.slice(0, limit) : transactions;
-    const lastTransaction = currentPageTransactions.at(-1);
-    const nextCursor = hasMore && lastTransaction ? this.encodeCursor(lastTransaction) : null;
+    const hasMore = rows.length > limit;
+    const currentPage = hasMore ? rows.slice(0, limit) : rows;
+    const lastTransaction = currentPage.at(-1);
+    const nextCursor =
+      hasMore && lastTransaction
+        ? this.encodeCursor({ timestamp: lastTransaction.occurredAt, id: lastTransaction.id })
+        : null;
 
     return {
-      transactions: currentPageTransactions.map((transaction) => ({
-        id: transaction.id,
-        transactionId: transaction.transactionId,
-        accountId: transaction.accountId,
-        normalisedProviderTransactionId: transaction.normalisedProviderTransactionId,
-        providerTransactionId: transaction.providerTransactionId,
-        timestamp: transaction.timestamp.toISOString(),
-        description: transaction.description,
-        amount: transaction.amount,
-        currency: transaction.currency,
-        transactionType: transaction.transactionType,
-        transactionCategory: transaction.transactionCategory,
-        transactionClassification: transaction.transactionClassification,
-        merchantName: transaction.merchantName,
-        runningBalance: transaction.runningBalance,
-        meta: transaction.meta,
-        updatedAt: transaction.updatedAt.toISOString(),
-      })),
+      transactions: currentPage.map((row) => this.toSavedTransaction(row)),
       nextCursor,
       hasMore,
+    };
+  }
+
+  /**
+   * Rebuilds the TrueLayer-shaped SavedTransaction from the canonical row:
+   * banking fields ride in metadata (see mapTrueLayerTransaction).
+   */
+  private toSavedTransaction(row: {
+    id: string;
+    externalId: string;
+    accountExternalId: string;
+    occurredAt: Date;
+    description: string;
+    amount: string;
+    currency: string;
+    metadata: Record<string, unknown>;
+    updatedAt: Date;
+  }): SavedTransaction {
+    const metadata = row.metadata;
+    return {
+      id: row.id,
+      transactionId:
+        typeof metadata.truelayerTransactionId === "string"
+          ? metadata.truelayerTransactionId
+          : row.externalId.replace("truelayer:txn:", ""),
+      accountId: row.accountExternalId.replace("truelayer:account:", ""),
+      normalisedProviderTransactionId:
+        (metadata.normalisedProviderTransactionId as string | null | undefined) ?? null,
+      providerTransactionId: (metadata.providerTransactionId as string | null | undefined) ?? null,
+      timestamp: row.occurredAt.toISOString(),
+      description: row.description,
+      amount: row.amount,
+      currency: row.currency as SavedTransaction["currency"],
+      transactionType:
+        (metadata.truelayerTransactionType as SavedTransaction["transactionType"]) ?? "DEBIT",
+      transactionCategory:
+        (metadata.transactionCategory as SavedTransaction["transactionCategory"]) ?? "UNKNOWN",
+      transactionClassification: Array.isArray(metadata.transactionClassification)
+        ? (metadata.transactionClassification as string[])
+        : [],
+      merchantName: (metadata.merchantName as string | null | undefined) ?? null,
+      runningBalance:
+        (metadata.runningBalance as SavedTransaction["runningBalance"] | undefined) ?? null,
+      meta: (metadata.meta as SavedTransaction["meta"] | undefined) ?? null,
+      updatedAt: row.updatedAt.toISOString(),
     };
   }
 

@@ -6,7 +6,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./core": "./src/core/index.ts",
-    "./trading212": "./src/trading212/index.ts"
+    "./trading212": "./src/trading212/index.ts",
+    "./truelayer": "./src/truelayer/index.ts"
   },
   "scripts": {
     "test": "vitest run",
@@ -14,6 +15,7 @@
   },
   "dependencies": {
     "@spark/schema": "workspace:*",
+    "@spark/truelayer": "workspace:*",
     "zod": "catalog:"
   },
   "devDependencies": {
