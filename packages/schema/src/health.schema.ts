@@ -1,9 +1,16 @@
 import { z } from "zod";
 
-export const HelloResponseSchema = z
-  .object({
-    message: z.string(),
-  })
-  .meta({ id: "HelloResponse" });
+export const HealthDependencySchema = z.object({
+  status: z.enum(["up", "down"]),
+  message: z.string().optional(),
+});
 
-export type HelloResponse = z.infer<typeof HelloResponseSchema>;
+export const HealthResponseSchema = z
+  .object({
+    status: z.enum(["ok", "error"]),
+    details: z.record(z.string(), HealthDependencySchema),
+  })
+  .meta({ id: "HealthResponse" });
+
+export type HealthDependency = z.infer<typeof HealthDependencySchema>;
+export type HealthResponse = z.infer<typeof HealthResponseSchema>;

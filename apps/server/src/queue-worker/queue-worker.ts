@@ -1,16 +1,20 @@
 import { Logger } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
+import { Logger as PinoNestLogger } from "nestjs-pino";
+import { initSentry } from "../observability/sentry";
 import { QueueWorkerModule } from "./queue-worker.module";
 
 async function bootstrap() {
-  const logger = new Logger("QueueWorker");
+  initSentry();
 
   const app = await NestFactory.createApplicationContext(QueueWorkerModule, {
     bufferLogs: true,
   });
 
-  app.useLogger(logger);
+  // Route all Nest logging through the shared redacting pino logger.
+  app.useLogger(app.get(PinoNestLogger));
 
+  const logger = new Logger("QueueWorker");
   logger.log("Queue worker started");
 
   // Handle graceful shutdown

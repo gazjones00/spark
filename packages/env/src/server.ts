@@ -9,7 +9,11 @@ export const env = createEnv({
     CORS_ORIGIN: z.url(),
     DATABASE_URL: z.string().min(1),
     ENCRYPTION_KEY: z.string().length(64, "Encryption key must be 64 hex characters (32 bytes)"),
+    LOG_LEVEL: z
+      .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
+      .default("info"),
     NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
+    SENTRY_DSN: z.url().optional(),
     REDIS_HOST: z.string(),
     REDIS_PORT: z.coerce.number(),
     TRUELAYER_ENV: z.enum(["sandbox", "production"]).default("sandbox"),

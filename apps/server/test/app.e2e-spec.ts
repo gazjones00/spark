@@ -4,7 +4,7 @@ import request from "supertest";
 import { App } from "supertest/types";
 import { AppModule } from "./../src/app.module";
 
-describe("AppController (e2e)", () => {
+describe("AppModule (e2e)", () => {
   let app: INestApplication<App>;
 
   beforeEach(async () => {
@@ -16,7 +16,17 @@ describe("AppController (e2e)", () => {
     await app.init();
   });
 
-  it("/ (GET)", () => {
-    return request(app.getHttpServer()).get("/").expect(200).expect("Hello World!");
+  afterEach(async () => {
+    await app.close();
+  });
+
+  it("/health/live (GET) responds without dependency I/O", () => {
+    return request(app.getHttpServer()).get("/health/live").expect(200).expect({ status: "ok" });
+  });
+
+  it("/health (GET) reports per-dependency readiness", async () => {
+    const response = await request(app.getHttpServer()).get("/health");
+    expect([200, 503]).toContain(response.status);
+    expect(response.body).toHaveProperty("details");
   });
 });

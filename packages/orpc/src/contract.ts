@@ -33,7 +33,7 @@ export {
   ExchangeCodeResponseSchema,
   GenerateAuthLinkInputSchema,
   GetAccountsResponseSchema,
-  HelloResponseSchema,
+  HealthResponseSchema,
   ListTransactionsInputSchema,
   ListTransactionsResponseSchema,
   NotificationPreferencesSchema,
