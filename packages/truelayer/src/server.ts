@@ -147,6 +147,30 @@ function mapAccountTypeFromCardType(cardType: "CREDIT" | "CHARGE"): AccountType 
   return cardType === "CHARGE" ? "CHARGE_CARD" : "CREDIT_CARD";
 }
 
+/**
+ * TrueLayer publishes a broken `logo_uri` for some card providers: Amex's icon
+ * lives at `banks-icons/amex-icon.svg`, but the API hands back the non-existent
+ * `banks-icons/ob-amex-icon.svg` (the `ob-` prefix only has a matching asset for
+ * the Open-Banking bank providers). We correct the known bad paths so the right
+ * brand mark renders and leave everything else untouched. This is an explicit
+ * map rather than a blanket `ob-` strip, which would break the valid bank logos.
+ */
+const LOGO_URI_CORRECTIONS: Record<string, string> = {
+  "banks-icons/ob-amex-icon.svg": "banks-icons/amex-icon.svg",
+};
+
+function normalizeProviderLogoUri(logoUri?: string): string | undefined {
+  if (!logoUri) {
+    return logoUri;
+  }
+  for (const [broken, fixed] of Object.entries(LOGO_URI_CORRECTIONS)) {
+    if (logoUri.includes(broken)) {
+      return logoUri.replace(broken, fixed);
+    }
+  }
+  return logoUri;
+}
+
 export interface TrueLayerClient {
   generateAuthLink(options?: GenerateAuthLinkOptions): AuthLinkResult;
   exchangeCode(options: ExchangeCodeOptions): Promise<TokenResponse>;
@@ -327,7 +351,7 @@ export function createTrueLayerClient(config: TrueLayerConfig): TrueLayerClient 
         accountNumber: account.account_number,
         provider: {
           providerId: account.provider.provider_id,
-          logoUri: account.provider.logo_uri,
+          logoUri: normalizeProviderLogoUri(account.provider.logo_uri),
           displayName: account.provider.display_name,
         },
       }));
@@ -343,7 +367,7 @@ export function createTrueLayerClient(config: TrueLayerConfig): TrueLayerClient 
         },
         provider: {
           providerId: card.provider.provider_id,
-          logoUri: card.provider.logo_uri,
+          logoUri: normalizeProviderLogoUri(card.provider.logo_uri),
           displayName: card.provider.display_name,
         },
       }));

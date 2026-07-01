@@ -7,6 +7,7 @@ import type { Account } from "@spark/orpc/contract";
 import { AccountType } from "@spark/truelayer/types";
 import type { AccountType as AccountTypeType } from "@spark/truelayer/types";
 import { formatCurrency } from "@/lib/utils";
+import { ProviderLogo } from "@/components/provider-logo";
 import { SyncStatusBadge } from "./SyncStatusBadge";
 
 const accountTypeConfig: Record<AccountTypeType, { icon: typeof Wallet; label: string }> = {
@@ -45,15 +46,12 @@ export function AccountCard({ account, onEdit, onDelete, onReauth }: AccountCard
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
             <div className="bg-muted rounded-none p-2 w-10 h-10 flex items-center justify-center shrink-0">
-              {account.provider.logoUri ? (
-                <img
-                  src={account.provider.logoUri}
-                  alt={account.provider.displayName}
-                  className="size-5"
-                />
-              ) : (
-                <Icon className="size-5 text-muted-foreground" />
-              )}
+              <ProviderLogo
+                logoUri={account.provider.logoUri}
+                alt={account.provider.displayName}
+                className="size-5"
+                fallback={<Icon className="size-5 text-muted-foreground" />}
+              />
             </div>
             <div>
               <p className="font-medium line-clamp-1">{account.displayName}</p>
