@@ -21,7 +21,7 @@ function findProvider(providers: unknown[], token: unknown): FactoryProvider {
   return provider;
 }
 
-describe("MessageQueueCoreModule providers (TASK-007 FR-4)", () => {
+describe("MessageQueueCoreModule providers", () => {
   it("constructs queue services through the real constructor, registering exactly once", () => {
     const driver = fakeDriver();
     const dynamicModule = MessageQueueCoreModule.register({ driver });
@@ -45,7 +45,7 @@ describe("MessageQueueCoreModule providers (TASK-007 FR-4)", () => {
     expect(dynamicModule.exports).toContain(QUEUE_DRIVER);
   });
 
-  it("registerAsync exposes the factory-produced driver under QUEUE_DRIVER (TASK-007 FR-1)", () => {
+  it("registerAsync exposes the factory-produced driver under QUEUE_DRIVER", () => {
     const driver = fakeDriver();
     const dynamicModule = MessageQueueCoreModule.registerAsync({
       useFactory: () => ({ driver }),

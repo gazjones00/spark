@@ -54,7 +54,7 @@ describe("JOB_SCHEMAS", () => {
   });
 });
 
-describe("MessageQueueExplorer.dispatch (TASK-006 FR-1)", () => {
+describe("MessageQueueExplorer.dispatch", () => {
   let explorer: MessageQueueExplorer;
   let handler: Mock<(data: unknown) => Promise<void>>;
   let handlers: Map<Jobs, (data: unknown) => Promise<void>>;
@@ -108,7 +108,7 @@ describe("MessageQueueExplorer.dispatch (TASK-006 FR-1)", () => {
   });
 });
 
-describe("MessageQueueExplorer.explore (TASK-007 FR-6)", () => {
+describe("MessageQueueExplorer.explore", () => {
   @Processor(MessageQueue.DEFAULT)
   class TestProcessor {
     @Process(Jobs.AccountSync)
