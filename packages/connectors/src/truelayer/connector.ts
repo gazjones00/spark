@@ -6,6 +6,7 @@ import type {
   GetAccountsOptions,
   GetBalanceOptions,
   GetTransactionsOptions,
+  RevokeAccessOptions,
   Transaction,
 } from "@spark/truelayer/server";
 import {
@@ -41,6 +42,7 @@ export interface TrueLayerConnectorClient {
   getAccounts(options: GetAccountsOptions): Promise<Account[]>;
   getTransactions(options: GetTransactionsOptions): Promise<Transaction[]>;
   getBalance(options: GetBalanceOptions): Promise<Balance>;
+  revokeAccess(options: RevokeAccessOptions): Promise<void>;
 }
 
 /**
@@ -73,6 +75,22 @@ export class TrueLayerConnector implements FinancialConnector {
     const accessToken = await this.tokenProvider.getAccessToken(context);
     try {
       await this.client.getAccounts({ accessToken });
+    } catch (error) {
+      throw classifyError(error);
+    }
+  }
+
+  /**
+   * Kills the open-banking grant at TrueLayer. Resolving the token first may
+   * itself refresh; if that refresh fails with `invalid_grant` the token
+   * provider throws `ConnectorAuthError` — the grant is already dead, which
+   * callers treat as the goal state.
+   */
+  async revoke(context: ConnectorSyncContext): Promise<void> {
+    this.assertEnvironment(context);
+    const accessToken = await this.tokenProvider.getAccessToken(context);
+    try {
+      await this.client.revokeAccess({ accessToken });
     } catch (error) {
       throw classifyError(error);
     }

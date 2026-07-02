@@ -70,6 +70,15 @@ export interface FinancialConnector {
   readonly manifest: ConnectorManifest;
   testConnection(context: ConnectorSyncContext): Promise<void>;
   sync(context: ConnectorSyncContext): Promise<ConnectorSyncResult>;
+  /**
+   * Revokes the provider-side grant behind this connection, so that
+   * "disconnected" locally also means "no longer authorised" upstream.
+   * Optional: API-key providers (e.g. Trading 212) have no grant to revoke —
+   * deleting the local credentials is the whole story. Implementations should
+   * throw a `ConnectorAuthError` when the grant is already gone; callers
+   * treat that as success.
+   */
+  revoke?(context: ConnectorSyncContext): Promise<void>;
 }
 
 export function emptyConnectorSyncResult(

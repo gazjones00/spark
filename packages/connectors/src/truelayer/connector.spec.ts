@@ -62,6 +62,7 @@ function createConnector(
     accounts?: Account[] | Error;
     transactions?: Transaction[] | Error;
     balance?: Balance | Error;
+    revoke?: Error;
   } = {},
 ) {
   const client = {
@@ -76,6 +77,9 @@ function createConnector(
     getBalance: vi.fn(async () => {
       if (overrides.balance instanceof Error) throw overrides.balance;
       return overrides.balance ?? BALANCE;
+    }),
+    revokeAccess: vi.fn(async () => {
+      if (overrides.revoke instanceof Error) throw overrides.revoke;
     }),
   };
   const tokenProvider = { getAccessToken: vi.fn(async () => "valid-token") };
@@ -229,5 +233,27 @@ describe("TrueLayerConnector", () => {
     await connector.testConnection(createContext());
     expect(tokenProvider.getAccessToken).toHaveBeenCalled();
     expect(client.getAccounts).toHaveBeenCalledWith({ accessToken: "valid-token" });
+  });
+
+  it("revoke resolves a valid token and calls the revocation endpoint", async () => {
+    const { connector, client, tokenProvider } = createConnector();
+    await connector.revoke(createContext());
+    expect(tokenProvider.getAccessToken).toHaveBeenCalled();
+    expect(client.revokeAccess).toHaveBeenCalledWith({ accessToken: "valid-token" });
+  });
+
+  it("revoke maps an already-dead grant (401) to ConnectorAuthError", async () => {
+    const { connector } = createConnector({
+      revoke: new TrueLayerAuthError("invalid_grant", "grant revoked", 401),
+    });
+    await expect(connector.revoke(createContext())).rejects.toBeInstanceOf(ConnectorAuthError);
+  });
+
+  it("revoke rejects unsupported environments before calling upstream", async () => {
+    const { connector, client } = createConnector();
+    await expect(connector.revoke(createContext({ environment: "demo" }))).rejects.toBeInstanceOf(
+      ConnectorAuthError,
+    );
+    expect(client.revokeAccess).not.toHaveBeenCalled();
   });
 });

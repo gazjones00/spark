@@ -564,4 +564,54 @@ describe("createTrueLayerClient rate limiting", () => {
     expect(error).toBeInstanceOf(TrueLayerRateLimitError);
     expect((error as TrueLayerRateLimitError).retryAfterMs).toBe(5_000);
   });
+
+  it("revokeAccess: sends DELETE /api/delete on the auth host with the bearer token", async () => {
+    const fetchMock = vi.fn(() => Promise.resolve(new Response(null, { status: 204 })));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(client.revokeAccess({ accessToken: "token" })).resolves.toBeUndefined();
+
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe("https://auth.truelayer.com/api/delete");
+    expect(init.method).toBe("DELETE");
+    expect(new Headers(init.headers).get("Authorization")).toBe("Bearer token");
+  });
+
+  it("revokeAccess: 401 (already revoked / dead token) surfaces as TrueLayerAuthError", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(jsonResponse({ error: "invalid_grant" }, 401))),
+    );
+
+    await expect(client.revokeAccess({ accessToken: "token" })).rejects.toBeInstanceOf(
+      TrueLayerAuthError,
+    );
+  });
+
+  it("revokeAccess: 429 carries the provider's backoff hint", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve(new Response(null, { status: 429, headers: { "Retry-After": "7" } })),
+      ),
+    );
+
+    const error = await client
+      .revokeAccess({ accessToken: "token" })
+      .catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(TrueLayerRateLimitError);
+    expect((error as TrueLayerRateLimitError).retryAfterMs).toBe(7_000);
+  });
+
+  it("revokeAccess: 5xx with an empty body surfaces as a generic error", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(new Response(null, { status: 500 }))),
+    );
+
+    await expect(client.revokeAccess({ accessToken: "token" })).rejects.toThrow(
+      "TrueLayer request failed: 500",
+    );
+  });
 });
