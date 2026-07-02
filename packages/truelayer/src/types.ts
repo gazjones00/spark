@@ -101,6 +101,10 @@ export interface GetBalanceOptions {
   accountType?: SchemaAccountType | null;
 }
 
+export interface RevokeAccessOptions {
+  accessToken: string;
+}
+
 export type BalanceResponse = SchemaBalanceResponse;
 
 export type TrueLayerErrorResponse = SchemaTrueLayerErrorResponse;

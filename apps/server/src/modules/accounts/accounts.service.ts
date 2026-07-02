@@ -4,6 +4,7 @@ import type { Database } from "@spark/db";
 import { and, desc, eq, inArray } from "@spark/db";
 import type { UpdateAccountInput } from "@spark/schema";
 import { balanceSnapshots, connectorConnections, financialAccounts } from "@spark/db/schema";
+import { ConnectorConnectionService } from "../connectors";
 import { DATABASE_CONNECTION } from "../database";
 import { toAccountDto, type AccountConnectionState } from "./mappers/account.mapper";
 
@@ -16,7 +17,10 @@ type BalanceSnapshotRow = typeof balanceSnapshots.$inferSelect;
  */
 @Injectable()
 export class AccountsService {
-  constructor(@Inject(DATABASE_CONNECTION) private readonly db: Database) {}
+  constructor(
+    @Inject(DATABASE_CONNECTION) private readonly db: Database,
+    private readonly connectionService: ConnectorConnectionService,
+  ) {}
 
   async list(userId: string) {
     const rows = await this.db
@@ -126,6 +130,23 @@ export class AccountsService {
         ? row.metadata.truelayerAccountId
         : truelayerAccountIdFromExternalId(row.externalId),
     );
+
+    // Last account gone → the user has disconnected the bank. Delete the
+    // whole connection (revoking the upstream grant best-effort, cascades
+    // clean the child rows) instead of leaving a tokened connection syncing
+    // an empty allow-list forever.
+    if (remainingAccountIds.length === 0) {
+      try {
+        await this.connectionService.deleteConnection(userId, existing.connectionId);
+      } catch (error) {
+        // Concurrent disconnect already removed it; the account row is gone
+        // either way, so the user-visible delete succeeded.
+        if (!(error instanceof NotFoundException)) {
+          throw error;
+        }
+      }
+      return { success: true };
+    }
 
     const connection = await this.db.query.connectorConnections.findFirst({
       where: eq(connectorConnections.id, existing.connectionId),

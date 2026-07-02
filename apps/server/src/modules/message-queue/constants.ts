@@ -17,5 +17,6 @@ export enum Jobs {
   ConnectorPeriodicSync = "ConnectorPeriodicSync",
   ConnectorSync = "ConnectorSync",
   InitialSync = "InitialSync",
+  OauthStateCleanup = "OauthStateCleanup",
   PeriodicSync = "PeriodicSync",
 }
