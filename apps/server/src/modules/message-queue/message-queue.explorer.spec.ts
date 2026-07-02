@@ -5,9 +5,11 @@ import { UnrecoverableError } from "bullmq";
 import { beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 import { Jobs, MessageQueue } from "./constants";
 import { Cron, Process, Processor } from "./decorators";
+import { SyncDriver } from "./drivers/sync.driver";
 import { JOB_SCHEMAS } from "./job-schemas";
 import { MessageQueueMetadataAccessor } from "./message-queue-metadata.accessor";
 import { MessageQueueExplorer } from "./message-queue.explorer";
+import { MessageQueueService } from "./services/message-queue.service";
 
 describe("JOB_SCHEMAS", () => {
   it("has a schema for every Jobs enum value", () => {
@@ -54,7 +56,7 @@ describe("JOB_SCHEMAS", () => {
   });
 });
 
-describe("MessageQueueExplorer.dispatch (TASK-006 FR-1)", () => {
+describe("MessageQueueExplorer.dispatch", () => {
   let explorer: MessageQueueExplorer;
   let handler: Mock<(data: unknown) => Promise<void>>;
   let handlers: Map<Jobs, (data: unknown) => Promise<void>>;
@@ -108,7 +110,7 @@ describe("MessageQueueExplorer.dispatch (TASK-006 FR-1)", () => {
   });
 });
 
-describe("MessageQueueExplorer.explore (TASK-007 FR-6)", () => {
+describe("MessageQueueExplorer.explore", () => {
   @Processor(MessageQueue.DEFAULT)
   class TestProcessor {
     @Process(Jobs.AccountSync)
@@ -182,5 +184,62 @@ describe("MessageQueueExplorer.explore (TASK-007 FR-6)", () => {
     await expect(explorer.explore()).rejects.toThrow(
       `Duplicate job handler registered for "${Jobs.AccountSync}"`,
     );
+  });
+});
+
+describe("MessageQueueExplorer + SyncDriver end-to-end", () => {
+  it("routes an added job synchronously through the registered processor method", async () => {
+    const received: unknown[] = [];
+
+    @Processor(MessageQueue.DEFAULT)
+    class SyncProcessor {
+      @Process(Jobs.ConnectorSync)
+      async handleConnectorSync(data: unknown) {
+        received.push(data);
+      }
+    }
+
+    const driver = new SyncDriver();
+    const queueService = new MessageQueueService(driver, MessageQueue.DEFAULT);
+    const instance = new SyncProcessor();
+    const explorer = new MessageQueueExplorer(
+      { get: vi.fn().mockReturnValue(queueService) } as never,
+      { getProviders: () => [{ metatype: SyncProcessor, instance }] } as never,
+      new MessageQueueMetadataAccessor(new Reflector()),
+      new MetadataScanner(),
+    );
+
+    await explorer.explore();
+    await queueService.add(Jobs.ConnectorSync, { connectionId: "conn-1" });
+
+    expect(received).toEqual([{ connectionId: "conn-1" }]);
+  });
+
+  it("rejects schema-invalid payloads before the processor runs", async () => {
+    const received: unknown[] = [];
+
+    @Processor(MessageQueue.DEFAULT)
+    class SyncProcessor {
+      @Process(Jobs.ConnectorSync)
+      async handleConnectorSync(data: unknown) {
+        received.push(data);
+      }
+    }
+
+    const driver = new SyncDriver();
+    const queueService = new MessageQueueService(driver, MessageQueue.DEFAULT);
+    const explorer = new MessageQueueExplorer(
+      { get: vi.fn().mockReturnValue(queueService) } as never,
+      { getProviders: () => [{ metatype: SyncProcessor, instance: new SyncProcessor() }] } as never,
+      new MessageQueueMetadataAccessor(new Reflector()),
+      new MetadataScanner(),
+    );
+
+    await explorer.explore();
+
+    await expect(
+      queueService.add(Jobs.ConnectorSync, { connection: "stale-shape" }),
+    ).rejects.toBeInstanceOf(UnrecoverableError);
+    expect(received).toEqual([]);
   });
 });

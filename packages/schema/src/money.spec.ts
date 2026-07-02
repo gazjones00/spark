@@ -48,7 +48,7 @@ describe("DecimalSchema", () => {
     expect(DecimalSchema.nullable().parse(9.99)).toBe("9.99");
   });
 
-  it("round-trips large/high-precision values without drift (AC-5)", () => {
+  it("round-trips large/high-precision values without drift", () => {
     // What reaches Postgres must equal what the provider sent us, exactly.
     expect(DecimalSchema.parse("123456789012345.6789")).toBe("123456789012345.6789");
     expect(DecimalSchema.parse(1234567890.12)).toBe(String(1234567890.12));

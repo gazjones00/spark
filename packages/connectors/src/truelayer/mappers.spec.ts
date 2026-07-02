@@ -55,7 +55,7 @@ describe("TrueLayer mappers", () => {
     expect(truelayerAccountIdFromExternalId("truelayer:account:acc-1")).toBe("acc-1");
   });
 
-  it("maps accounts with type folding and full metadata preservation (AC-3)", () => {
+  it("maps accounts with type folding and full metadata preservation", () => {
     const account = mapTrueLayerAccount(ACCOUNT);
     expect(() => FinancialAccountSchema.parse(account)).not.toThrow();
     expect(account.type).toBe(FinancialAccountType.Cash);

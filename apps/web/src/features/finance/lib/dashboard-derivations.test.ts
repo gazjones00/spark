@@ -58,7 +58,7 @@ function makeTransaction(overrides: Partial<SavedTransaction> = {}): SavedTransa
 }
 
 describe("calculateNetWorth", () => {
-  it("sums currentBalance across accounts (AC-1)", () => {
+  it("sums currentBalance across accounts", () => {
     const accounts = [
       makeAccount({ currentBalance: "1000.00" }),
       makeAccount({ currentBalance: "2500.50" }),
@@ -79,7 +79,7 @@ describe("calculateNetWorth", () => {
 describe("calculateMonthlyTotals", () => {
   const now = new Date(2026, 4, 15); // 15 May 2026
 
-  it("partitions current-month CREDIT/DEBIT and excludes prior months (AC-2)", () => {
+  it("partitions current-month CREDIT/DEBIT and excludes prior months", () => {
     const transactions = [
       makeTransaction({ transactionType: "CREDIT", amount: "100", timestamp: iso(2026, 4, 3) }),
       makeTransaction({ transactionType: "CREDIT", amount: "50", timestamp: iso(2026, 4, 9) }),
@@ -110,7 +110,7 @@ describe("calculateMonthlyTotals", () => {
 describe("calculateSpendingByCategory", () => {
   const now = new Date(2026, 4, 15); // 15 May 2026
 
-  it("groups current-month DEBITs, excluding credits and prior months (AC-4)", () => {
+  it("groups current-month DEBITs, excluding credits and prior months", () => {
     const transactions = [
       makeTransaction({
         transactionType: "DEBIT",
@@ -156,7 +156,7 @@ describe("calculateSpendingByCategory", () => {
 describe("deriveBalanceSeries", () => {
   // Use explicit UTC timestamps: the series buckets by the UTC date portion of
   // the ISO string, so literals keep the asserted dates timezone-independent.
-  it("uses the most recent runningBalance per day, carrying forward gaps (AC-5)", () => {
+  it("uses the most recent runningBalance per day, carrying forward gaps", () => {
     const transactions = [
       makeTransaction({
         timestamp: "2026-05-01T09:00:00.000Z",
@@ -181,7 +181,7 @@ describe("deriveBalanceSeries", () => {
     ]);
   });
 
-  it("returns an empty series when no transaction has a running balance (AC-5 empty path)", () => {
+  it("returns an empty series when no transaction has a running balance", () => {
     const transactions = [
       makeTransaction({ timestamp: "2026-05-01T12:00:00.000Z", runningBalance: null }),
       makeTransaction({ timestamp: "2026-05-02T12:00:00.000Z", runningBalance: null }),
