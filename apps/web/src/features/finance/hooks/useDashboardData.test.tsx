@@ -60,7 +60,7 @@ describe("useDashboardData", () => {
           income: "2000",
           expenses: "750.25",
           categories: [
-            { category: "GROCERIES", total: "120.50" },
+            { category: "PURCHASE", total: "120.50" },
             { category: "NOT_A_REAL_CATEGORY", total: "10" },
           ],
         },
@@ -99,16 +99,42 @@ describe("useDashboardData", () => {
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-    const [groceries, unknown] = result.current.spendingByCategory;
-    expect(groceries.category).toBe("GROCERIES");
-    expect(groceries.amount).toBe(120.5);
-    expect(groceries.fill).toBeTruthy();
-    // Unmapped categories fall back to the UNKNOWN colour instead of crashing.
+    const [purchase, unknown] = result.current.spendingByCategory;
+    expect(purchase.category).toBe("PURCHASE");
+    expect(purchase.amount).toBe(120.5);
+    expect(purchase.fill).toBeTruthy();
+    // Unmapped provider categories are folded into UNKNOWN so downstream
+    // categoryConfig lookups (e.g. the spending chart's labels) never crash.
+    expect(unknown.category).toBe("UNKNOWN");
     expect(unknown.amount).toBe(10);
     expect(unknown.fill).toBeTruthy();
   });
 
-  it("falls back to the busiest summary when no entry matches the dominant currency", async () => {
+  it("merges multiple unmapped categories into a single UNKNOWN slice", async () => {
+    calls.monthlySummary.mockResolvedValue({
+      totals: [
+        {
+          currency: "GBP",
+          income: "0",
+          expenses: "30",
+          categories: [
+            { category: "MYSTERY_A", total: "10" },
+            { category: "MYSTERY_B", total: "20" },
+          ],
+        },
+      ],
+    });
+
+    const { result } = renderDashboardData();
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.spendingByCategory).toHaveLength(1);
+    expect(result.current.spendingByCategory[0].category).toBe("UNKNOWN");
+    expect(result.current.spendingByCategory[0].amount).toBe(30);
+  });
+
+  it("labels fallback totals with the fallback summary's currency", async () => {
     calls.monthlySummary.mockResolvedValue({
       totals: [{ currency: "EUR", income: "300", expenses: "100", categories: [] }],
     });
@@ -117,7 +143,9 @@ describe("useDashboardData", () => {
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-    expect(result.current.currency).toBe("GBP");
+    // No GBP rollup exists, so the EUR summary is displayed — the label must
+    // follow it rather than the dominant account currency.
+    expect(result.current.currency).toBe("EUR");
     expect(result.current.monthlyIncome).toBe(300);
     expect(result.current.monthlyExpenses).toBe(100);
   });

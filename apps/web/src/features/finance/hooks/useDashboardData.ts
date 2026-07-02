@@ -18,7 +18,7 @@ export interface DashboardData {
   netWorth: number;
   monthlyIncome: number;
   monthlyExpenses: number;
-  /** Dominant account currency, used to label aggregate figures. */
+  /** Currency of the displayed monthly summary, used to label aggregate figures. */
   currency: string | undefined;
   spendingByCategory: SpendingByCategory[];
   balanceSeries: BalanceHistory[];
@@ -64,24 +64,32 @@ export function useDashboardData(): DashboardData {
 
   const accounts = accountsQuery.data?.accounts ?? [];
   const recentTransactions = recentQuery.data?.transactions ?? [];
-  const currency = dominantCurrency(accounts);
+  const accountCurrency = dominantCurrency(accounts);
 
   // Aggregates are per-currency (cross-currency sums are meaningless without
   // FX); display the entry matching the dominant account currency, falling
-  // back to the busiest one.
+  // back to the busiest one. The returned currency follows the summary we
+  // actually display so a fallback's totals aren't labelled with the wrong
+  // currency.
   const totals = summaryQuery.data?.totals ?? [];
-  const summary = totals.find((entry) => entry.currency === currency) ?? totals[0];
+  const summary = totals.find((entry) => entry.currency === accountCurrency) ?? totals[0];
+  const currency = summary?.currency ?? accountCurrency;
 
-  const spendingByCategory: SpendingByCategory[] = (summary?.categories ?? []).map((entry) => {
-    const config = (categoryConfig as Record<string, { color: string } | undefined>)[
-      entry.category
-    ];
-    return {
-      category: entry.category as SpendingByCategory["category"],
-      amount: Number(entry.total),
-      fill: config?.color ?? categoryConfig.UNKNOWN.color,
-    };
-  });
+  // Rollups store raw provider categories; anything the UI has no config for
+  // is folded into UNKNOWN (merged, since the pie keys slices by category).
+  const spendingByCategory: SpendingByCategory[] = [];
+  for (const entry of summary?.categories ?? []) {
+    const category = (
+      entry.category in categoryConfig ? entry.category : "UNKNOWN"
+    ) as SpendingByCategory["category"];
+    const amount = Number(entry.total);
+    const existing = spendingByCategory.find((slice) => slice.category === category);
+    if (existing) {
+      existing.amount += amount;
+    } else {
+      spendingByCategory.push({ category, amount, fill: categoryConfig[category].color });
+    }
+  }
 
   const balanceSeries: BalanceHistory[] = (seriesQuery.data?.points ?? []).map((point) => ({
     date: point.date,
