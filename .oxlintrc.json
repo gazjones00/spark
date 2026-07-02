@@ -139,5 +139,17 @@
     "builtin": true
   },
   "globals": {},
+  "overrides": [
+    {
+      "files": [
+        "apps/server/src/**/*.ts",
+        "packages/truelayer/src/**/*.ts",
+        "packages/connectors/src/**/*.ts"
+      ],
+      "rules": {
+        "no-console": "error"
+      }
+    }
+  ],
   "ignorePatterns": ["apps/web/src/routeTree.gen.ts"]
 }

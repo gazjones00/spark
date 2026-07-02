@@ -131,7 +131,15 @@ async function classifyDataEndpoint(
 ): Promise<DataEndpointOutcome> {
   if (settled.status === "rejected") {
     const { reason } = settled;
-    console.error("TrueLayer data endpoint fetch failed", reason);
+    // Log name/message only — a fetch rejection can carry request context
+    // (Authorization headers, bodies) on its properties or `cause`, and this
+    // package has no redacting logger to hand it to. The raw reason still
+    // reaches the caller via `raise()`.
+    // oxlint-disable-next-line no-console
+    console.error(
+      "TrueLayer data endpoint fetch failed",
+      reason instanceof Error ? `${reason.name}: ${reason.message}` : String(reason),
+    );
     return {
       kind: "error",
       raise: () => {

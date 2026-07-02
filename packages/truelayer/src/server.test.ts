@@ -117,6 +117,51 @@ describe("createTrueLayerClient", () => {
     ]);
   });
 
+  it("logs fetch rejections as name/message only, never the raw reason object", async () => {
+    // spyOn returns the pre-existing spy when console.error is already
+    // spied by an earlier test, so drop any calls it has accumulated.
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    errorSpy.mockClear();
+
+    // A hostile rejection reason: request context attached to the error the
+    // way undici/fetch failures carry it. None of it may reach the log.
+    const reason = Object.assign(new Error("socket hang up"), {
+      headers: { authorization: "Bearer live-access-token" },
+      cause: { config: { access_token: "live-access-token" } },
+    });
+
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/data/v1/accounts")) {
+        return Promise.resolve(
+          jsonResponse({
+            results: [
+              {
+                update_timestamp: "2026-01-01T00:00:00.000Z",
+                account_id: "account-id",
+                account_type: "TRANSACTION",
+                display_name: "Current Account",
+                currency: "GBP",
+                account_number: { number: "12345678", sortCode: "112233" },
+                provider: { provider_id: "bank", display_name: "Bank" },
+              },
+            ],
+            status: "Succeeded",
+          }),
+        );
+      }
+      return Promise.reject(reason);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await client.getAccounts({ accessToken: "token" });
+
+    expect(errorSpy).toHaveBeenCalledTimes(1);
+    const logged = errorSpy.mock.calls[0] ?? [];
+    expect(logged).toEqual(["TrueLayer data endpoint fetch failed", "Error: socket hang up"]);
+    expect(JSON.stringify(logged)).not.toContain("live-access-token");
+  });
+
   it("returns only cards when the provider does not support the accounts endpoint (e.g. Amex)", async () => {
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
