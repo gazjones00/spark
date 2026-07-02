@@ -8,7 +8,7 @@
     "./contract": "./src/contract.ts"
   },
   "scripts": {
-    "type:check": "tsc -b"
+    "type:check": "tsc --noEmit"
   },
   "dependencies": {
     "@orpc/client": "^1.13.2",
@@ -17,7 +17,8 @@
     "@orpc/tanstack-query": "^1.13.2",
     "@spark/connectors": "workspace:*",
     "@spark/env": "workspace:*",
-    "@spark/schema": "workspace:*"
+    "@spark/schema": "workspace:*",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@spark/config": "workspace:*",

@@ -2,11 +2,11 @@
   "$schema": "https://json.schemastore.org/tsconfig",
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "composite": true,
-    "declaration": true,
-    "declarationMap": true,
-    "emitDeclarationOnly": true,
-    "noEmit": false,
+    // Packages are consumed as raw TypeScript source (every package.json
+    // exports map points at ./src/*.ts and the apps bundle from source), so
+    // type-checking never emits. allowImportingTsExtensions stays because
+    // source imports use explicit .ts extensions.
+    "noEmit": true,
     "allowImportingTsExtensions": true
   }
 }

@@ -11,6 +11,16 @@ import { useReauthAccount } from "@/features/finance/hooks/useReauthAccount";
 import { orpc } from "@spark/orpc";
 
 export const Route = createFileRoute("/_authenticated/accounts")({
+  // Warm the accounts cache before render — the page reads it with
+  // useSuspenseQuery, so a prefetch avoids suspending on navigation. SSR is
+  // skipped: the oRPC fetch has no user cookie server-side.
+  loader: ({ context }) => {
+    if (typeof window === "undefined") return;
+    void context.queryClient.prefetchQuery({
+      queryKey: ["accounts"],
+      queryFn: () => orpc.accounts.list.call({}),
+    });
+  },
   component: AccountsPage,
 });
 

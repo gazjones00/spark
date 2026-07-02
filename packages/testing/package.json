@@ -7,6 +7,9 @@
     ".": "./src/index.ts",
     "./db": "./src/db.ts"
   },
+  "scripts": {
+    "type:check": "tsc --noEmit"
+  },
   "devDependencies": {
     "@spark/config": "workspace:*",
     "typescript": "catalog:"

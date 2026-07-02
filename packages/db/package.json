@@ -24,11 +24,10 @@
     "db:watch": "docker compose up",
     "db:stop": "docker compose stop",
     "db:down": "docker compose down",
-    "type:check": "tsc -b",
+    "type:check": "tsc --noEmit",
     "db:backfill:truelayer": "bun ./scripts/backfill-truelayer.ts"
   },
   "dependencies": {
-    "@libsql/client": "^0.17.0",
     "@spark/common": "workspace:*",
     "@spark/env": "workspace:*",
     "@spark/schema": "workspace:*",

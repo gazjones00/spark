@@ -8,15 +8,28 @@ import { PageHeader } from "@/components/page-header";
 import {
   TransactionFiltersBar,
   type TransactionFilters,
-} from "@/features/finance/components/transaction-filters";
-import { TransactionsTable } from "@/features/finance/components/transactions-table";
+} from "@/features/finance/components/TransactionFilters";
+import { TransactionsTable } from "@/features/finance/components/TransactionsTable";
 import { orpc } from "@spark/orpc";
 
+const PAGE_SIZE = 25;
+
 export const Route = createFileRoute("/_authenticated/transactions")({
+  // Warm the caches for the page's default (unfiltered) state on client-side
+  // navigations. SSR is skipped: the oRPC fetch has no user cookie there.
+  loader: ({ context }) => {
+    if (typeof window === "undefined") return;
+    void context.queryClient.prefetchQuery({
+      queryKey: ["accounts"],
+      queryFn: () => orpc.accounts.list.call({}),
+    });
+    void context.queryClient.prefetchQuery({
+      queryKey: ["transactions", { limit: PAGE_SIZE }],
+      queryFn: () => orpc.transactions.list.call({ limit: PAGE_SIZE }),
+    });
+  },
   component: TransactionsPage,
 });
-
-const PAGE_SIZE = 25;
 
 function TransactionsPage() {
   const [filters, setFilters] = React.useState<TransactionFilters>({
