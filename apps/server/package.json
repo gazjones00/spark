@@ -43,6 +43,7 @@
     "@spark/truelayer": "workspace:*",
     "@thallesp/nestjs-better-auth": "^2.4.0",
     "bullmq": "^5.69.3",
+    "express": "^5.2.1",
     "express-rate-limit": "^8.5.2",
     "helmet": "^8.2.0",
     "ioredis": "^5.9.3",

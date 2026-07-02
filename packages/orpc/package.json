@@ -17,7 +17,8 @@
     "@orpc/tanstack-query": "^1.13.2",
     "@spark/connectors": "workspace:*",
     "@spark/env": "workspace:*",
-    "@spark/schema": "workspace:*"
+    "@spark/schema": "workspace:*",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@spark/config": "workspace:*",
