@@ -2,7 +2,7 @@ import { Trading212Connector } from "@spark/connectors";
 import { describe, expect, it } from "vitest";
 import { ConnectorRegistryService } from "./connector-registry.service";
 
-describe("ConnectorRegistryService (TASK-007 FR-5)", () => {
+describe("ConnectorRegistryService", () => {
   it("registers injected connectors and lists their manifests", () => {
     const connector = new Trading212Connector();
     const registry = new ConnectorRegistryService([connector]);

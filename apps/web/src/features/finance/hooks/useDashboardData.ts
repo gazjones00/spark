@@ -18,7 +18,7 @@ import {
 // 100 is the maximum the list endpoint allows (`ListTransactionsInputSchema.limit`).
 // That is enough for current-month income/expense and the recent-5 list; we do
 // NOT page the whole history for v1 — productionising server-side aggregates is
-// a separate task (see TASK-002 "Out of Scope" / TASK-005).
+// a separate piece of work.
 const TRANSACTIONS_LIMIT = 100;
 
 export interface DashboardData {
@@ -42,7 +42,7 @@ export interface DashboardData {
  *
  * Query keys deliberately match `accounts.tsx` (`["accounts"]`) and
  * `transactions.tsx` (`["transactions", input]`) so the cache is shared across
- * routes (NFR-2). All figures are derived deterministically — no `Math.random()`.
+ * routes. All figures are derived deterministically — no `Math.random()`.
  */
 export function useDashboardData(now: Date = new Date()): DashboardData {
   const accountsQuery = useQuery({

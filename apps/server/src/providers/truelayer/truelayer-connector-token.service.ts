@@ -30,7 +30,7 @@ export interface TrueLayerCredentialRecord {
  * rotated record back.
  *
  * Ports the safety guarantees of the bespoke TruelayerConnectionService
- * verbatim (NFR-2 of TASK-005):
+ * verbatim:
  * - single-flight refresh per connection — TrueLayer rotates refresh tokens
  *   on use, so concurrent refreshes with the same token make the second fail
  *   with invalid_grant. In-process dedupe via the in-flight map; across

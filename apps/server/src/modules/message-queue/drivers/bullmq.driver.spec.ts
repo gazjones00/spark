@@ -62,7 +62,7 @@ async function flushAsync() {
   await new Promise((resolve) => setImmediate(resolve));
 }
 
-describe("BullMQDriver failure instrumentation (TASK-004 FR-6)", () => {
+describe("BullMQDriver failure instrumentation", () => {
   let driver: BullMQDriver;
   let logger: MessageQueueLogger;
   let onTerminalFailure: Mock<(error: unknown, context: Record<string, unknown>) => void>;
@@ -91,7 +91,7 @@ describe("BullMQDriver failure instrumentation (TASK-004 FR-6)", () => {
       | undefined;
   }
 
-  it("logs every failed attempt but only dead-letters the final one (AC-7)", async () => {
+  it("logs every failed attempt but only dead-letters the final one", async () => {
     worker().emit("failed", makeJob({ attemptsMade: 1 }), new Error("boom"));
     await flushAsync();
     expect(logger.error).toHaveBeenCalledTimes(1);
@@ -126,7 +126,7 @@ describe("BullMQDriver failure instrumentation (TASK-004 FR-6)", () => {
     expect(deadLetterQueue()?.add).toHaveBeenCalledTimes(1);
   });
 
-  it("redacts sensitive fields from the dead-lettered payload (AC-7)", async () => {
+  it("redacts sensitive fields from the dead-lettered payload", async () => {
     worker().emit(
       "failed",
       makeJob({
@@ -157,7 +157,7 @@ describe("BullMQDriver failure instrumentation (TASK-004 FR-6)", () => {
     expect(payload.error).toMatchObject({ name: "Error", message: "exchange failed" });
   });
 
-  it("onModuleDestroy drains every queue and worker (TASK-007 FR-3)", async () => {
+  it("onModuleDestroy drains every queue and worker", async () => {
     await driver.onModuleDestroy();
 
     for (const queue of queues) {

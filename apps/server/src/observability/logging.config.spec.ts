@@ -14,7 +14,7 @@ function createCapturingLogger() {
   return { logger, lines };
 }
 
-describe("loggerOptions redaction (NFR-1)", () => {
+describe("loggerOptions redaction", () => {
   it("redacts token/secret fields at the top level and one level deep", () => {
     const { logger, lines } = createCapturingLogger();
 
@@ -65,7 +65,7 @@ describe("loggerOptions redaction (NFR-1)", () => {
     expect(output).not.toContain("xyz789");
   });
 
-  it("normalises errors logged under `err`, dropping payload-bearing fields (AC-2)", () => {
+  it("normalises errors logged under `err`, dropping payload-bearing fields", () => {
     const { logger, lines } = createCapturingLogger();
 
     // Shaped like a TrueLayer token-exchange failure: secrets live in

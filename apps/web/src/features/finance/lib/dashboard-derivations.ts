@@ -28,7 +28,7 @@ export interface CategorySpend {
  *
  * NOTE: values are summed in their raw numeric form regardless of currency.
  * True multi-currency net worth needs FX conversion, which is out of scope for
- * v1 (see TASK-005). When accounts span currencies the figure is only
+ * v1. When accounts span currencies the figure is only
  * meaningful if one currency dominates — surface it labelled with
  * {@link dominantCurrency}.
  */
@@ -110,7 +110,7 @@ export function calculateSpendingByCategory(
  * `runningBalance` of that day; days whose transactions all lack a running
  * balance carry the last known value forward. If no transaction anywhere has a
  * `runningBalance`, returns an empty array — the caller must then render an
- * explicit empty state rather than a fabricated curve (FR-6).
+ * explicit empty state rather than a fabricated curve.
  */
 export function deriveBalanceSeries(transactions: SavedTransaction[]): BalanceHistory[] {
   const byDay = new Map<string, SavedTransaction[]>();

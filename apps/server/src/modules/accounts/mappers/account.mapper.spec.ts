@@ -52,7 +52,7 @@ const CONNECTION_STATE = {
 };
 
 describe("account mapper (canonical tables)", () => {
-  it("reassembles the TrueLayer-shaped dto from a financial_accounts row (AC-9)", () => {
+  it("reassembles the TrueLayer-shaped dto from a financial_accounts row", () => {
     const mapped = toAccountDto(createAccount(), CONNECTION_STATE, createSnapshot());
 
     expect(mapped).toEqual({

@@ -30,7 +30,7 @@ async function createService(databaseUp: boolean, redisUp: boolean) {
 }
 
 describe("HealthService", () => {
-  describe("when all dependencies are up (AC-4)", () => {
+  describe("when all dependencies are up", () => {
     let service: HealthService;
     beforeEach(async () => {
       service = await createService(true, true);
@@ -47,7 +47,7 @@ describe("HealthService", () => {
     });
   });
 
-  describe("when redis is down (AC-5)", () => {
+  describe("when redis is down", () => {
     let service: HealthService;
     beforeEach(async () => {
       service = await createService(true, false);

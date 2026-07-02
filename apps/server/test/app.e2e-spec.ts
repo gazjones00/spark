@@ -27,6 +27,10 @@ describe("AppModule (e2e)", () => {
   it("/health (GET) reports per-dependency readiness", async () => {
     const response = await request(app.getHttpServer()).get("/health");
     expect([200, 503]).toContain(response.status);
-    expect(response.body).toHaveProperty("details");
+    // 200 returns the HealthResponse directly; on 503 the same payload is
+    // carried in the ORPCError body's `data` (see HealthService.check).
+    const payload = response.status === 200 ? response.body : response.body.data;
+    expect(payload.status).toBe(response.status === 200 ? "ok" : "error");
+    expect(payload).toHaveProperty("details");
   });
 });

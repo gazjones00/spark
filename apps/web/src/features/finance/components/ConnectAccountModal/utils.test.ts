@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { describeConnectError } from "./utils";
 
 describe("describeConnectError", () => {
-  it("branches structurally on a defined NEEDS_REAUTH error (AC-4)", () => {
+  it("branches structurally on a defined NEEDS_REAUTH error", () => {
     const error = new ORPCError("NEEDS_REAUTH", {
       defined: true,
       status: 403,
