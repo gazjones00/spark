@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@spark/db": "workspace:*",
+    "@spark/env": "workspace:*",
     "better-auth": "catalog:",
     "dotenv": "catalog:",
     "zod": "catalog:"

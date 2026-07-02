@@ -37,6 +37,7 @@
     "@spark/connectors": "workspace:*",
     "@spark/crypto": "workspace:*",
     "@spark/db": "workspace:*",
+    "@spark/env": "workspace:*",
     "@spark/orpc": "workspace:*",
     "@spark/schema": "workspace:*",
     "@spark/truelayer": "workspace:*",
