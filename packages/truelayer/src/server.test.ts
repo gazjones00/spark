@@ -158,10 +158,7 @@ describe("createTrueLayerClient", () => {
 
     expect(errorSpy).toHaveBeenCalledTimes(1);
     const logged = errorSpy.mock.calls[0] ?? [];
-    expect(logged).toEqual([
-      "TrueLayer data endpoint fetch failed",
-      "Error: socket hang up",
-    ]);
+    expect(logged).toEqual(["TrueLayer data endpoint fetch failed", "Error: socket hang up"]);
     expect(JSON.stringify(logged)).not.toContain("live-access-token");
   });
 
