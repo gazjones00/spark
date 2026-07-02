@@ -3,6 +3,7 @@ import { createRouter as createTanStackRouter } from "@tanstack/react-router";
 import { routerWithQueryClient } from "@tanstack/react-router-with-query";
 
 import Loader from "./components/loader";
+import { RouteError } from "./components/route-error";
 import "./index.css";
 import { routeTree } from "./routeTree.gen";
 
@@ -16,6 +17,7 @@ export const getRouter = () => {
     context: { queryClient },
     defaultPendingComponent: () => <Loader />,
     defaultNotFoundComponent: () => <div>Not Found</div>,
+    defaultErrorComponent: RouteError,
     Wrap: ({ children }) => (
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     ),
