@@ -21,6 +21,7 @@ import { CryptoService } from "../crypto";
 import { DATABASE_CONNECTION } from "../database";
 import { Jobs, MessageQueue } from "../message-queue";
 import type { MessageQueueService } from "../message-queue";
+import { consentExpiryFor } from "./consent-lifecycle.config";
 import { ConnectorRegistryService } from "./connector-registry.service";
 import { ConnectorSyncService } from "./connector-sync.service";
 
@@ -152,6 +153,11 @@ export class ConnectorConnectionService {
         capabilities: [...manifest.capabilities],
         metadata,
         nextSyncAt: addMinutes(now, INITIAL_SYNC_RESERVATION_MINUTES),
+        // A reconnect creates a fresh connection row, so a surviving row's
+        // consent columns are always from its own grant; the warning stamp
+        // starts clear. Null expiry (unknown lifetime) is never flagged.
+        consentGrantedAt: now,
+        consentExpiresAt: consentExpiryFor(manifest.id, now),
         createdAt: now,
         updatedAt: now,
       })

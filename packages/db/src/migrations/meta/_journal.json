@@ -64,6 +64,13 @@
       "when": 1782994269526,
       "tag": "0008_powerful_wolfsbane",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1783026293812,
+      "tag": "0009_luxuriant_hedge_knight",
+      "breakpoints": true
     }
   ]
 }

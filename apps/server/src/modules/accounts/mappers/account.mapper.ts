@@ -2,6 +2,7 @@ import { truelayerAccountIdFromExternalId } from "@spark/connectors";
 import { balanceSnapshots, financialAccounts } from "@spark/db/schema";
 import type { Account, AccountNumber, AccountProvider, AccountType } from "@spark/schema";
 import type { SyncStatusType } from "@spark/common";
+import { deriveConsentStatus } from "../../connectors";
 
 type FinancialAccountRow = typeof financialAccounts.$inferSelect;
 type BalanceSnapshotRow = typeof balanceSnapshots.$inferSelect;
@@ -9,6 +10,7 @@ type BalanceSnapshotRow = typeof balanceSnapshots.$inferSelect;
 export interface AccountConnectionState {
   syncStatus: SyncStatusType;
   lastSyncedAt: Date | null;
+  consentExpiresAt: Date | null;
 }
 
 /**
@@ -43,5 +45,7 @@ export const toAccountDto = (
     balanceUpdatedAt: snapshot?.observedAt.toISOString() ?? null,
     syncStatus: connection.syncStatus,
     lastSyncedAt: connection.lastSyncedAt?.toISOString() ?? null,
+    consentStatus: deriveConsentStatus(connection.consentExpiresAt),
+    consentExpiresAt: connection.consentExpiresAt?.toISOString() ?? null,
   };
 };

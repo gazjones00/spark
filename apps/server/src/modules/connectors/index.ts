@@ -1,4 +1,9 @@
 export { ConnectorsModule } from "./connectors.module";
+export {
+  CONSENT_WARNING_WINDOW_DAYS,
+  consentExpiryFor,
+  deriveConsentStatus,
+} from "./consent-lifecycle.config";
 export { ConnectorConnectionService } from "./connector-connection.service";
 export type {
   ConnectorConnectionSummary,

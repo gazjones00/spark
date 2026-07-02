@@ -23,6 +23,8 @@ function makeAccount(overrides: Partial<Account> = {}): Account {
     balanceUpdatedAt: null,
     syncStatus: "OK",
     lastSyncedAt: null,
+    consentStatus: "ACTIVE",
+    consentExpiresAt: null,
     ...overrides,
   };
 }

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ConsentStatusSchema } from "./consent.schema.ts";
 import { SyncStatusSchema } from "./sync-status.schema.ts";
 import {
   AccountNumberSchema,
@@ -23,6 +24,8 @@ export const AccountSchema = z
     balanceUpdatedAt: z.iso.datetime().nullable(),
     syncStatus: SyncStatusSchema,
     lastSyncedAt: z.iso.datetime().nullable(),
+    consentStatus: ConsentStatusSchema,
+    consentExpiresAt: z.iso.datetime().nullable(),
   })
   .meta({ id: "Account" });
 
@@ -37,6 +40,8 @@ export const CreateAccountSchema = AccountSchema.omit({
   balanceUpdatedAt: true,
   syncStatus: true,
   lastSyncedAt: true,
+  consentStatus: true,
+  consentExpiresAt: true,
 }).meta({ id: "CreateAccount" });
 
 export type CreateAccount = z.infer<typeof CreateAccountSchema>;

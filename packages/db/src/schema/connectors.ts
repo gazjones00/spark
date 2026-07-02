@@ -36,6 +36,14 @@ export const connectorConnections = pgTable(
     consecutiveFailures: integer("consecutive_failures").notNull().default(0),
     lastSyncErrorCode: text("last_sync_error_code"),
     lastSyncErrorMessage: text("last_sync_error_message"),
+    // Consent lifecycle (estimates, all nullable): when the user's bank-side
+    // consent was granted, when it is expected to lapse (null when the
+    // provider's consent lifetime is unknown), and when the expiry warning
+    // was last issued. A warning stamp older than consentGrantedAt belongs to
+    // a previous consent cycle and is treated as unissued.
+    consentGrantedAt: timestamp("consent_granted_at", { withTimezone: true }),
+    consentExpiresAt: timestamp("consent_expires_at", { withTimezone: true }),
+    consentWarningIssuedAt: timestamp("consent_warning_issued_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },

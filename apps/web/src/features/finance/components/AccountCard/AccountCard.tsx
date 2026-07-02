@@ -82,7 +82,7 @@ export function AccountCard({ account, onEdit, onDelete, onReauth }: AccountCard
             </p>
           )}
           <div className="flex items-center gap-2">
-            {account.syncStatus !== "OK" && (
+            {(account.syncStatus !== "OK" || account.consentStatus === "EXPIRING_SOON") && (
               <Button
                 variant="outline"
                 size="sm"
@@ -96,7 +96,11 @@ export function AccountCard({ account, onEdit, onDelete, onReauth }: AccountCard
           </div>
         </div>
         <div className="mt-auto flex items-center justify-between">
-          <SyncStatusBadge status={account.syncStatus} lastSyncedAt={account.lastSyncedAt} />
+          <SyncStatusBadge
+            status={account.syncStatus}
+            lastSyncedAt={account.lastSyncedAt}
+            consentStatus={account.consentStatus}
+          />
 
           <div className="flex gap-1">
             <Button

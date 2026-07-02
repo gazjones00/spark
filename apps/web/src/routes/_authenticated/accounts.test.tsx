@@ -45,6 +45,8 @@ function makeAccount(overrides: Partial<Account> = {}): Account {
     balanceUpdatedAt: "2026-07-01T10:00:00.000Z",
     syncStatus: "OK",
     lastSyncedAt: "2026-07-01T10:00:00.000Z",
+    consentStatus: "ACTIVE",
+    consentExpiresAt: null,
     ...overrides,
   };
 }
