@@ -14,7 +14,7 @@ vi.mock("@spark/db", () => ({
   sql: vi.fn(() => ({ __sql: true })),
 }));
 
-import { isNotNull, isNull, lt, lte, or } from "@spark/db";
+import { inArray, isNotNull, isNull, lt, lte, or } from "@spark/db";
 import { Jobs } from "../modules/message-queue";
 import { ConsentLifecycleJob } from "./consent-lifecycle.job";
 
@@ -39,7 +39,15 @@ function makeRow(overrides: Partial<ExpiringRow> = {}): ExpiringRow {
   };
 }
 
-function createJob({ due, locked = true }: { due: ExpiringRow[]; locked?: boolean }) {
+function createJob({
+  due,
+  locked = true,
+  rejectConnectionIds = [],
+}: {
+  due: ExpiringRow[];
+  locked?: boolean;
+  rejectConnectionIds?: string[];
+}) {
   const selectChain = {
     from: vi.fn().mockReturnThis(),
     where: vi.fn().mockReturnThis(),
@@ -60,7 +68,12 @@ function createJob({ due, locked = true }: { due: ExpiringRow[]; locked?: boolea
   };
   const queue = {
     add: vi.fn<(name: unknown, data: unknown, opts?: { jobId?: string }) => Promise<void>>(
-      async () => undefined,
+      async (_name, data) => {
+        const connectionId = (data as { connectionId?: string }).connectionId;
+        if (connectionId && rejectConnectionIds.includes(connectionId)) {
+          throw new Error("queue unavailable");
+        }
+      },
     ),
   };
 
@@ -116,6 +129,23 @@ describe("ConsentLifecycleJob", () => {
     // The jobId keys on connection + grant so re-enqueues within one consent
     // cycle dedupe at the queue, while a later cycle produces a distinct job.
     expect(options?.jobId).toBe(`consent-expiring:conn-1:${makeRow().consentGrantedAt?.getTime()}`);
+  });
+
+  it("stamps only successfully dispatched warnings so failed rows retry later", async () => {
+    const rows = [makeRow(), makeRow({ id: "conn-2", userId: "user-2" })];
+    const { job, queue, updateChain } = createJob({
+      due: rows,
+      rejectConnectionIds: ["conn-2"],
+    });
+
+    await job.handle();
+
+    expect(queue.add).toHaveBeenCalledTimes(2);
+    expect(inArray).toHaveBeenCalledWith(connectorConnections.id, ["conn-1"]);
+    expect(updateChain.set).toHaveBeenCalledWith(
+      expect.objectContaining({ consentWarningIssuedAt: expect.any(Date) }),
+    );
+    expect(updateChain.where).toHaveBeenCalledTimes(1);
   });
 
   it("emits no tokens or PII in the event payload", async () => {

@@ -21,6 +21,13 @@ interface ExpiringConnection {
   consentGrantedAt: Date | null;
 }
 
+interface ConsentLifecycleSummary {
+  selected: number;
+  issued: number;
+  failed: number;
+  batchLimitReached: boolean;
+}
+
 /**
  * Flags connections whose estimated consent expiry falls within the warning
  * window: stamps `consentWarningIssuedAt` and emits one `consent.expiring`
@@ -43,7 +50,7 @@ export class ConsentLifecycleJob {
   async handle(): Promise<void> {
     this.logger.log("Starting consent lifecycle check");
 
-    const expiring = await this.db.transaction(async (tx) => {
+    const summary = await this.db.transaction<ConsentLifecycleSummary | null>(async (tx) => {
       const lockResult = await tx.execute(
         sql`SELECT pg_try_advisory_xact_lock(${CONSENT_LOCK_KEY}) AS locked`,
       );
@@ -86,45 +93,17 @@ export class ConsentLifecycleJob {
         .limit(BATCH_SIZE);
 
       if (due.length === 0) {
-        return [];
+        return { selected: 0, issued: 0, failed: 0, batchLimitReached: false };
       }
 
-      await tx
-        .update(connectorConnections)
-        .set({ consentWarningIssuedAt: now, updatedAt: now })
-        .where(
-          inArray(
-            connectorConnections.id,
-            due.map((connection) => connection.id),
-          ),
-        );
-
-      return due;
-    });
-
-    if (expiring === null) {
-      return;
-    }
-    if (expiring.length === 0) {
-      this.logger.log("No connections approaching consent expiry");
-      return;
-    }
-    if (expiring.length === BATCH_SIZE) {
-      this.logger.warn(`Batch limit reached (${BATCH_SIZE}); remaining warnings issue tomorrow`);
-    }
-
-    // Stamp-then-emit gives at-most-once per cycle (NFR-2): a dispatch
-    // failure here leaves the stamp in place rather than risking duplicate
-    // notifications. The jobId keys on the grant, so a re-stamped later
-    // cycle produces a distinct job.
-    const dispatches = await Promise.allSettled(
-      expiring
-        // The predicate guarantees a non-null expiry; the filter narrows the type.
-        .filter(
-          (connection): connection is ExpiringConnection & { consentExpiresAt: Date } =>
-            connection.consentExpiresAt !== null,
-        )
-        .map((connection) =>
+      const dispatchTargets = due.filter(
+        (connection): connection is ExpiringConnection & { consentExpiresAt: Date } =>
+          connection.consentExpiresAt !== null,
+      );
+      // Keep dispatch under the advisory-lock transaction so another runner
+      // cannot select the same unstamped rows before successful sends are stamped.
+      const dispatches = await Promise.allSettled(
+        dispatchTargets.map((connection) =>
           this.queue.add<ConsentExpiringEvent>(
             Jobs.ConsentExpiring,
             {
@@ -135,15 +114,46 @@ export class ConsentLifecycleJob {
               consentExpiresAt: connection.consentExpiresAt.toISOString(),
             },
             {
-              jobId: `consent-expiring:${connection.id}:${connection.consentGrantedAt?.getTime() ?? 0}`,
+              jobId: `consent-expiring:${connection.id}:${
+                connection.consentGrantedAt?.getTime() ?? 0
+              }`,
             },
           ),
         ),
-    );
+      );
 
-    const failed = dispatches.filter((dispatch) => dispatch.status === "rejected").length;
+      const succeededIds = dispatchTargets
+        .filter((_, index) => dispatches[index]?.status === "fulfilled")
+        .map((connection) => connection.id);
+
+      if (succeededIds.length > 0) {
+        await tx
+          .update(connectorConnections)
+          .set({ consentWarningIssuedAt: now, updatedAt: now })
+          .where(inArray(connectorConnections.id, succeededIds));
+      }
+
+      return {
+        selected: due.length,
+        issued: succeededIds.length,
+        failed: dispatchTargets.length - succeededIds.length,
+        batchLimitReached: due.length === BATCH_SIZE,
+      };
+    });
+
+    if (summary === null) {
+      return;
+    }
+    if (summary.selected === 0) {
+      this.logger.log("No connections approaching consent expiry");
+      return;
+    }
+    if (summary.batchLimitReached) {
+      this.logger.warn(`Batch limit reached (${BATCH_SIZE}); remaining warnings issue tomorrow`);
+    }
+
     this.logger.log(
-      `Issued ${expiring.length - failed} consent expiry warnings, ${failed} failed to dispatch`,
+      `Issued ${summary.issued} consent expiry warnings, ${summary.failed} failed to dispatch`,
     );
   }
 
