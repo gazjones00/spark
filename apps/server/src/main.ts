@@ -5,6 +5,7 @@ import helmet from "helmet";
 import { Logger } from "nestjs-pino";
 import { AppModule } from "./app.module";
 import { AllExceptionsFilter } from "./observability/all-exceptions.filter";
+import { rootLogger } from "./observability/logging.config";
 import { initSentry } from "./observability/sentry";
 
 async function bootstrap() {
@@ -35,4 +36,9 @@ async function bootstrap() {
   app.useGlobalFilters(new AllExceptionsFilter(app.get(HttpAdapterHost).httpAdapter));
   await app.listen(process.env.PORT ?? 3000);
 }
-bootstrap();
+bootstrap().catch((error: unknown) => {
+  // Without this catch a boot failure surfaces as the runtime's raw
+  // unhandled-rejection dump, bypassing the redacting `err` serializer.
+  rootLogger.fatal({ err: error }, "server bootstrap failed");
+  process.exit(1);
+});
