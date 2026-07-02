@@ -157,6 +157,22 @@ describe("BullMQDriver failure instrumentation (TASK-004 FR-6)", () => {
     expect(payload.error).toMatchObject({ name: "Error", message: "exchange failed" });
   });
 
+  it("onModuleDestroy drains every queue and worker (TASK-007 FR-3)", async () => {
+    await driver.onModuleDestroy();
+
+    for (const queue of queues) {
+      expect((queue as FakeQueueInstance & { close: Mock }).close).toHaveBeenCalledTimes(1);
+    }
+    expect((worker() as FakeWorkerInstance & { close: Mock }).close).toHaveBeenCalledTimes(1);
+  });
+
+  it("closes only once across repeated onModuleDestroy calls", async () => {
+    await driver.onModuleDestroy();
+    await driver.onModuleDestroy();
+
+    expect((worker() as FakeWorkerInstance & { close: Mock }).close).toHaveBeenCalledTimes(1);
+  });
+
   it("logs worker errors and stalled jobs", () => {
     worker().emit("error", new Error("redis gone"));
     expect(logger.error).toHaveBeenCalledWith(

@@ -6,7 +6,7 @@ import { HttpAdapterHost } from "@nestjs/core";
 import { env } from "@spark/env/server";
 import type { Express, NextFunction, Request, Response } from "express";
 import { rateLimit } from "express-rate-limit";
-import type { BullMQDriver } from "../message-queue";
+import { type BullMQDriver, QUEUE_DRIVER } from "../message-queue";
 
 function basicAuthMiddleware(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
@@ -38,13 +38,15 @@ export class BullBoardModule implements OnModuleInit {
     @Inject(BULL_BOARD_DRIVER) private driver: BullMQDriver,
   ) {}
 
-  static forRoot(driver: BullMQDriver) {
+  static forRoot() {
     return {
       module: BullBoardModule,
       providers: [
         {
+          // Alias the DI-managed driver (MessageQueueModule is global), so
+          // the dashboard inspects the same instance the queue services use.
           provide: BULL_BOARD_DRIVER,
-          useValue: driver,
+          useExisting: QUEUE_DRIVER,
         },
       ],
     };

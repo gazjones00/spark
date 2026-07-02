@@ -10,3 +10,4 @@ export type {
   WorkerOptions,
 } from "./drivers";
 export { BullMQDriver, type BullMQDriverOptions, SyncDriver } from "./drivers";
+export { createBullMQDriver } from "./bullmq-driver.factory";

@@ -1,3 +1,4 @@
+import { Injectable, type OnModuleDestroy } from "@nestjs/common";
 import { type Job, Queue, UnrecoverableError, Worker } from "bullmq";
 import { normalizeError, redactSensitive } from "../../../observability/redaction";
 import { type Jobs, MessageQueue } from "../constants";
@@ -25,9 +26,11 @@ export interface BullMQDriverOptions {
   onTerminalFailure?: (error: unknown, context: Record<string, unknown>) => void;
 }
 
-export class BullMQDriver implements MessageQueueDriver {
+@Injectable()
+export class BullMQDriver implements MessageQueueDriver, OnModuleDestroy {
   private queueMap: Record<string, Queue> = {};
   private workerMap: Record<string, Worker> = {};
+  private closePromise?: Promise<void>;
   private readonly connection: BullMQDriverOptions["connection"];
   private readonly logger?: MessageQueueLogger;
   private readonly onTerminalFailure?: BullMQDriverOptions["onTerminalFailure"];
@@ -131,6 +134,18 @@ export class BullMQDriver implements MessageQueueDriver {
     });
 
     this.workerMap[queueName] = worker;
+  }
+
+  /**
+   * Drain queues and workers when the Nest container shuts down (worker
+   * `app.close()` on SIGINT/SIGTERM, API via `enableShutdownHooks()`), so
+   * in-flight jobs finish instead of being force-killed mid-sync. Guarded
+   * so an aliasing provider (e.g. Bull Board's `useExisting`) can't drain
+   * twice.
+   */
+  onModuleDestroy(): Promise<void> {
+    this.closePromise ??= this.close();
+    return this.closePromise;
   }
 
   async close(): Promise<void> {

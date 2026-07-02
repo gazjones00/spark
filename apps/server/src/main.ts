@@ -15,6 +15,9 @@ async function bootstrap() {
     bufferLogs: true,
   });
   app.useLogger(app.get(Logger));
+  // On SIGINT/SIGTERM run provider shutdown hooks — the BullMQ driver's
+  // onModuleDestroy drains queues/workers so Redis connections are released.
+  app.enableShutdownHooks();
   // The Bull Board dashboard (/queues) serves its own inline-scripted UI,
   // so only that path opts out of CSP; every other route keeps helmet's
   // default CSP alongside the rest of the headers.

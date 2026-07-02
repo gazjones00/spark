@@ -1,4 +1,5 @@
-import { Module } from "@nestjs/common";
+import { Module, type Provider } from "@nestjs/common";
+import type { FinancialConnector } from "@spark/connectors";
 import { Trading212Connector, TrueLayerConnector } from "@spark/connectors";
 import { TruelayerClient } from "../../providers/truelayer/truelayer.client";
 import { TruelayerConnectorTokenService } from "../../providers/truelayer/truelayer-connector-token.service";
@@ -7,27 +8,37 @@ import { ConnectorConnectionService } from "./connector-connection.service";
 import { ConnectorPersistenceService } from "./connector-persistence.service";
 import { ConnectorRegistryService } from "./connector-registry.service";
 import { ConnectorSyncService } from "./connector-sync.service";
+import { CONNECTORS } from "./connector.tokens";
 import { ConnectorsController } from "./connectors.controller";
+
+// Each connector is its own provider so it can receive injected
+// dependencies (the TrueLayer connector needs the client + token provider
+// from the global TruelayerModule). To add a provider: register it here
+// and append it to the CONNECTORS inject list — the registry never changes.
+const connectorProviders: Provider[] = [
+  {
+    provide: Trading212Connector,
+    useFactory: () => new Trading212Connector(),
+  },
+  {
+    provide: TrueLayerConnector,
+    useFactory: (client: TruelayerClient, tokenProvider: TruelayerConnectorTokenService) =>
+      new TrueLayerConnector({ client, tokenProvider }),
+    inject: [TruelayerClient, TruelayerConnectorTokenService],
+  },
+  {
+    provide: CONNECTORS,
+    useFactory: (...connectors: FinancialConnector[]) => connectors,
+    inject: [Trading212Connector, TrueLayerConnector],
+  },
+];
 
 @Module({
   imports: [CryptoModule],
   controllers: [ConnectorsController],
   providers: [
-    {
-      // The TrueLayer connector has injected dependencies (client + token
-      // provider, both provided by the global TruelayerModule), so the
-      // registry is built via a factory rather than bare constructors.
-      provide: ConnectorRegistryService,
-      useFactory: (
-        truelayerClient: TruelayerClient,
-        tokenService: TruelayerConnectorTokenService,
-      ) =>
-        new ConnectorRegistryService([
-          new Trading212Connector(),
-          new TrueLayerConnector({ client: truelayerClient, tokenProvider: tokenService }),
-        ]),
-      inject: [TruelayerClient, TruelayerConnectorTokenService],
-    },
+    ...connectorProviders,
+    ConnectorRegistryService,
     ConnectorPersistenceService,
     ConnectorSyncService,
     ConnectorConnectionService,
