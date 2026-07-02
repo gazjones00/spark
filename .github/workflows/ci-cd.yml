@@ -87,7 +87,7 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Run database migrations
-        run: bun --filter @spark/db run db:migrate
+        run: bun run --filter @spark/db db:migrate
 
       - name: Run e2e tests
-        run: bun --filter @spark/server run test:e2e
+        run: bun run --filter @spark/server test:e2e
