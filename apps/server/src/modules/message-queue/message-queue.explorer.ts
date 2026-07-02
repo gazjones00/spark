@@ -60,8 +60,14 @@ export class MessageQueueExplorer implements OnModuleInit {
 
       queueService.work((job: MessageQueueJob) => this.dispatch(handlers, job), {
         // Bound the pool: at most WORKER_CONCURRENCY jobs (financial syncs)
-        // run in parallel per worker process.
+        // run in parallel per worker process, and the limiter caps queue
+        // throughput to QUEUE_LIMITER_MAX jobs per window so a scheduler
+        // fan-out can't burst-hammer upstream providers.
         concurrency: env.WORKER_CONCURRENCY,
+        limiter: {
+          max: env.QUEUE_LIMITER_MAX,
+          duration: env.QUEUE_LIMITER_DURATION_MS,
+        },
       });
 
       this.logger.log(`Worker registered for queue "${queueName}" (${handlers.size} handlers)`);

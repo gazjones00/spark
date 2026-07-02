@@ -19,7 +19,7 @@ export interface QueueJobOptions {
     delay: number;
   };
 }
-export type WorkerOptions = Pick<BullMQWorkerOptions, "concurrency">;
+export type WorkerOptions = Pick<BullMQWorkerOptions, "concurrency" | "limiter">;
 
 export interface MessageQueueDriver {
   register?(queueName: MessageQueue): void;

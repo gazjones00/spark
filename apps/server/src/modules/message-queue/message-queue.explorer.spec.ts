@@ -138,7 +138,7 @@ describe("MessageQueueExplorer.explore (TASK-007 FR-6)", () => {
     return { explorer, queueService, moduleRef };
   }
 
-  it("registers the worker with the configured concurrency bound", async () => {
+  it("registers the worker with the configured concurrency and limiter bounds", async () => {
     const { explorer, queueService, moduleRef } = buildExplorer([new TestProcessor()]);
 
     await explorer.explore();
@@ -149,6 +149,10 @@ describe("MessageQueueExplorer.explore (TASK-007 FR-6)", () => {
     expect(queueService.work).toHaveBeenCalledTimes(1);
     expect(queueService.work).toHaveBeenCalledWith(expect.any(Function), {
       concurrency: env.WORKER_CONCURRENCY,
+      limiter: {
+        max: env.QUEUE_LIMITER_MAX,
+        duration: env.QUEUE_LIMITER_DURATION_MS,
+      },
     });
   });
 

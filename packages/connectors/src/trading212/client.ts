@@ -1,8 +1,10 @@
+import { HttpTimeoutError, parseRetryAfterMs, resilientFetch } from "@spark/common";
 import {
   ConnectorAuthError,
   ConnectorError,
   ConnectorRateLimitError,
   ConnectorSchemaError,
+  ConnectorTimeoutError,
 } from "../core/index.ts";
 import { TRADING212_ENVIRONMENTS, type Trading212Environment } from "./constants.ts";
 import {
@@ -29,6 +31,8 @@ export interface Trading212ClientConfig extends Trading212Credentials {
   environment?: Trading212Environment;
   baseUrl?: string;
   fetch?: typeof fetch;
+  /** Total-request deadline per API call; defaults inside resilientFetch. */
+  timeoutMs?: number;
 }
 
 export interface Trading212PageOptions {
@@ -47,6 +51,7 @@ export class Trading212Client {
   private readonly baseUrl: string;
   private readonly fetchFn: typeof fetch;
   private readonly credentials: Trading212Credentials;
+  private readonly timeoutMs: number | undefined;
 
   constructor(config: Trading212ClientConfig) {
     const baseUrl =
@@ -60,6 +65,7 @@ export class Trading212Client {
     }
     this.baseUrl = baseUrl.replace(/\/$/, "");
     this.fetchFn = config.fetch ?? fetch;
+    this.timeoutMs = config.timeoutMs;
     this.credentials = {
       apiKey: config.apiKey,
       apiSecret: config.apiSecret,
@@ -138,20 +144,32 @@ export class Trading212Client {
   }
 
   private async request<T>(path: string, parse: (payload: unknown) => T): Promise<T> {
-    const response = await this.fetchFn(this.url(path), {
-      method: "GET",
-      headers: {
-        Authorization: this.authorizationHeader(),
-        Accept: "application/json",
-      },
-    });
+    let response: Response;
+    try {
+      response = await resilientFetch(this.url(path), {
+        method: "GET",
+        headers: {
+          Authorization: this.authorizationHeader(),
+          Accept: "application/json",
+        },
+        fetchFn: this.fetchFn,
+        timeoutMs: this.timeoutMs,
+      });
+    } catch (error) {
+      if (error instanceof HttpTimeoutError) {
+        throw new ConnectorTimeoutError("Trading 212 request timed out.", error);
+      }
+      throw error;
+    }
 
     if (!response.ok) {
       if (response.status === 401 || response.status === 403) {
         throw new ConnectorAuthError(`Trading 212 authentication failed with ${response.status}.`);
       }
       if (response.status === 429) {
-        throw new ConnectorRateLimitError("Trading 212 rate limit exceeded.");
+        throw new ConnectorRateLimitError("Trading 212 rate limit exceeded.", {
+          retryAfterMs: parseRetryAfterMs(response.headers),
+        });
       }
       throw new ConnectorError(`Trading 212 request failed with ${response.status}.`);
     }

@@ -1,4 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
+import { ConnectorRateLimitError } from "@spark/connectors";
 import type { z } from "zod";
 import { ConnectorSyncService } from "../modules/connectors";
 import { Jobs, MessageQueue, Process, Processor } from "../modules/message-queue";
@@ -19,11 +20,29 @@ export class ConnectorSyncJob {
 
     this.logger.log(`Starting connector sync for connection ${data.connectionId}`);
 
-    const result = await this.connectorSyncService.syncConnection({
-      connectionId: data.connectionId,
-      userId: data.userId,
-      requestedAt,
-    });
+    let result;
+    try {
+      result = await this.connectorSyncService.syncConnection({
+        connectionId: data.connectionId,
+        userId: data.userId,
+        requestedAt,
+      });
+    } catch (error) {
+      // Rate limits are rescheduled via the connection's nextSyncAt (set from
+      // the provider's Retry-After hint during failure persistence), so the
+      // job completes instead of rethrowing — a BullMQ retry on its generic
+      // backoff would re-hammer an upstream that told us to back off.
+      if (error instanceof ConnectorRateLimitError) {
+        this.logger.warn({
+          event: "provider.ratelimit.hit",
+          connectionId: data.connectionId,
+          retryAfterMs: error.retryAfterMs,
+          msg: "Connector sync rate-limited; deferred to nextSyncAt",
+        });
+        return;
+      }
+      throw error;
+    }
 
     this.logger.log(
       `Connector sync completed for connection ${data.connectionId}: status=${result.syncResult.status}, recordsRead=${result.recordsRead}, recordsWritten=${result.recordsWritten}`,

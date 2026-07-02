@@ -37,8 +37,15 @@ const PAGINATED_RESOURCES = {
   transactions: "history-transactions",
 } as const;
 
+export interface Trading212ConnectorOptions {
+  /** Total-request deadline per API call, passed through to the client. */
+  timeoutMs?: number;
+}
+
 export class Trading212Connector implements FinancialConnector {
   readonly manifest = TRADING212_MANIFEST;
+
+  constructor(private readonly options: Trading212ConnectorOptions = {}) {}
 
   async testConnection(context: ConnectorSyncContext): Promise<void> {
     await this.client(context).testConnection();
@@ -159,7 +166,11 @@ export class Trading212Connector implements FinancialConnector {
         `Trading 212 does not support the ${context.environment} environment.`,
       );
     }
-    return new Trading212Client({ ...credentials, environment: context.environment });
+    return new Trading212Client({
+      ...credentials,
+      environment: context.environment,
+      timeoutMs: this.options.timeoutMs,
+    });
   }
 
   private credentials(context: ConnectorSyncContext): Trading212Credentials {

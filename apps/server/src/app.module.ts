@@ -56,6 +56,7 @@ declare module "@orpc/nest" {
       clientId: env.TRUELAYER_CLIENT_ID,
       clientSecret: env.TRUELAYER_CLIENT_SECRET,
       redirectUri: env.TRUELAYER_REDIRECT_URI,
+      timeoutMs: env.PROVIDER_HTTP_TIMEOUT_MS,
     }),
     ORPCModule.forRootAsync({
       useFactory: (request: Request) => ({

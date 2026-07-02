@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
-import { TrueLayerAuthError } from "@spark/truelayer/server";
+import { TrueLayerAuthError, TrueLayerRateLimitError } from "@spark/truelayer/server";
 import type { Account, Balance, Transaction } from "@spark/truelayer/types";
-import { ConnectorAuthError, type ConnectorSyncContext } from "../core/index.ts";
+import {
+  ConnectorAuthError,
+  ConnectorRateLimitError,
+  type ConnectorSyncContext,
+} from "../core/index.ts";
 import { transactionsResource, TrueLayerConnector } from "./connector.ts";
 import { TRUELAYER_MANIFEST } from "./constants.ts";
 import { ConnectorManifestSchema } from "../core/manifest.ts";
@@ -180,6 +184,28 @@ describe("TrueLayerConnector", () => {
     expect(result.status).toBe("partial");
     expect(result.errors).toHaveLength(2);
     expect(result.transactions).toHaveLength(2);
+  });
+
+  it("maps a 429 on accounts to ConnectorRateLimitError preserving the backoff hint (TASK-008)", async () => {
+    const { connector } = createConnector({
+      accounts: new TrueLayerRateLimitError(45_000),
+    });
+    await expect(connector.sync(createContext())).rejects.toMatchObject({
+      name: "ConnectorRateLimitError",
+      code: "CONNECTOR_RATE_LIMIT_ERROR",
+      retryAfterMs: 45_000,
+    });
+  });
+
+  it("fails the whole sync (not partial) when a per-account fetch is rate-limited", async () => {
+    const { connector, client } = createConnector({
+      accounts: [ACCOUNT, SECOND_ACCOUNT],
+      balance: new TrueLayerRateLimitError(30_000),
+    });
+    await expect(connector.sync(createContext())).rejects.toBeInstanceOf(ConnectorRateLimitError);
+    // The throttle covers the whole client: syncing must stop at the first
+    // rate-limited account instead of hammering the remaining ones.
+    expect(client.getBalance).toHaveBeenCalledTimes(1);
   });
 
   it("does not advance the cursor for an account whose transactions fetch failed", async () => {

@@ -14,6 +14,7 @@
     "type:check": "tsc -b"
   },
   "dependencies": {
+    "@spark/common": "workspace:*",
     "@spark/schema": "workspace:*",
     "@spark/truelayer": "workspace:*",
     "zod": "catalog:"

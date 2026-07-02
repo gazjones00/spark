@@ -30,6 +30,8 @@ export interface TrueLayerConfig {
   clientId: string;
   clientSecret: string;
   redirectUri: string;
+  /** Total-request deadline per API call; defaults inside resilientFetch. */
+  timeoutMs?: number;
 }
 
 export type TrueLayerScope =
@@ -109,4 +111,5 @@ export type TrueLayerErrorCode =
   | "invalid_request"
   | "unauthorized_client"
   | "access_denied"
-  | "server_error";
+  | "server_error"
+  | "rate_limit_exceeded";

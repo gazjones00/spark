@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createTrueLayerClient } from "./server.ts";
-import { TrueLayerAuthError, TrueLayerError } from "./errors.ts";
+import { TrueLayerAuthError, TrueLayerError, TrueLayerRateLimitError } from "./errors.ts";
 
 const client = createTrueLayerClient({
   environment: "production",
@@ -441,4 +441,82 @@ describe("createTrueLayerClient data-endpoint error classification", () => {
       });
     }
   }
+});
+
+describe("createTrueLayerClient rate limiting (TASK-008)", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  function rateLimitedResponse(headers: Record<string, string> = {}): Response {
+    return new Response("", { status: 429, headers });
+  }
+
+  it("getTransactions: 429 with delta-seconds Retry-After carries retryAfterMs (AC-3)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(rateLimitedResponse({ "Retry-After": "30" }))),
+    );
+
+    const error = await client.getTransactions({ accessToken: "token", accountId: "acc-1" }).then(
+      () => {
+        throw new Error("expected the call to reject");
+      },
+      (caught: unknown) => caught,
+    );
+
+    expect(error).toBeInstanceOf(TrueLayerRateLimitError);
+    expect((error as TrueLayerRateLimitError).status).toBe(429);
+    expect((error as TrueLayerRateLimitError).retryAfterMs).toBe(30_000);
+  });
+
+  it("getTransactions: 429 with an HTTP-date Retry-After resolves a positive delay (AC-3)", async () => {
+    const future = new Date(Date.now() + 120_000).toUTCString();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(rateLimitedResponse({ "Retry-After": future }))),
+    );
+
+    const error = await client
+      .getTransactions({ accessToken: "token", accountId: "acc-1" })
+      .catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(TrueLayerRateLimitError);
+    const { retryAfterMs } = error as TrueLayerRateLimitError;
+    expect(retryAfterMs).not.toBeNull();
+    expect(retryAfterMs!).toBeGreaterThan(0);
+    expect(retryAfterMs!).toBeLessThanOrEqual(120_000);
+  });
+
+  it("getBalance: 429 without backoff headers reports a null hint (AC-4)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(rateLimitedResponse())),
+    );
+
+    const error = await client
+      .getBalance({ accessToken: "token", accountId: "acc-1" })
+      .catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(TrueLayerRateLimitError);
+    expect((error as TrueLayerRateLimitError).retryAfterMs).toBeNull();
+  });
+
+  it("refreshToken: 429 (possibly non-JSON body) surfaces as TrueLayerRateLimitError", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve(
+          new Response("<html>slow down</html>", { status: 429, headers: { "Retry-After": "5" } }),
+        ),
+      ),
+    );
+
+    const error = await client
+      .refreshToken({ refreshToken: "refresh" })
+      .catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(TrueLayerRateLimitError);
+    expect((error as TrueLayerRateLimitError).retryAfterMs).toBe(5_000);
+  });
 });

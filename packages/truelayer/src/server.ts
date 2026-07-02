@@ -22,8 +22,14 @@ import {
   type GetBalanceOptions,
   type Balance,
 } from "./types.ts";
+import { parseRetryAfterMs, resilientFetch } from "@spark/common";
 import { getEnvironmentUrls, DEFAULT_SCOPES, DEFAULT_PROVIDERS } from "./config.ts";
-import { TrueLayerError, TrueLayerAuthError, isTrueLayerAuthCode } from "./errors.ts";
+import {
+  TrueLayerError,
+  TrueLayerAuthError,
+  TrueLayerRateLimitError,
+  isTrueLayerAuthCode,
+} from "./errors.ts";
 import type { TrueLayerErrorCode } from "./types.ts";
 
 type TrueLayerResourceType = "accounts" | "cards";
@@ -43,13 +49,22 @@ type TrueLayerResourceType = "accounts" | "cards";
  * (exchangeCode/refreshToken) keep their original behaviour because refresh
  * failures are funnelled through the connection service's token error types.
  */
-function throwDataEndpointError(status: number, data: unknown): never {
+function throwDataEndpointError(status: number, data: unknown, headers?: Headers): never {
   const errorResult = TrueLayerErrorResponseSchema.safeParse(data);
   const parsed = errorResult.success ? errorResult.data : undefined;
 
   if (status === 401 || status === 403) {
     const code = (parsed?.error as TrueLayerErrorCode | undefined) ?? "access_denied";
     throw new TrueLayerAuthError(code, parsed?.error_description, status);
+  }
+
+  // Detect by HTTP status — the error-body schema carries no rate-limit
+  // signal — and preserve the provider's backoff hint for the scheduler.
+  if (status === 429) {
+    throw new TrueLayerRateLimitError(
+      headers ? parseRetryAfterMs(headers) : null,
+      parsed?.error_description,
+    );
   }
 
   if (parsed) {
@@ -135,8 +150,8 @@ async function classifyDataEndpoint(
     return { kind: "absent" };
   }
 
-  const { status } = response;
-  return { kind: "error", raise: () => throwDataEndpointError(status, errorBody) };
+  const { status, headers } = response;
+  return { kind: "error", raise: () => throwDataEndpointError(status, errorBody, headers) };
 }
 
 function getResourceType(accountType?: AccountType | null): TrueLayerResourceType {
@@ -230,13 +245,18 @@ export function createTrueLayerClient(config: TrueLayerConfig): TrueLayerClient 
         body.set("code_verifier", options.codeVerifier);
       }
 
-      const response = await fetch(`${urls.auth}/connect/token`, {
+      const response = await resilientFetch(`${urls.auth}/connect/token`, {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
         },
         body,
+        timeoutMs: config.timeoutMs,
       });
+
+      if (response.status === 429) {
+        throw new TrueLayerRateLimitError(parseRetryAfterMs(response.headers));
+      }
 
       const data = await response.json();
 
@@ -267,13 +287,18 @@ export function createTrueLayerClient(config: TrueLayerConfig): TrueLayerClient 
         refresh_token: options.refreshToken,
       });
 
-      const response = await fetch(`${urls.auth}/connect/token`, {
+      const response = await resilientFetch(`${urls.auth}/connect/token`, {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
         },
         body,
+        timeoutMs: config.timeoutMs,
       });
+
+      if (response.status === 429) {
+        throw new TrueLayerRateLimitError(parseRetryAfterMs(response.headers));
+      }
 
       const data = await response.json();
 
@@ -298,17 +323,19 @@ export function createTrueLayerClient(config: TrueLayerConfig): TrueLayerClient 
 
     async getAccounts(options: GetAccountsOptions): Promise<Account[]> {
       const [accountsSettled, cardsSettled] = await Promise.allSettled([
-        fetch(`${urls.api}/data/v1/accounts`, {
+        resilientFetch(`${urls.api}/data/v1/accounts`, {
           method: "GET",
           headers: {
             Authorization: `Bearer ${options.accessToken}`,
           },
+          timeoutMs: config.timeoutMs,
         }),
-        fetch(`${urls.api}/data/v1/cards`, {
+        resilientFetch(`${urls.api}/data/v1/cards`, {
           method: "GET",
           headers: {
             Authorization: `Bearer ${options.accessToken}`,
           },
+          timeoutMs: config.timeoutMs,
         }),
       ]);
 
@@ -386,15 +413,16 @@ export function createTrueLayerClient(config: TrueLayerConfig): TrueLayerClient 
         url.searchParams.set("to", options.to);
       }
 
-      const response = await fetch(url.toString(), {
+      const response = await resilientFetch(url.toString(), {
         method: "GET",
         headers: {
           Authorization: `Bearer ${options.accessToken}`,
         },
+        timeoutMs: config.timeoutMs,
       });
 
       if (!response.ok) {
-        throwDataEndpointError(response.status, await safeJson(response));
+        throwDataEndpointError(response.status, await safeJson(response), response.headers);
       }
 
       const data = await response.json();
@@ -439,18 +467,19 @@ export function createTrueLayerClient(config: TrueLayerConfig): TrueLayerClient 
 
     async getBalance(options: GetBalanceOptions): Promise<Balance> {
       const resourceType = getResourceType(options.accountType);
-      const response = await fetch(
+      const response = await resilientFetch(
         `${urls.api}/data/v1/${resourceType}/${options.accountId}/balance`,
         {
           method: "GET",
           headers: {
             Authorization: `Bearer ${options.accessToken}`,
           },
+          timeoutMs: config.timeoutMs,
         },
       );
 
       if (!response.ok) {
-        throwDataEndpointError(response.status, await safeJson(response));
+        throwDataEndpointError(response.status, await safeJson(response), response.headers);
       }
 
       const data = await response.json();
@@ -506,4 +535,9 @@ export type {
   BalanceResponse,
 } from "./types.ts";
 
-export { TrueLayerError, TrueLayerAuthError, isTrueLayerAuthCode } from "./errors.ts";
+export {
+  TrueLayerError,
+  TrueLayerAuthError,
+  TrueLayerRateLimitError,
+  isTrueLayerAuthCode,
+} from "./errors.ts";

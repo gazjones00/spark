@@ -46,6 +46,24 @@ export class TrueLayerAuthError extends TrueLayerError {
   }
 }
 
+/**
+ * HTTP 429 from any TrueLayer endpoint. Transient with an explicit backoff
+ * deadline: `retryAfterMs` carries the provider's `Retry-After` /
+ * `X-RateLimit-Reset` hint (null when the response had neither), so the sync
+ * layer can reschedule on the provider's schedule instead of the generic
+ * exponential backoff.
+ */
+export class TrueLayerRateLimitError extends TrueLayerError {
+  readonly status = 429;
+  readonly retryAfterMs: number | null;
+
+  constructor(retryAfterMs: number | null, description?: string) {
+    super("rate_limit_exceeded", description ?? "TrueLayer rate limit exceeded");
+    this.name = "TrueLayerRateLimitError";
+    this.retryAfterMs = retryAfterMs;
+  }
+}
+
 export function isTrueLayerAuthCode(code: string): boolean {
   return AUTH_ERROR_CODES.has(code as TrueLayerErrorCode);
 }
