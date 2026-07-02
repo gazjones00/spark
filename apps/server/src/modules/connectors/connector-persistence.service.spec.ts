@@ -3,6 +3,7 @@ import { SyncStatus } from "@spark/common";
 import { connectorConnections } from "@spark/db/schema";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ConnectorPersistenceService } from "./connector-persistence.service";
+import type { TransactionRollupService } from "./transaction-rollup.service";
 
 function emptyResult(overrides: Partial<ConnectorSyncResult> = {}): ConnectorSyncResult {
   return {
@@ -55,11 +56,18 @@ function createService(options: { consecutiveFailures?: number } = {}) {
     transaction: vi.fn((cb: (txArg: unknown) => unknown) => cb(tx)),
   };
 
-  const service = new ConnectorPersistenceService(db as never);
+  const rollupService = {
+    captureExistingBuckets: vi.fn(async () => new Map<string, Set<string>>()),
+    refreshForBatch: vi.fn(async () => undefined),
+  };
+  const service = new ConnectorPersistenceService(
+    db as never,
+    rollupService as unknown as TransactionRollupService,
+  );
   const connectionState = () =>
     setCalls.find((call) => call.table === connectorConnections)?.payload;
 
-  return { service, connectionState };
+  return { service, connectionState, rollupService };
 }
 
 describe("ConnectorPersistenceService.updateConnectionSyncState", () => {
@@ -243,5 +251,32 @@ describe("ConnectorPersistenceService.updateConnectionSyncState", () => {
     expect(state?.syncStatus).toBe(SyncStatus.NEEDS_REAUTH);
     expect(state).not.toHaveProperty("nextSyncAt");
     expect(state).not.toHaveProperty("consecutiveFailures");
+  });
+
+  it("refreshes the daily rollups inside the persistence transaction", async () => {
+    const { service, rollupService } = createService();
+    const result = emptyResult();
+    const previousBuckets = new Map([["truelayer:account:acc-1", new Set(["2026-06-01"])]]);
+    rollupService.captureExistingBuckets.mockResolvedValueOnce(previousBuckets);
+
+    await service.persistSyncResult({
+      userId: "user-1",
+      connectionId: "conn-1",
+      result,
+    });
+
+    // Pre-upsert buckets are captured and handed to the refresh, so an
+    // update that moves a transaction across days recomputes the old day.
+    expect(rollupService.captureExistingBuckets).toHaveBeenCalledWith(
+      expect.anything(),
+      "conn-1",
+      result.transactions,
+    );
+    expect(rollupService.refreshForBatch).toHaveBeenCalledWith(expect.anything(), {
+      userId: "user-1",
+      connectionId: "conn-1",
+      transactions: result.transactions,
+      previousBuckets,
+    });
   });
 });

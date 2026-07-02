@@ -14,4 +14,18 @@ export class TransactionsController {
       return this.transactionsService.list(session.user.id, input);
     });
   }
+
+  @Implement(contract.transactions.monthlySummary)
+  monthlySummary(@Session() session: UserSession) {
+    return implement(contract.transactions.monthlySummary).handler(({ input }) => {
+      return this.transactionsService.monthlySummary(session.user.id, input);
+    });
+  }
+
+  @Implement(contract.transactions.balanceSeries)
+  balanceSeries(@Session() session: UserSession) {
+    return implement(contract.transactions.balanceSeries).handler(({ input }) => {
+      return this.transactionsService.balanceSeries(session.user.id, input);
+    });
+  }
 }

@@ -57,6 +57,13 @@
       "when": 1782945954237,
       "tag": "0007_bizarre_exiles",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1782994269526,
+      "tag": "0008_powerful_wolfsbane",
+      "breakpoints": true
     }
   ]
 }
