@@ -8,7 +8,7 @@
     "./contract": "./src/contract.ts"
   },
   "scripts": {
-    "type:check": "tsc -b"
+    "type:check": "tsc --noEmit"
   },
   "dependencies": {
     "@orpc/client": "^1.13.2",

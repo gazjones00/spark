@@ -25,6 +25,5 @@
     "noFallthroughCasesInSwitch": false,
     "allowImportingTsExtensions": true,
     "emitDeclarationOnly": true
-  },
-  "references": [{ "path": "../../packages/connectors" }, { "path": "../../packages/orpc" }]
+  }
 }

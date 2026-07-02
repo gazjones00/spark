@@ -12,7 +12,7 @@
     "./react/components": "./src/react/components/index.ts"
   },
   "scripts": {
-    "type:check": "tsc -b"
+    "type:check": "tsc --noEmit"
   },
   "dependencies": {
     "@spark/db": "workspace:*",
