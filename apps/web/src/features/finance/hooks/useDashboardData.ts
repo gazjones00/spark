@@ -5,21 +5,14 @@ import { orpc } from "@spark/orpc";
 import type { SavedTransaction } from "@spark/orpc/contract";
 
 import {
-  calculateMonthlyTotals,
   calculateNetWorth,
-  calculateSpendingByCategory,
-  deriveBalanceSeries,
   dominantCurrency,
   type BalanceHistory,
   type SpendingByCategory,
 } from "../lib/dashboard-derivations";
 
-// Dashboard aggregates are computed from the most recent page of transactions.
-// 100 is the maximum the list endpoint allows (`ListTransactionsInputSchema.limit`).
-// That is enough for current-month income/expense and the recent-5 list; we do
-// NOT page the whole history for v1 — productionising server-side aggregates is
-// a separate piece of work.
-const TRANSACTIONS_LIMIT = 100;
+/** The dashboard's recent-activity list shows the five newest transactions. */
+const RECENT_TRANSACTIONS_LIMIT = 5;
 
 export interface DashboardData {
   netWorth: number;
@@ -40,47 +33,83 @@ export interface DashboardData {
 /**
  * Single source of dashboard data, wired to the live oRPC API.
  *
- * Query keys deliberately match `accounts.tsx` (`["accounts"]`) and
- * `transactions.tsx` (`["transactions", input]`) so the cache is shared across
- * routes. All figures are derived deterministically — no `Math.random()`.
+ * Monthly totals, category spend, and the balance series come from the
+ * server-side rollup aggregates — computed in SQL over full history, so a
+ * month with hundreds of transactions is fully counted (the old client-side
+ * derivation silently truncated at the list endpoint's 100-row page).
+ * Net worth stays derived from the accounts list, and recent activity still
+ * reads a small `transactions.list` page.
  */
-export function useDashboardData(now: Date = new Date()): DashboardData {
+export function useDashboardData(): DashboardData {
   const accountsQuery = useQuery({
+    // Key matches accounts.tsx so the cache is shared across routes.
     queryKey: ["accounts"],
     queryFn: () => orpc.accounts.list.call({}),
   });
 
-  const transactionsQuery = useQuery({
-    queryKey: ["transactions", { limit: TRANSACTIONS_LIMIT }],
-    queryFn: () => orpc.transactions.list.call({ limit: TRANSACTIONS_LIMIT }),
+  const recentQuery = useQuery({
+    queryKey: ["transactions", { limit: RECENT_TRANSACTIONS_LIMIT }],
+    queryFn: () => orpc.transactions.list.call({ limit: RECENT_TRANSACTIONS_LIMIT }),
+  });
+
+  const summaryQuery = useQuery({
+    queryKey: ["transactions", "monthly-summary"],
+    queryFn: () => orpc.transactions.monthlySummary.call({}),
+  });
+
+  const seriesQuery = useQuery({
+    queryKey: ["transactions", "balance-series"],
+    queryFn: () => orpc.transactions.balanceSeries.call({}),
   });
 
   const accounts = accountsQuery.data?.accounts ?? [];
-  const transactions = transactionsQuery.data?.transactions ?? [];
+  const recentTransactions = recentQuery.data?.transactions ?? [];
+  const currency = dominantCurrency(accounts);
 
-  const { income, expenses } = calculateMonthlyTotals(transactions, now);
+  // Aggregates are per-currency (cross-currency sums are meaningless without
+  // FX); display the entry matching the dominant account currency, falling
+  // back to the busiest one.
+  const totals = summaryQuery.data?.totals ?? [];
+  const summary = totals.find((entry) => entry.currency === currency) ?? totals[0];
 
-  const spendingByCategory: SpendingByCategory[] = calculateSpendingByCategory(
-    transactions,
-    now,
-  ).map((entry) => ({ ...entry, fill: categoryConfig[entry.category].color }));
+  const spendingByCategory: SpendingByCategory[] = (summary?.categories ?? []).map((entry) => {
+    const config = (categoryConfig as Record<string, { color: string } | undefined>)[
+      entry.category
+    ];
+    return {
+      category: entry.category as SpendingByCategory["category"],
+      amount: Number(entry.total),
+      fill: config?.color ?? categoryConfig.UNKNOWN.color,
+    };
+  });
+
+  const balanceSeries: BalanceHistory[] = (seriesQuery.data?.points ?? []).map((point) => ({
+    date: point.date,
+    balance: Number(point.balance),
+  }));
 
   return {
     netWorth: calculateNetWorth(accounts),
-    monthlyIncome: income,
-    monthlyExpenses: expenses,
-    currency: dominantCurrency(accounts),
+    monthlyIncome: summary ? Number(summary.income) : 0,
+    monthlyExpenses: summary ? Number(summary.expenses) : 0,
+    currency,
     spendingByCategory,
-    balanceSeries: deriveBalanceSeries(transactions),
-    // The API returns transactions sorted most-recent-first; take the top 5.
-    recentTransactions: transactions.slice(0, 5),
+    balanceSeries,
+    recentTransactions,
     hasAccounts: accounts.length > 0,
-    hasTransactions: transactions.length > 0,
-    isLoading: accountsQuery.isLoading || transactionsQuery.isLoading,
-    isError: accountsQuery.isError || transactionsQuery.isError,
+    hasTransactions: recentTransactions.length > 0,
+    isLoading:
+      accountsQuery.isLoading ||
+      recentQuery.isLoading ||
+      summaryQuery.isLoading ||
+      seriesQuery.isLoading,
+    isError:
+      accountsQuery.isError || recentQuery.isError || summaryQuery.isError || seriesQuery.isError,
     refetch: () => {
       void accountsQuery.refetch();
-      void transactionsQuery.refetch();
+      void recentQuery.refetch();
+      void summaryQuery.refetch();
+      void seriesQuery.refetch();
     },
   };
 }

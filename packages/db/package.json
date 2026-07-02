@@ -25,7 +25,8 @@
     "db:stop": "docker compose stop",
     "db:down": "docker compose down",
     "type:check": "tsc -b",
-    "db:backfill:truelayer": "bun ./scripts/backfill-truelayer.ts"
+    "db:backfill:truelayer": "bun ./scripts/backfill-truelayer.ts",
+    "db:backfill:rollups": "bun ./scripts/backfill-rollups.ts"
   },
   "dependencies": {
     "@libsql/client": "^0.17.0",

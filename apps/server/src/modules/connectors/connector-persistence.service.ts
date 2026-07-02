@@ -16,6 +16,7 @@ import {
   rawProviderRecords,
 } from "@spark/db/schema";
 import { DATABASE_CONNECTION } from "../database";
+import { TransactionRollupService } from "./transaction-rollup.service";
 
 const CONNECTOR_SYNC_INTERVAL_MINUTES = 5;
 const FAILED_CONNECTOR_RETRY_MINUTES = 30;
@@ -47,7 +48,10 @@ type ConnectorPersistenceDb = Database | Parameters<Parameters<Database["transac
 export class ConnectorPersistenceService {
   private readonly logger = new Logger(ConnectorPersistenceService.name);
 
-  constructor(@Inject(DATABASE_CONNECTION) private readonly db: Database) {}
+  constructor(
+    @Inject(DATABASE_CONNECTION) private readonly db: Database,
+    private readonly rollupService: TransactionRollupService,
+  ) {}
 
   async persistSyncResult(
     input: PersistConnectorSyncResultInput,
@@ -66,6 +70,13 @@ export class ConnectorPersistenceService {
     recordsWritten += await this.persistAccounts(db, input);
     recordsWritten += await this.persistInstruments(db, input);
     recordsWritten += await this.persistTransactions(db, input);
+    // Same transaction as the upserts: the dashboard aggregates can never be
+    // observed out of step with the base rows.
+    await this.rollupService.refreshForBatch(db, {
+      userId: input.userId,
+      connectionId: input.connectionId,
+      transactions: input.result.transactions,
+    });
     recordsWritten += await this.persistHoldings(db, input);
     recordsWritten += await this.persistBalanceSnapshots(db, input);
     recordsWritten += await this.persistPortfolioSnapshots(db, input);

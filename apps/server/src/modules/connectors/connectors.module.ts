@@ -11,6 +11,7 @@ import { ConnectorRegistryService } from "./connector-registry.service";
 import { ConnectorSyncService } from "./connector-sync.service";
 import { CONNECTORS } from "./connector.tokens";
 import { ConnectorsController } from "./connectors.controller";
+import { TransactionRollupService } from "./transaction-rollup.service";
 
 // Each connector is its own provider so it can receive injected
 // dependencies (the TrueLayer connector needs the client + token provider
@@ -43,12 +44,14 @@ const connectorProviders: Provider[] = [
     ConnectorPersistenceService,
     ConnectorSyncService,
     ConnectorConnectionService,
+    TransactionRollupService,
   ],
   exports: [
     ConnectorRegistryService,
     ConnectorPersistenceService,
     ConnectorSyncService,
     ConnectorConnectionService,
+    TransactionRollupService,
   ],
 })
 export class ConnectorsModule {}

@@ -15,12 +15,6 @@ export interface SpendingByCategory {
   fill: string;
 }
 
-/** Spending grouped by category before a colour is attached. */
-export interface CategorySpend {
-  category: TransactionCategory;
-  amount: number;
-}
-
 /**
  * Net worth = sum of every account's `currentBalance`.
  *
@@ -38,112 +32,6 @@ export function calculateNetWorth(accounts: Account[]): number {
     // Guard against malformed numeric strings so one bad row can't poison the sum.
     return sum + (Number.isNaN(value) ? 0 : value);
   }, 0);
-}
-
-/**
- * Income and expenses for the calendar month containing `now`.
- *
- * Includes transactions on or after the first of the month (inclusive) and
- * partitions them by `transactionType`. Amounts are unsigned in storage, so we
- * sum `Math.abs(Number(amount))`.
- */
-export function calculateMonthlyTotals(
-  transactions: SavedTransaction[],
-  now: Date,
-): { income: number; expenses: number } {
-  const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
-  let income = 0;
-  let expenses = 0;
-
-  for (const transaction of transactions) {
-    if (new Date(transaction.timestamp) < firstOfMonth) continue;
-    const amount = Math.abs(Number(transaction.amount));
-    if (Number.isNaN(amount)) continue;
-
-    if (transaction.transactionType === "CREDIT") {
-      income += amount;
-    } else if (transaction.transactionType === "DEBIT") {
-      expenses += amount;
-    }
-  }
-
-  return { income, expenses };
-}
-
-/**
- * Spending grouped by category, derived from current-month DEBIT transactions.
- *
- * Windowed to the calendar month containing `now` so the breakdown stays
- * consistent with the "Expenses (This Month)" figure from
- * {@link calculateMonthlyTotals} (the pie total equals monthly expenses).
- * Amounts are summed as `Math.abs(Number(amount))`. Sorted desc by amount.
- */
-export function calculateSpendingByCategory(
-  transactions: SavedTransaction[],
-  now: Date,
-): CategorySpend[] {
-  const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const totals = new Map<TransactionCategory, number>();
-
-  for (const transaction of transactions) {
-    if (transaction.transactionType !== "DEBIT") continue;
-    if (new Date(transaction.timestamp) < firstOfMonth) continue;
-    const amount = Math.abs(Number(transaction.amount));
-    if (Number.isNaN(amount)) continue;
-
-    totals.set(
-      transaction.transactionCategory,
-      (totals.get(transaction.transactionCategory) ?? 0) + amount,
-    );
-  }
-
-  return [...totals.entries()]
-    .map(([category, amount]) => ({ category, amount }))
-    .sort((a, b) => b.amount - a.amount);
-}
-
-/**
- * Daily balance series derived client-side from `runningBalance`.
- *
- * For each calendar day (UTC) with transactions, use the most recent
- * `runningBalance` of that day; days whose transactions all lack a running
- * balance carry the last known value forward. If no transaction anywhere has a
- * `runningBalance`, returns an empty array — the caller must then render an
- * explicit empty state rather than a fabricated curve.
- */
-export function deriveBalanceSeries(transactions: SavedTransaction[]): BalanceHistory[] {
-  const byDay = new Map<string, SavedTransaction[]>();
-  for (const transaction of transactions) {
-    const day = transaction.timestamp.slice(0, 10);
-    const bucket = byDay.get(day);
-    if (bucket) {
-      bucket.push(transaction);
-    } else {
-      byDay.set(day, [transaction]);
-    }
-  }
-
-  const days = [...byDay.keys()].sort();
-  const series: BalanceHistory[] = [];
-  let lastKnown: number | undefined;
-
-  for (const day of days) {
-    const withBalance = byDay
-      .get(day)!
-      .filter((transaction) => transaction.runningBalance != null)
-      .sort((a, b) => a.timestamp.localeCompare(b.timestamp));
-
-    if (withBalance.length > 0) {
-      lastKnown = withBalance[withBalance.length - 1].runningBalance!.amount;
-    }
-
-    if (lastKnown !== undefined) {
-      series.push({ date: day, balance: lastKnown });
-    }
-  }
-
-  return series;
 }
 
 /**
