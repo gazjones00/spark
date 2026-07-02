@@ -1,14 +1,28 @@
 import { Injectable } from "@nestjs/common";
 import type { ConnectorSyncResult } from "@spark/connectors";
 import { and, eq, inArray, sql, type Database } from "@spark/db";
-import { accountDailyBalances, transactionDailyRollups } from "@spark/db/schema";
+import {
+  accountDailyBalances,
+  financialTransactions,
+  transactionDailyRollups,
+} from "@spark/db/schema";
 
 type RollupDb = Database | Parameters<Parameters<Database["transaction"]>[0]>[0];
+
+/** Distinct UTC days per account external id. */
+export type RollupBuckets = Map<string, Set<string>>;
 
 export interface RefreshRollupsInput {
   userId: string;
   connectionId: string;
   transactions: ConnectorSyncResult["transactions"];
+  /**
+   * Buckets the batch's rows occupied BEFORE the upsert (see
+   * {@link TransactionRollupService.captureExistingBuckets}). Without them an
+   * update that moves a transaction to a different day would leave the old
+   * day's bucket stale — the new batch only names the new day.
+   */
+  previousBuckets?: RollupBuckets;
 }
 
 /**
@@ -26,8 +40,51 @@ export interface RefreshRollupsInput {
  */
 @Injectable()
 export class TransactionRollupService {
+  /**
+   * Reads the (account, day) buckets the batch's rows currently sit in.
+   * MUST run before the transaction upserts: the upsert overwrites
+   * `occurred_at`, destroying the only record of a moved transaction's old
+   * day. Same transaction as the upsert, so the read is consistent.
+   */
+  async captureExistingBuckets(
+    db: RollupDb,
+    connectionId: string,
+    transactions: ConnectorSyncResult["transactions"],
+  ): Promise<RollupBuckets> {
+    const buckets: RollupBuckets = new Map();
+    if (transactions.length === 0) {
+      return buckets;
+    }
+
+    const rows = await db
+      .select({
+        accountExternalId: financialTransactions.accountExternalId,
+        occurredAt: financialTransactions.occurredAt,
+      })
+      .from(financialTransactions)
+      .where(
+        and(
+          eq(financialTransactions.connectionId, connectionId),
+          inArray(
+            financialTransactions.externalId,
+            transactions.map((transaction) => transaction.externalId),
+          ),
+        ),
+      );
+
+    for (const row of rows) {
+      addBucket(buckets, row.accountExternalId, row.occurredAt.toISOString().slice(0, 10));
+    }
+    return buckets;
+  }
+
   async refreshForBatch(db: RollupDb, input: RefreshRollupsInput): Promise<void> {
     const daysByAccount = groupTouchedDaysByAccount(input.transactions);
+    for (const [accountExternalId, days] of input.previousBuckets ?? []) {
+      for (const day of days) {
+        addBucket(daysByAccount, accountExternalId, day);
+      }
+    }
     for (const [accountExternalId, days] of daysByAccount) {
       await this.recomputeBuckets(db, input, accountExternalId, [...days].sort());
     }
@@ -81,7 +138,7 @@ export class TransactionRollupService {
       FROM financial_transactions
       WHERE connection_id = ${input.connectionId}
         AND account_external_id = ${accountExternalId}
-        AND (occurred_at AT TIME ZONE 'UTC')::date = ANY(${days}::date[])
+        AND (occurred_at AT TIME ZONE 'UTC')::date = ANY(${sql.param(days)}::date[])
       GROUP BY
         connection_id,
         account_external_id,
@@ -123,7 +180,7 @@ export class TransactionRollupService {
       FROM financial_transactions
       WHERE connection_id = ${input.connectionId}
         AND account_external_id = ${accountExternalId}
-        AND (occurred_at AT TIME ZONE 'UTC')::date = ANY(${days}::date[])
+        AND (occurred_at AT TIME ZONE 'UTC')::date = ANY(${sql.param(days)}::date[])
         AND metadata->'runningBalance'->>'amount' IS NOT NULL
       ORDER BY
         account_external_id,
@@ -137,20 +194,23 @@ export class TransactionRollupService {
 /** Distinct UTC days touched per account, derived from the sync batch. */
 function groupTouchedDaysByAccount(
   transactions: ConnectorSyncResult["transactions"],
-): Map<string, Set<string>> {
-  const result = new Map<string, Set<string>>();
+): RollupBuckets {
+  const result: RollupBuckets = new Map();
   for (const transaction of transactions) {
     const occurredAt = new Date(transaction.occurredAt);
     if (Number.isNaN(occurredAt.getTime())) {
       continue;
     }
-    const day = occurredAt.toISOString().slice(0, 10);
-    const days = result.get(transaction.accountExternalId);
-    if (days) {
-      days.add(day);
-    } else {
-      result.set(transaction.accountExternalId, new Set([day]));
-    }
+    addBucket(result, transaction.accountExternalId, occurredAt.toISOString().slice(0, 10));
   }
   return result;
+}
+
+function addBucket(buckets: RollupBuckets, accountExternalId: string, day: string): void {
+  const days = buckets.get(accountExternalId);
+  if (days) {
+    days.add(day);
+  } else {
+    buckets.set(accountExternalId, new Set([day]));
+  }
 }

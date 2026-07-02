@@ -69,6 +69,13 @@ export class ConnectorPersistenceService {
     recordsWritten += await this.persistRawRecords(db, input);
     recordsWritten += await this.persistAccounts(db, input);
     recordsWritten += await this.persistInstruments(db, input);
+    // Captured before the upsert overwrites occurred_at: an update that moves
+    // a transaction to a different day must recompute the OLD day too.
+    const previousBuckets = await this.rollupService.captureExistingBuckets(
+      db,
+      input.connectionId,
+      input.result.transactions,
+    );
     recordsWritten += await this.persistTransactions(db, input);
     // Same transaction as the upserts: the dashboard aggregates can never be
     // observed out of step with the base rows.
@@ -76,6 +83,7 @@ export class ConnectorPersistenceService {
       userId: input.userId,
       connectionId: input.connectionId,
       transactions: input.result.transactions,
+      previousBuckets,
     });
     recordsWritten += await this.persistHoldings(db, input);
     recordsWritten += await this.persistBalanceSnapshots(db, input);
