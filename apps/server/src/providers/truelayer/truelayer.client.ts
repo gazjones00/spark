@@ -13,6 +13,7 @@ import {
   type Transaction,
   type GetBalanceOptions,
   type Balance,
+  type RevokeAccessOptions,
 } from "@spark/truelayer/server";
 import { TRUELAYER_MODULE_OPTIONS } from "./truelayer.constants";
 import type { TruelayerModuleOptions } from "./truelayer.interfaces";
@@ -50,5 +51,9 @@ export class TruelayerClient implements TrueLayerClient {
 
   getBalance(options: GetBalanceOptions): Promise<Balance> {
     return this.client.getBalance(options);
+  }
+
+  revokeAccess(options: RevokeAccessOptions): Promise<void> {
+    return this.client.revokeAccess(options);
   }
 }

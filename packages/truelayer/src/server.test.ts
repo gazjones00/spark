@@ -117,6 +117,51 @@ describe("createTrueLayerClient", () => {
     ]);
   });
 
+  it("logs fetch rejections as name/message only, never the raw reason object", async () => {
+    // spyOn returns the pre-existing spy when console.error is already
+    // spied by an earlier test, so drop any calls it has accumulated.
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    errorSpy.mockClear();
+
+    // A hostile rejection reason: request context attached to the error the
+    // way undici/fetch failures carry it. None of it may reach the log.
+    const reason = Object.assign(new Error("socket hang up"), {
+      headers: { authorization: "Bearer live-access-token" },
+      cause: { config: { access_token: "live-access-token" } },
+    });
+
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/data/v1/accounts")) {
+        return Promise.resolve(
+          jsonResponse({
+            results: [
+              {
+                update_timestamp: "2026-01-01T00:00:00.000Z",
+                account_id: "account-id",
+                account_type: "TRANSACTION",
+                display_name: "Current Account",
+                currency: "GBP",
+                account_number: { number: "12345678", sortCode: "112233" },
+                provider: { provider_id: "bank", display_name: "Bank" },
+              },
+            ],
+            status: "Succeeded",
+          }),
+        );
+      }
+      return Promise.reject(reason);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await client.getAccounts({ accessToken: "token" });
+
+    expect(errorSpy).toHaveBeenCalledTimes(1);
+    const logged = errorSpy.mock.calls[0] ?? [];
+    expect(logged).toEqual(["TrueLayer data endpoint fetch failed", "Error: socket hang up"]);
+    expect(JSON.stringify(logged)).not.toContain("live-access-token");
+  });
+
   it("returns only cards when the provider does not support the accounts endpoint (e.g. Amex)", async () => {
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
@@ -518,5 +563,55 @@ describe("createTrueLayerClient rate limiting", () => {
 
     expect(error).toBeInstanceOf(TrueLayerRateLimitError);
     expect((error as TrueLayerRateLimitError).retryAfterMs).toBe(5_000);
+  });
+
+  it("revokeAccess: sends DELETE /api/delete on the auth host with the bearer token", async () => {
+    const fetchMock = vi.fn(() => Promise.resolve(new Response(null, { status: 204 })));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(client.revokeAccess({ accessToken: "token" })).resolves.toBeUndefined();
+
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe("https://auth.truelayer.com/api/delete");
+    expect(init.method).toBe("DELETE");
+    expect(new Headers(init.headers).get("Authorization")).toBe("Bearer token");
+  });
+
+  it("revokeAccess: 401 (already revoked / dead token) surfaces as TrueLayerAuthError", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(jsonResponse({ error: "invalid_grant" }, 401))),
+    );
+
+    await expect(client.revokeAccess({ accessToken: "token" })).rejects.toBeInstanceOf(
+      TrueLayerAuthError,
+    );
+  });
+
+  it("revokeAccess: 429 carries the provider's backoff hint", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve(new Response(null, { status: 429, headers: { "Retry-After": "7" } })),
+      ),
+    );
+
+    const error = await client
+      .revokeAccess({ accessToken: "token" })
+      .catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(TrueLayerRateLimitError);
+    expect((error as TrueLayerRateLimitError).retryAfterMs).toBe(7_000);
+  });
+
+  it("revokeAccess: 5xx with an empty body surfaces as a generic error", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(new Response(null, { status: 500 }))),
+    );
+
+    await expect(client.revokeAccess({ accessToken: "token" })).rejects.toThrow(
+      "TrueLayer request failed: 500",
+    );
   });
 });

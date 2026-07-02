@@ -5,15 +5,26 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
-import { QuickStats } from "@/features/finance/components/quick-stats";
-import { BalanceHistoryChart } from "@/features/finance/components/balance-history-chart";
-import { SpendingChart } from "@/features/finance/components/spending-chart";
-import { RecentTransactions } from "@/features/finance/components/recent-transactions";
+import { QuickStats } from "@/features/finance/components/QuickStats";
+import { BalanceHistoryChart } from "@/features/finance/components/BalanceHistoryChart";
+import { SpendingChart } from "@/features/finance/components/SpendingChart";
+import { RecentTransactions } from "@/features/finance/components/RecentTransactions";
 import { ConnectAccountModal } from "@/features/finance/components/ConnectAccountModal";
 import { useDashboardData, type DashboardData } from "@/features/finance/hooks/useDashboardData";
+import { orpc } from "@spark/orpc";
 import { useAuth } from "@spark/auth/react";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
+  // Warm the shared accounts cache on client-side navigations. SSR is
+  // skipped: the oRPC fetch has no user cookie server-side, so a prefetch
+  // there would dehydrate a 401 into the client cache.
+  loader: ({ context }) => {
+    if (typeof window === "undefined") return;
+    void context.queryClient.prefetchQuery({
+      queryKey: ["accounts"],
+      queryFn: () => orpc.accounts.list.call({}),
+    });
+  },
   component: DashboardPage,
 });
 

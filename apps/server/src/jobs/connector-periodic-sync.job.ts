@@ -8,8 +8,23 @@ import type { MessageQueueService } from "../modules/message-queue";
 import type { ConnectorSyncJobData } from "./connector-sync.job";
 
 const BATCH_SIZE = 100;
+/**
+ * Bound on pages drained per tick so a pathological backlog cannot pin the
+ * cron handler's worker slot; anything left over waits for the next tick.
+ */
+const MAX_PAGES = 20;
 const SYNC_INTERVAL_MINUTES = 5;
+/** Reservations spread over this window; see the jitter note below. */
+const RESERVATION_JITTER_SECONDS = 60;
 const SCHEDULER_LOCK_KEY = 4242002;
+/**
+ * BullMQ pops standard (non-prioritised) jobs before it ever looks at the
+ * prioritised set, so the PERIODIC backlog is the class that carries a
+ * priority value: initial syncs enqueued at connect time stay standard and
+ * preempt it — a new user's first data doesn't queue behind hundreds of
+ * routine refreshes.
+ */
+const PERIODIC_SYNC_PRIORITY = 10;
 
 @Processor(MessageQueue.DEFAULT)
 @Injectable()
@@ -37,40 +52,69 @@ export class ConnectorPeriodicSyncJob {
       }
 
       const now = new Date();
-      const nextSyncAt = new Date(now.getTime() + SYNC_INTERVAL_MINUTES * 60 * 1000);
-      nextSyncAt.setSeconds(0, 0);
+      const nextSyncBase = new Date(now.getTime() + SYNC_INTERVAL_MINUTES * 60 * 1000);
+      const connections: Array<{ id: string; userId: string }> = [];
 
-      const dueConnections = await tx
-        .select({
-          id: connectorConnections.id,
-          userId: connectorConnections.userId,
-        })
-        .from(connectorConnections)
-        .where(
-          and(
-            // Retry transient ERRORs after nextSyncAt; NEEDS_REAUTH stays manual.
-            inArray(connectorConnections.syncStatus, [SyncStatus.OK, SyncStatus.ERROR]),
-            lte(connectorConnections.nextSyncAt, now),
-          ),
-        )
-        .orderBy(connectorConnections.nextSyncAt, connectorConnections.id)
-        .limit(BATCH_SIZE);
+      // Drain everything due, page by page, while the lock is held — a
+      // single batch per tick caps throughput at BATCH_SIZE × ticks/hour no
+      // matter how many workers exist. Reserving a page (advancing its
+      // nextSyncAt) makes the next select see the following page, so no
+      // offset bookkeeping is needed.
+      let drained = false;
+      for (let page = 0; page < MAX_PAGES; page++) {
+        const due = await tx
+          .select({
+            id: connectorConnections.id,
+            userId: connectorConnections.userId,
+          })
+          .from(connectorConnections)
+          .where(
+            and(
+              // Retry transient ERRORs after nextSyncAt; NEEDS_REAUTH stays manual.
+              inArray(connectorConnections.syncStatus, [SyncStatus.OK, SyncStatus.ERROR]),
+              lte(connectorConnections.nextSyncAt, now),
+            ),
+          )
+          .orderBy(connectorConnections.nextSyncAt, connectorConnections.id)
+          .limit(BATCH_SIZE);
 
-      if (dueConnections.length === 0) {
-        return { connections: [], timestamp: 0 };
+        if (due.length === 0) {
+          drained = true;
+          break;
+        }
+
+        await tx
+          .update(connectorConnections)
+          .set({
+            // Per-row jitter spreads the next cycle across the interval
+            // instead of re-synchronising the whole batch onto one minute
+            // boundary and hitting the provider in bursts. Strictly
+            // additive, so a reserved row can never be re-selected within
+            // this tick's drain.
+            nextSyncAt: sql`${nextSyncBase}::timestamptz + random() * make_interval(secs => ${RESERVATION_JITTER_SECONDS})`,
+            updatedAt: now,
+          })
+          .where(
+            inArray(
+              connectorConnections.id,
+              due.map((connection) => connection.id),
+            ),
+          );
+
+        connections.push(...due);
+        if (due.length < BATCH_SIZE) {
+          drained = true;
+          break;
+        }
       }
 
-      await tx
-        .update(connectorConnections)
-        .set({ nextSyncAt, updatedAt: now })
-        .where(
-          inArray(
-            connectorConnections.id,
-            dueConnections.map((connection) => connection.id),
-          ),
+      if (!drained) {
+        this.logger.warn(
+          `Connector sync drain bound reached (${MAX_PAGES * BATCH_SIZE}); remaining due connections wait for the next tick`,
         );
+      }
 
-      return { connections: dueConnections, timestamp: now.getTime() };
+      return { connections, timestamp: now.getTime() };
     });
 
     if (result === null) {
@@ -81,12 +125,6 @@ export class ConnectorPeriodicSyncJob {
     if (connections.length === 0) {
       this.logger.log("No connector connections due for sync");
       return;
-    }
-
-    if (connections.length === BATCH_SIZE) {
-      this.logger.warn(
-        `Connector sync batch limit reached (${BATCH_SIZE}); some connections may be delayed`,
-      );
     }
 
     const dispatches = await Promise.allSettled(
@@ -100,6 +138,7 @@ export class ConnectorPeriodicSyncJob {
           },
           {
             jobId: `connector:${connection.id}:${timestamp}`,
+            priority: PERIODIC_SYNC_PRIORITY,
             attempts: 3,
             backoff: {
               type: "exponential",

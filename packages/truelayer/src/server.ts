@@ -21,6 +21,7 @@ import {
   type Transaction,
   type GetBalanceOptions,
   type Balance,
+  type RevokeAccessOptions,
 } from "./types.ts";
 import { parseRetryAfterMs, resilientFetch } from "@spark/common";
 import { getEnvironmentUrls, DEFAULT_SCOPES, DEFAULT_PROVIDERS } from "./config.ts";
@@ -131,7 +132,15 @@ async function classifyDataEndpoint(
 ): Promise<DataEndpointOutcome> {
   if (settled.status === "rejected") {
     const { reason } = settled;
-    console.error("TrueLayer data endpoint fetch failed", reason);
+    // Log name/message only — a fetch rejection can carry request context
+    // (Authorization headers, bodies) on its properties or `cause`, and this
+    // package has no redacting logger to hand it to. The raw reason still
+    // reaches the caller via `raise()`.
+    // oxlint-disable-next-line no-console
+    console.error(
+      "TrueLayer data endpoint fetch failed",
+      reason instanceof Error ? `${reason.name}: ${reason.message}` : String(reason),
+    );
     return {
       kind: "error",
       raise: () => {
@@ -193,6 +202,7 @@ export interface TrueLayerClient {
   getAccounts(options: GetAccountsOptions): Promise<Account[]>;
   getTransactions(options: GetTransactionsOptions): Promise<Transaction[]>;
   getBalance(options: GetBalanceOptions): Promise<Balance>;
+  revokeAccess(options: RevokeAccessOptions): Promise<void>;
 }
 
 export function createTrueLayerClient(config: TrueLayerConfig): TrueLayerClient {
@@ -504,6 +514,27 @@ export function createTrueLayerClient(config: TrueLayerConfig): TrueLayerClient 
         updateTimestamp: balance.update_timestamp,
       };
     },
+
+    /**
+     * Revokes the credentials/grant associated with the access token
+     * (`DELETE {auth}/api/delete`) so the bank connection stops working
+     * upstream. A 401/403 surfaces as `TrueLayerAuthError` — for callers
+     * revoking a grant that usually means it is already dead, which is the
+     * goal state; the disconnect path treats it as success.
+     */
+    async revokeAccess(options: RevokeAccessOptions): Promise<void> {
+      const response = await resilientFetch(`${urls.auth}/api/delete`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${options.accessToken}`,
+        },
+        timeoutMs: config.timeoutMs,
+      });
+
+      if (!response.ok) {
+        throwDataEndpointError(response.status, await safeJson(response), response.headers);
+      }
+    },
   };
 }
 
@@ -533,6 +564,7 @@ export type {
   GetBalanceOptions,
   Balance,
   BalanceResponse,
+  RevokeAccessOptions,
 } from "./types.ts";
 
 export {

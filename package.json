@@ -7,15 +7,15 @@
       "packages/*"
     ],
     "catalog": {
-      "@types/bun": "^1.2.7",
+      "@types/bun": "^1.3.9",
       "better-auth": "^1.4.10",
-      "dotenv": "^17.2.2",
+      "dotenv": "^17.3.1",
       "drizzle-kit": "^0.31.8",
       "drizzle-orm": "^0.45.1",
-      "typescript": "^5",
-      "vitest": "^4.0.16",
-      "@vitest/ui": "^4.0.16",
-      "zod": "^4.1.13"
+      "typescript": "^5.9.3",
+      "vitest": "^4.0.18",
+      "@vitest/ui": "^4.0.18",
+      "zod": "^4.3.6"
     }
   },
   "type": "module",
@@ -26,7 +26,6 @@
     "test": "turbo test",
     "test:cov": "turbo test:cov",
     "type:check": "turbo type:check",
-    "dev:native": "turbo -F native dev",
     "dev:server": "turbo -F @spark/server dev",
     "dev:web": "turbo -F web dev",
     "db:push": "turbo -F @spark/db db:push",
@@ -41,20 +40,14 @@
     "check:fix": "oxlint && oxfmt --write",
     "prepare": "husky"
   },
-  "dependencies": {
-    "@spark/env": "workspace:*",
-    "dotenv": "^17.3.1",
-    "drizzle-orm": "^0.45.1",
-    "zod": "^4.3.6"
-  },
   "devDependencies": {
     "@spark/config": "workspace:*",
-    "@types/bun": "^1.3.9",
+    "@types/bun": "catalog:",
     "husky": "^9.1.7",
     "oxfmt": "^0.34.0",
     "oxlint": "^1.49.0",
     "turbo": "^2.8.10",
-    "typescript": "^5.9.3"
+    "typescript": "catalog:"
   },
   "packageManager": "bun@1.3.5"
 }

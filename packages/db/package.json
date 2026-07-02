@@ -29,7 +29,6 @@
     "db:backfill:rollups": "bun ./scripts/backfill-rollups.ts"
   },
   "dependencies": {
-    "@libsql/client": "^0.17.0",
     "@spark/common": "workspace:*",
     "@spark/env": "workspace:*",
     "@spark/schema": "workspace:*",

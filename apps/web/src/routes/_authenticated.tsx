@@ -1,6 +1,7 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 
 import { DashboardLayout } from "@/components/layouts/dashboard-layout";
+import { RouteError } from "@/components/route-error";
 import { getCurrentUser } from "@/server/auth";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -12,6 +13,9 @@ export const Route = createFileRoute("/_authenticated")({
     return { user };
   },
   component: AuthenticatedLayout,
+  // Boundary for every signed-in page: a child route's render/loader error
+  // renders here instead of bubbling to the app root.
+  errorComponent: RouteError,
 });
 
 function AuthenticatedLayout() {

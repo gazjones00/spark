@@ -3,8 +3,6 @@
   "compilerOptions": {
     "rootDir": "./src",
     "lib": ["ESNext"],
-
-    "noEmit": true,
     "strictNullChecks": true
   },
   "include": ["src/**/*"]

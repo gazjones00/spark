@@ -183,15 +183,87 @@ export class ConnectorConnectionService {
   }
 
   async deleteConnection(userId: string, connectionId: string): Promise<void> {
-    const deleted = await this.db
-      .delete(connectorConnections)
+    const rows = await this.db
+      .select()
+      .from(connectorConnections)
       .where(
         and(eq(connectorConnections.id, connectionId), eq(connectorConnections.userId, userId)),
       )
-      .returning({ id: connectorConnections.id });
-    if (deleted.length === 0) {
+      .limit(1);
+    const connection = rows.at(0);
+    if (!connection) {
       throw new NotFoundException("Connector connection not found.");
     }
+
+    // Revoke before deleting: the row holds the only copy of the credentials,
+    // so once it is gone the grant can never be revoked. Best-effort — a
+    // provider outage must never leave the user unable to delete their data.
+    await this.revokeUpstreamGrant(connection);
+
+    await this.db
+      .delete(connectorConnections)
+      .where(
+        and(eq(connectorConnections.id, connectionId), eq(connectorConnections.userId, userId)),
+      );
+  }
+
+  /**
+   * Ends the provider-side authorisation behind a connection so that
+   * "disconnected" also means "no longer authorised" at the provider, not
+   * just locally. Never throws:
+   * - providers without a grant (API-key connectors) declare no `revoke`
+   *   capability and are skipped;
+   * - an already-dead grant (`ConnectorAuthError`) is the goal state;
+   * - any other failure is logged (message only) and deletion proceeds —
+   *   the token dies upstream when the grant naturally expires.
+   */
+  private async revokeUpstreamGrant(
+    connection: typeof connectorConnections.$inferSelect,
+  ): Promise<void> {
+    const connector = this.registry.get(connection.providerId);
+    if (!connector?.revoke) {
+      return;
+    }
+
+    try {
+      const credentials = await this.decryptStoredCredentials(connection);
+      await connector.revoke({
+        connectionId: connection.id,
+        userId: connection.userId,
+        environment: connection.environment,
+        credentials,
+        metadata: connection.metadata,
+      });
+      this.logger.log(`Revoked upstream grant for connection ${connection.id}`);
+    } catch (error) {
+      if (error instanceof ConnectorAuthError) {
+        this.logger.log(`Upstream grant already revoked for connection ${connection.id}`);
+        return;
+      }
+      this.logger.warn(
+        `Upstream revocation failed for connection ${connection.id}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
+  }
+
+  private async decryptStoredCredentials(
+    connection: typeof connectorConnections.$inferSelect,
+  ): Promise<Record<string, string>> {
+    const plaintext = await this.cryptoService.decryptFromString(
+      connection.encryptedCredentials,
+      connection.credentialKeyId,
+    );
+    const parsed = JSON.parse(plaintext) as unknown;
+    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+      throw new Error("Stored connector credentials are not a record.");
+    }
+    return Object.fromEntries(
+      Object.entries(parsed).filter((entry): entry is [string, string] => {
+        return typeof entry[1] === "string";
+      }),
+    );
   }
 
   private assertEnvironment(

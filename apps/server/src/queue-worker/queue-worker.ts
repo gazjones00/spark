@@ -1,6 +1,7 @@
 import { Logger } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { Logger as PinoNestLogger } from "nestjs-pino";
+import { rootLogger } from "../observability/logging.config";
 import { initSentry } from "../observability/sentry";
 import { QueueWorkerModule } from "./queue-worker.module";
 
@@ -28,4 +29,10 @@ async function bootstrap() {
   process.on("SIGTERM", shutdown);
 }
 
-bootstrap();
+bootstrap().catch((error: unknown) => {
+  // Without this catch a boot failure (e.g. Redis unreachable) surfaces as
+  // the runtime's raw unhandled-rejection dump, bypassing the redacting
+  // `err` serializer.
+  rootLogger.fatal({ err: error }, "queue worker bootstrap failed");
+  process.exit(1);
+});

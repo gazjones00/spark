@@ -39,6 +39,7 @@ export const JOB_SCHEMAS = {
   [Jobs.AccountSync]: AccountSyncJobDataSchema,
   [Jobs.InitialSync]: InitialSyncJobDataSchema,
   [Jobs.ConnectorSync]: ConnectorSyncJobDataSchema,
+  [Jobs.OauthStateCleanup]: EmptyJobDataSchema,
   [Jobs.PeriodicSync]: EmptyJobDataSchema,
   [Jobs.ConnectorPeriodicSync]: EmptyJobDataSchema,
 } as const satisfies Record<Jobs, z.ZodType>;
