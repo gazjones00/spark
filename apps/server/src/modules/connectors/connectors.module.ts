@@ -1,6 +1,7 @@
 import { Module, type Provider } from "@nestjs/common";
 import type { FinancialConnector } from "@spark/connectors";
 import { Trading212Connector, TrueLayerConnector } from "@spark/connectors";
+import { env } from "@spark/env/server";
 import { TruelayerClient } from "../../providers/truelayer/truelayer.client";
 import { TruelayerConnectorTokenService } from "../../providers/truelayer/truelayer-connector-token.service";
 import { CryptoModule } from "../crypto";
@@ -18,7 +19,7 @@ import { ConnectorsController } from "./connectors.controller";
 const connectorProviders: Provider[] = [
   {
     provide: Trading212Connector,
-    useFactory: () => new Trading212Connector(),
+    useFactory: () => new Trading212Connector({ timeoutMs: env.PROVIDER_HTTP_TIMEOUT_MS }),
   },
   {
     provide: TrueLayerConnector,

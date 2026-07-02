@@ -112,4 +112,58 @@ describe("Trading212Client", () => {
 
     await expect(client.getAccountSummary()).rejects.toBeInstanceOf(ConnectorAuthError);
   });
+
+  it("throws ConnectorRateLimitError carrying the parsed Retry-After hint on 429", async () => {
+    const fetchMock = (async () =>
+      new Response("", {
+        status: 429,
+        headers: { "Retry-After": "30" },
+      })) as unknown as typeof fetch;
+    const client = new Trading212Client({
+      apiKey: "key",
+      apiSecret: "secret",
+      baseUrl: "https://example.test/api/v0",
+      fetch: fetchMock,
+    });
+
+    await expect(client.getAccountSummary()).rejects.toMatchObject({
+      name: "ConnectorRateLimitError",
+      code: "CONNECTOR_RATE_LIMIT_ERROR",
+      retryAfterMs: 30_000,
+    });
+  });
+
+  it("reports a null hint when the 429 has no backoff headers", async () => {
+    const fetchMock = (async () => new Response("", { status: 429 })) as unknown as typeof fetch;
+    const client = new Trading212Client({
+      apiKey: "key",
+      apiSecret: "secret",
+      baseUrl: "https://example.test/api/v0",
+      fetch: fetchMock,
+    });
+
+    await expect(client.getAccountSummary()).rejects.toMatchObject({
+      code: "CONNECTOR_RATE_LIMIT_ERROR",
+      retryAfterMs: null,
+    });
+  });
+
+  it("aborts a hung request after timeoutMs and maps it to ConnectorTimeoutError", async () => {
+    const fetchMock = ((_input: unknown, init?: RequestInit) =>
+      new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => reject(new Error("aborted")));
+      })) as unknown as typeof fetch;
+    const client = new Trading212Client({
+      apiKey: "key",
+      apiSecret: "secret",
+      baseUrl: "https://example.test/api/v0",
+      fetch: fetchMock,
+      timeoutMs: 10,
+    });
+
+    await expect(client.getAccountSummary()).rejects.toMatchObject({
+      name: "ConnectorTimeoutError",
+      code: "CONNECTOR_TIMEOUT",
+    });
+  });
 });

@@ -17,6 +17,7 @@ import { CryptoModule } from "../modules/crypto";
       clientId: env.TRUELAYER_CLIENT_ID,
       clientSecret: env.TRUELAYER_CLIENT_SECRET,
       redirectUri: env.TRUELAYER_REDIRECT_URI,
+      timeoutMs: env.PROVIDER_HTTP_TIMEOUT_MS,
     }),
     MessageQueueModule.registerAsync({
       useFactory: () => ({ driver: createBullMQDriver() }),

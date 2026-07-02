@@ -7,13 +7,15 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "type:check": "tsc -b"
+    "type:check": "tsc -b",
+    "test": "vitest run"
   },
   "dependencies": {
     "@spark/schema": "workspace:*"
   },
   "devDependencies": {
     "@spark/config": "workspace:*",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }

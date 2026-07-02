@@ -16,10 +16,30 @@ export class ConnectorAuthError extends ConnectorError {
   }
 }
 
+export interface ConnectorRateLimitErrorOptions {
+  /** Provider backoff hint resolved to a relative delay; null when absent. */
+  retryAfterMs?: number | null;
+  cause?: unknown;
+}
+
 export class ConnectorRateLimitError extends ConnectorError {
-  constructor(message = "Connector rate limit exceeded.", cause?: unknown) {
-    super(message, "CONNECTOR_RATE_LIMIT_ERROR", cause);
+  readonly retryAfterMs: number | null;
+
+  constructor(
+    message = "Connector rate limit exceeded.",
+    options: ConnectorRateLimitErrorOptions = {},
+  ) {
+    super(message, "CONNECTOR_RATE_LIMIT_ERROR", options.cause);
     this.name = "ConnectorRateLimitError";
+    this.retryAfterMs = options.retryAfterMs ?? null;
+  }
+}
+
+/** A provider request exceeded its deadline — transient, safe to retry. */
+export class ConnectorTimeoutError extends ConnectorError {
+  constructor(message = "Connector request timed out.", cause?: unknown) {
+    super(message, "CONNECTOR_TIMEOUT", cause);
+    this.name = "ConnectorTimeoutError";
   }
 }
 

@@ -22,7 +22,7 @@ function emptyResult(overrides: Partial<ConnectorSyncResult> = {}): ConnectorSyn
   };
 }
 
-function createService() {
+function createService(options: { consecutiveFailures?: number } = {}) {
   // Capture the payload passed to connectorConnections .set(); the sync-run
   // insert reuses the same chain harmlessly.
   const setCalls: Array<{ table: unknown; payload: Record<string, unknown> }> = [];
@@ -38,12 +38,18 @@ function createService() {
   const insertChain = {
     values: vi.fn().mockResolvedValue(undefined),
   };
+  const selectChain = {
+    from: vi.fn(() => selectChain),
+    where: vi.fn(() => selectChain),
+    limit: vi.fn().mockResolvedValue([{ consecutiveFailures: options.consecutiveFailures ?? 0 }]),
+  };
   const tx = {
     update: vi.fn((table: unknown) => {
       lastUpdateTable = table;
       return updateChain;
     }),
     insert: vi.fn(() => insertChain),
+    select: vi.fn(() => selectChain),
   };
   const db = {
     transaction: vi.fn((cb: (txArg: unknown) => unknown) => cb(tx)),
@@ -109,5 +115,133 @@ describe("ConnectorPersistenceService.updateConnectionSyncState", () => {
     expect(state?.syncStatus).toBe(SyncStatus.OK);
     expect(state?.nextSyncAt).toBeInstanceOf(Date);
     expect(state?.lastSyncedAt).toBeInstanceOf(Date);
+  });
+
+  it("reschedules a rate-limited failure on the provider hint, not the generic backoff", async () => {
+    const { service, connectionState } = createService();
+    const before = Date.now();
+
+    await service.persistSyncResult({
+      userId: "user-1",
+      connectionId: "conn-1",
+      result: emptyResult({
+        status: "failed",
+        errors: [
+          { code: "CONNECTOR_RATE_LIMIT_ERROR", message: "rate limited", retryAfterMs: 90_000 },
+        ],
+      }),
+    });
+
+    const state = connectionState();
+    expect(state?.syncStatus).toBe(SyncStatus.ERROR);
+    expect(state).toBeDefined();
+    const delay = (state!.nextSyncAt as Date).getTime() - before;
+    // Hint of 90s, plus up to 10% jitter (and a little test slack).
+    expect(delay).toBeGreaterThanOrEqual(90_000);
+    expect(delay).toBeLessThanOrEqual(100_000);
+    expect(state?.consecutiveFailures).toBe(1);
+  });
+
+  it("applies the bounded default when the 429 carried no hint", async () => {
+    const { service, connectionState } = createService();
+    const before = Date.now();
+
+    await service.persistSyncResult({
+      userId: "user-1",
+      connectionId: "conn-1",
+      result: emptyResult({
+        status: "failed",
+        errors: [
+          { code: "CONNECTOR_RATE_LIMIT_ERROR", message: "rate limited", retryAfterMs: null },
+        ],
+      }),
+    });
+
+    const state = connectionState();
+    expect(state).toBeDefined();
+    const delay = (state!.nextSyncAt as Date).getTime() - before;
+    expect(delay).toBeGreaterThanOrEqual(60_000);
+    expect(delay).toBeLessThanOrEqual(70_000);
+  });
+
+  it("clamps a hostile Retry-After hint to the 1h ceiling", async () => {
+    const { service, connectionState } = createService();
+    const before = Date.now();
+
+    await service.persistSyncResult({
+      userId: "user-1",
+      connectionId: "conn-1",
+      result: emptyResult({
+        status: "failed",
+        errors: [
+          {
+            code: "CONNECTOR_RATE_LIMIT_ERROR",
+            message: "rate limited",
+            retryAfterMs: 48 * 60 * 60 * 1000,
+          },
+        ],
+      }),
+    });
+
+    const state = connectionState();
+    expect(state).toBeDefined();
+    const delay = (state!.nextSyncAt as Date).getTime() - before;
+    expect(delay).toBeLessThanOrEqual(3_600_000 * 1.1 + 1_000);
+  });
+
+  it("opens the breaker at the failure threshold: cool-down floor + counter", async () => {
+    // 4 prior failures; this one crosses the default threshold of 5.
+    const { service, connectionState } = createService({ consecutiveFailures: 4 });
+    const before = Date.now();
+
+    await service.persistSyncResult({
+      userId: "user-1",
+      connectionId: "conn-1",
+      result: emptyResult({
+        status: "failed",
+        errors: [
+          { code: "CONNECTOR_RATE_LIMIT_ERROR", message: "rate limited", retryAfterMs: 1_000 },
+        ],
+      }),
+    });
+
+    const state = connectionState();
+    expect(state?.consecutiveFailures).toBe(5);
+    expect(state).toBeDefined();
+    const delay = (state!.nextSyncAt as Date).getTime() - before;
+    // The 1s hint is floored by the breaker cool-down (default 120s).
+    expect(delay).toBeGreaterThanOrEqual(120_000);
+  });
+
+  it("closes the breaker on a successful half-open probe (counter resets)", async () => {
+    const { service, connectionState } = createService({ consecutiveFailures: 6 });
+
+    await service.persistSyncResult({
+      userId: "user-1",
+      connectionId: "conn-1",
+      result: emptyResult({ status: "success" }),
+    });
+
+    const state = connectionState();
+    expect(state?.syncStatus).toBe(SyncStatus.OK);
+    expect(state?.consecutiveFailures).toBe(0);
+  });
+
+  it("does not touch the failure counter for NEEDS_REAUTH (terminal, not breaker-relevant)", async () => {
+    const { service, connectionState } = createService({ consecutiveFailures: 2 });
+
+    await service.persistSyncResult({
+      userId: "user-1",
+      connectionId: "conn-1",
+      result: emptyResult({
+        status: "failed",
+        errors: [{ code: "CONNECTOR_AUTH_ERROR", message: "auth failed" }],
+      }),
+    });
+
+    const state = connectionState();
+    expect(state?.syncStatus).toBe(SyncStatus.NEEDS_REAUTH);
+    expect(state).not.toHaveProperty("nextSyncAt");
+    expect(state).not.toHaveProperty("consecutiveFailures");
   });
 });

@@ -1,19 +1,14 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { type Database, eq } from "@spark/db";
 import { truelayerAccounts } from "@spark/db/schema";
-import { SyncStatus } from "@spark/common";
 import type { AccountType } from "@spark/schema";
 import {
   TruelayerClient,
   TruelayerConnectionService,
   TruelayerAccountStatusService,
-  syncStatusFromError,
 } from "../../../providers/truelayer";
+import { syncErrorBackoff } from "../../../providers/truelayer/sync-error-backoff";
 import { DATABASE_CONNECTION } from "../../database";
-
-// Transient ERRORs are retried by the scheduler after this backoff. Kept in
-// sync with TransactionSyncService so both sync paths back off identically.
-const ERROR_RETRY_MINUTES = 30;
 
 export interface SyncBalanceParams {
   accountId: string;
@@ -71,12 +66,20 @@ export class BalanceService {
       // revoked-consent 401 here was re-thrown without ever recording status,
       // so an account could miss the NEEDS_REAUTH flip if balance rejected
       // alone. Classify and persist here too (last write wins, harmlessly).
-      const status = syncStatusFromError(error);
-      const nextSyncAt =
-        status === SyncStatus.ERROR
-          ? new Date(Date.now() + ERROR_RETRY_MINUTES * 60 * 1000)
-          : undefined;
-      await this.statusService.update(accountId, status, { nextSyncAt });
+      const backoff = syncErrorBackoff(error);
+      if (backoff.rateLimitRetryAfterMs !== undefined) {
+        this.logger.warn({
+          event: "provider.ratelimit.hit",
+          providerId: "truelayer",
+          connectionId,
+          accountId,
+          retryAfterMs: backoff.rateLimitRetryAfterMs,
+          backoffMs: backoff.backoffMs,
+        });
+      }
+      await this.statusService.update(accountId, backoff.status, {
+        nextSyncAt: backoff.nextSyncAt,
+      });
       throw error;
     }
   }

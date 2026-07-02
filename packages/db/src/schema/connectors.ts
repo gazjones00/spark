@@ -32,6 +32,7 @@ export const connectorConnections = pgTable(
       .default(SyncStatus.OK),
     lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }),
     nextSyncAt: timestamp("next_sync_at", { withTimezone: true }).notNull().defaultNow(),
+    consecutiveFailures: integer("consecutive_failures").notNull().default(0),
     lastSyncErrorCode: text("last_sync_error_code"),
     lastSyncErrorMessage: text("last_sync_error_message"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),

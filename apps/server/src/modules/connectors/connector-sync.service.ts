@@ -1,6 +1,7 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import {
   ConnectorError,
+  ConnectorRateLimitError,
   emptyConnectorSyncResult,
   type ConnectorSyncContext,
   type ConnectorSyncResult,
@@ -128,6 +129,10 @@ export class ConnectorSyncService {
     result.errors.push({
       code: error instanceof ConnectorError ? error.code : "CONNECTOR_SYNC_FAILED",
       message: error instanceof Error ? error.message : String(error),
+      // Carry the provider's backoff hint through to persistence so the
+      // scheduler reschedules on the provider's deadline, not the generic
+      // retry interval.
+      ...(error instanceof ConnectorRateLimitError ? { retryAfterMs: error.retryAfterMs } : {}),
     });
     return result;
   }

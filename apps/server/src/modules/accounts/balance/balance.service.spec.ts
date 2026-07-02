@@ -1,7 +1,7 @@
 import { SyncStatus } from "@spark/common";
 import { truelayerAccounts } from "@spark/db/schema";
-import { TrueLayerAuthError } from "@spark/truelayer/server";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { TrueLayerAuthError, TrueLayerRateLimitError } from "@spark/truelayer/server";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { TruelayerClient, TruelayerConnectionService } from "../../../providers/truelayer";
 import { TruelayerAccountStatusService } from "../../../providers/truelayer";
 import { BalanceService } from "./balance.service";
@@ -47,6 +47,10 @@ describe("BalanceService.syncBalance", () => {
     vi.clearAllMocks();
   });
 
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("writes NEEDS_REAUTH (no backoff) and re-throws when getBalance hits a bank-side 401", async () => {
     const { service, db, updateChain } = createService({
       getBalanceError: new TrueLayerAuthError("access_denied", "revoked", 401),
@@ -79,5 +83,23 @@ describe("BalanceService.syncBalance", () => {
     const nextSyncAt = set.nextSyncAt as Date;
     expect(nextSyncAt).toBeInstanceOf(Date);
     expect(nextSyncAt.getTime()).toBeGreaterThanOrEqual(before + 29 * 60 * 1000);
+  });
+
+  it("writes ERROR using the TrueLayer rate-limit backoff hint", async () => {
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    const { service, updateChain } = createService({
+      getBalanceError: new TrueLayerRateLimitError(90_000),
+    });
+
+    const before = Date.now();
+    await expect(
+      service.syncBalance({ accountId: "acc-1", connectionId: "conn-1" }),
+    ).rejects.toBeInstanceOf(TrueLayerRateLimitError);
+
+    const set = updateChain.set.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(set.syncStatus).toBe(SyncStatus.ERROR);
+    const delay = (set.nextSyncAt as Date).getTime() - before;
+    expect(delay).toBeGreaterThanOrEqual(90_000);
+    expect(delay).toBeLessThan(91_000);
   });
 });

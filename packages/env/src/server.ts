@@ -13,6 +13,15 @@ export const env = createEnv({
       .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
       .default("info"),
     NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
+    /** Total-request deadline for upstream provider HTTP calls. */
+    PROVIDER_HTTP_TIMEOUT_MS: z.coerce.number().int().positive().default(15_000),
+    /** BullMQ per-queue limiter: at most MAX jobs per DURATION_MS window. */
+    QUEUE_LIMITER_MAX: z.coerce.number().int().positive().default(20),
+    QUEUE_LIMITER_DURATION_MS: z.coerce.number().int().positive().default(1_000),
+    /** Consecutive sync failures before a connection's breaker opens. */
+    BREAKER_FAILURE_THRESHOLD: z.coerce.number().int().positive().default(5),
+    /** Cool-down before an open breaker allows a half-open probe sync. */
+    BREAKER_COOLDOWN_MS: z.coerce.number().int().positive().default(120_000),
     SENTRY_DSN: z.url().optional(),
     REDIS_HOST: z.string(),
     REDIS_PORT: z.coerce.number(),

@@ -166,6 +166,7 @@
       "devDependencies": {
         "@spark/config": "workspace:*",
         "typescript": "catalog:",
+        "vitest": "catalog:",
       },
     },
     "packages/config": {
@@ -176,6 +177,7 @@
       "name": "@spark/connectors",
       "version": "0.0.0",
       "dependencies": {
+        "@spark/common": "workspace:*",
         "@spark/schema": "workspace:*",
         "@spark/truelayer": "workspace:*",
         "zod": "catalog:",
@@ -272,6 +274,7 @@
       "name": "@spark/truelayer",
       "version": "0.0.0",
       "dependencies": {
+        "@spark/common": "workspace:*",
         "@spark/schema": "workspace:*",
       },
       "devDependencies": {

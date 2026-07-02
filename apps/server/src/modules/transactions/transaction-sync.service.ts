@@ -7,14 +7,12 @@ import {
   TruelayerClient,
   TruelayerConnectionService,
   TruelayerAccountStatusService,
-  syncStatusFromError,
 } from "../../providers/truelayer";
+import { syncErrorBackoff } from "../../providers/truelayer/sync-error-backoff";
 import { DATABASE_CONNECTION } from "../database";
 
 const DEFAULT_SYNC_DAYS = 7;
 const MAX_SYNC_DAYS = 90;
-// Transient ERRORs are retried by the scheduler after this backoff.
-const ERROR_RETRY_MINUTES = 30;
 
 interface BaseSyncParams {
   accountId: string;
@@ -125,13 +123,22 @@ export class TransactionSyncService {
         `Failed to sync transactions for account ${accountId}: ${error instanceof Error ? error.message : String(error)}`,
       );
       // NEEDS_REAUTH is terminal — no backoff is written so the scheduler stops
-      // re-queuing the account. Transient ERRORs retry after the backoff.
-      const status = syncStatusFromError(error);
-      const nextSyncAt =
-        status === SyncStatus.ERROR
-          ? new Date(Date.now() + ERROR_RETRY_MINUTES * 60 * 1000)
-          : undefined;
-      await this.statusService.update(accountId, status, { nextSyncAt });
+      // re-queuing the account. Transient ERRORs retry after the backoff, and
+      // 429s honour TrueLayer's Retry-After hint when present.
+      const backoff = syncErrorBackoff(error);
+      if (backoff.rateLimitRetryAfterMs !== undefined) {
+        this.logger.warn({
+          event: "provider.ratelimit.hit",
+          providerId: "truelayer",
+          connectionId,
+          accountId,
+          retryAfterMs: backoff.rateLimitRetryAfterMs,
+          backoffMs: backoff.backoffMs,
+        });
+      }
+      await this.statusService.update(accountId, backoff.status, {
+        nextSyncAt: backoff.nextSyncAt,
+      });
       throw error;
     }
   }

@@ -1,4 +1,5 @@
-import { TrueLayerAuthError } from "@spark/truelayer/server";
+import { HttpTimeoutError } from "@spark/common";
+import { TrueLayerAuthError, TrueLayerRateLimitError } from "@spark/truelayer/server";
 import type {
   Account,
   Balance,
@@ -10,6 +11,8 @@ import type {
 import {
   ConnectorAuthError,
   ConnectorError,
+  ConnectorRateLimitError,
+  ConnectorTimeoutError,
   emptyConnectorSyncResult,
   type ConnectorSyncContext,
   type ConnectorSyncResult,
@@ -204,8 +207,10 @@ export class TrueLayerConnector implements FinancialConnector {
   ): never | void {
     const classified = classifyError(error);
     // Auth failures cover the whole consent, not one account — fail the sync
-    // so persistence marks the connection NEEDS_REAUTH.
-    if (classified instanceof ConnectorAuthError) {
+    // so persistence marks the connection NEEDS_REAUTH. Rate limits likewise
+    // throttle the whole client, so continuing to the next account would
+    // amplify load; fail the sync and let the scheduler back off on the hint.
+    if (classified instanceof ConnectorAuthError || classified instanceof ConnectorRateLimitError) {
       throw classified;
     }
     result.status = "partial";
@@ -229,13 +234,26 @@ export function transactionsResource(accountId: string): string {
   return `transactions:${accountId}`;
 }
 
-/** Bank-side auth failures (401/403, revoked consent) → NEEDS_REAUTH. */
+/**
+ * Bank-side auth failures (401/403, revoked consent) → NEEDS_REAUTH;
+ * 429 → rate-limited with the provider's backoff hint preserved;
+ * request deadline exceeded → transient timeout.
+ */
 function classifyError(error: unknown): Error {
   if (error instanceof ConnectorError) {
     return error;
   }
   if (error instanceof TrueLayerAuthError) {
     return new ConnectorAuthError(error.message, error);
+  }
+  if (error instanceof TrueLayerRateLimitError) {
+    return new ConnectorRateLimitError(error.message, {
+      retryAfterMs: error.retryAfterMs,
+      cause: error,
+    });
+  }
+  if (error instanceof HttpTimeoutError) {
+    return new ConnectorTimeoutError(error.message, error);
   }
   return error instanceof Error ? error : new Error(String(error));
 }

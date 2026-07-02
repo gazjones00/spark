@@ -57,7 +57,13 @@ export interface ConnectorSyncResult {
   balanceSnapshots: BalanceSnapshot[];
   portfolioSnapshots: PortfolioSnapshot[];
   cursors: ConnectorCursor[];
-  errors: Array<{ code: string; message: string; resource?: string }>;
+  errors: Array<{
+    code: string;
+    message: string;
+    resource?: string;
+    /** Provider rate-limit backoff hint (relative ms); null/absent otherwise. */
+    retryAfterMs?: number | null;
+  }>;
 }
 
 export interface FinancialConnector {

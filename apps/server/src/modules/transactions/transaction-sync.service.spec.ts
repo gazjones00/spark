@@ -1,8 +1,8 @@
 import { SyncStatus } from "@spark/common";
 import { truelayerAccounts, truelayerTransactions } from "@spark/db/schema";
 import type { Transaction } from "@spark/schema";
-import { TrueLayerAuthError } from "@spark/truelayer/server";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { TrueLayerAuthError, TrueLayerRateLimitError } from "@spark/truelayer/server";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { TruelayerClient, TruelayerConnectionService } from "../../providers/truelayer";
 import { TruelayerAccountStatusService } from "../../providers/truelayer";
 import { TokenExpiredError } from "../../providers/truelayer";
@@ -69,6 +69,10 @@ function createService(
 describe("TransactionSyncService.syncTransactions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it("upserts on conflict (do-update, not do-nothing) keyed on (transactionId, accountId)", async () => {
@@ -196,5 +200,23 @@ describe("TransactionSyncService.syncTransactions", () => {
     expect(nextSyncAt).toBeInstanceOf(Date);
     // ~30 minutes ahead (allow a generous lower bound for execution time).
     expect(nextSyncAt.getTime()).toBeGreaterThanOrEqual(before + 29 * 60 * 1000);
+  });
+
+  it("maps a TrueLayerRateLimitError to ERROR using the provider backoff hint", async () => {
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    const { service, updateChain } = createService([], {
+      getTransactionsError: new TrueLayerRateLimitError(90_000),
+    });
+
+    const before = Date.now();
+    await expect(
+      service.syncTransactions({ accountId: "acc-1", connectionId: "conn-1", daysToSync: 7 }),
+    ).rejects.toBeInstanceOf(TrueLayerRateLimitError);
+
+    const set = updateChain.set.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(set.syncStatus).toBe(SyncStatus.ERROR);
+    const delay = (set.nextSyncAt as Date).getTime() - before;
+    expect(delay).toBeGreaterThanOrEqual(90_000);
+    expect(delay).toBeLessThan(91_000);
   });
 });
