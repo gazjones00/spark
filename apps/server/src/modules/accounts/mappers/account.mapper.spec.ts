@@ -49,6 +49,7 @@ const createSnapshot = (overrides: Partial<BalanceSnapshotRow> = {}): BalanceSna
 const CONNECTION_STATE = {
   syncStatus: SyncStatus.OK,
   lastSyncedAt: new Date("2026-01-01T02:00:00.000Z"),
+  consentExpiresAt: null,
 };
 
 describe("account mapper (canonical tables)", () => {
@@ -77,13 +78,15 @@ describe("account mapper (canonical tables)", () => {
       balanceUpdatedAt: "2026-01-01T01:00:00.000Z",
       syncStatus: "OK",
       lastSyncedAt: "2026-01-01T02:00:00.000Z",
+      consentStatus: "ACTIVE",
+      consentExpiresAt: null,
     });
   });
 
   it("maps missing snapshot/sync data to nulls", () => {
     const mapped = toAccountDto(
       createAccount(),
-      { syncStatus: SyncStatus.OK, lastSyncedAt: null },
+      { syncStatus: SyncStatus.OK, lastSyncedAt: null, consentExpiresAt: null },
       null,
     );
 
@@ -92,6 +95,19 @@ describe("account mapper (canonical tables)", () => {
     expect(mapped.overdraft).toBeNull();
     expect(mapped.balanceUpdatedAt).toBeNull();
     expect(mapped.lastSyncedAt).toBeNull();
+  });
+
+  it("flags consent expiring soon when the connection's estimate is inside the window", () => {
+    const soon = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const mapped = toAccountDto(
+      createAccount(),
+      { ...CONNECTION_STATE, consentExpiresAt: soon },
+      createSnapshot(),
+    );
+    expect(mapped.consentStatus).toBe("EXPIRING_SOON");
+    expect(mapped.consentExpiresAt).toBe(soon.toISOString());
+    // The soft prompt never touches sync state.
+    expect(mapped.syncStatus).toBe("OK");
   });
 
   it("derives the TrueLayer account id from externalId when metadata lacks it", () => {

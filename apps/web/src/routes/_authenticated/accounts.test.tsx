@@ -45,6 +45,8 @@ function makeAccount(overrides: Partial<Account> = {}): Account {
     balanceUpdatedAt: "2026-07-01T10:00:00.000Z",
     syncStatus: "OK",
     lastSyncedAt: "2026-07-01T10:00:00.000Z",
+    consentStatus: "ACTIVE",
+    consentExpiresAt: null,
     ...overrides,
   };
 }
@@ -89,5 +91,22 @@ describe("accounts route", () => {
 
     expect(await screen.findByText("Everyday Account")).toBeDefined();
     expect(screen.getByText("Rainy Day Savings")).toBeDefined();
+  });
+
+  it("renders a soft reconnect warning for accounts with consent expiring soon", async () => {
+    listAccounts.mockResolvedValue({
+      accounts: [
+        makeAccount({
+          consentStatus: "EXPIRING_SOON",
+          consentExpiresAt: "2026-07-10T00:00:00.000Z",
+        }),
+      ],
+    });
+
+    renderAccounts();
+
+    expect(await screen.findByText("Everyday Account")).toBeDefined();
+    expect(screen.getByText("1 account to reconnect soon")).toBeDefined();
+    expect(screen.getByText(/Bank access for Everyday Account expires soon/)).toBeDefined();
   });
 });

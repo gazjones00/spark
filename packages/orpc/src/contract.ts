@@ -30,6 +30,7 @@ export {
   CategorySpendSchema,
   ChangePasswordInputSchema,
   ChangePasswordResponseSchema,
+  ConsentStatusSchema,
   CurrencyMonthlySummarySchema,
   CurrencySchema,
   DeleteAccountInputSchema,
@@ -72,6 +73,7 @@ export {
 
 export type {
   Account,
+  ConsentStatusType,
   BalanceSeriesInput,
   BalanceSeriesPoint,
   BalanceSeriesResponse,

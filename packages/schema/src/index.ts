@@ -1,4 +1,5 @@
 export * from "./account.schema.ts";
+export * from "./consent.schema.ts";
 export * from "./health.schema.ts";
 export * from "./money.ts";
 export * from "./settings.schema.ts";

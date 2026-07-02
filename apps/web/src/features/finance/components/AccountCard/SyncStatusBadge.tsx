@@ -1,11 +1,13 @@
-import { CheckCircle2, AlertTriangle, XCircle } from "lucide-react";
+import { CheckCircle2, AlertTriangle, XCircle, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { SyncStatusType } from "@spark/common";
+import type { ConsentStatusType } from "@spark/orpc/contract";
 import { formatDistanceToNow } from "date-fns";
 
 interface SyncStatusBadgeProps {
   status: SyncStatusType;
   lastSyncedAt: string | null;
+  consentStatus?: ConsentStatusType;
 }
 
 const statusConfig = {
@@ -36,9 +38,23 @@ const statusConfig = {
   { icon: typeof CheckCircle2; label: string; variant: "secondary" | "destructive" }
 >;
 
-export function SyncStatusBadge({ status, lastSyncedAt }: SyncStatusBadgeProps) {
+export function SyncStatusBadge({ status, lastSyncedAt, consentStatus }: SyncStatusBadgeProps) {
   const config = statusConfig[status];
   const Icon = config.icon;
+
+  // Proactive, non-destructive prompt: consent is estimated to lapse soon but
+  // syncing still works — softer than the destructive NEEDS_REAUTH badge.
+  if (status === "OK" && consentStatus === "EXPIRING_SOON") {
+    return (
+      <Badge
+        variant="outline"
+        className="gap-1 text-xs leading-[16px] h-6 border-amber-500/50 text-amber-600 dark:text-amber-400"
+      >
+        <Clock className="size-3" />
+        Reconnect soon
+      </Badge>
+    );
+  }
 
   if (status === "OK") {
     const syncTime = lastSyncedAt

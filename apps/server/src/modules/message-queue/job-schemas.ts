@@ -1,4 +1,4 @@
-import { AccountTypeSchema } from "@spark/schema";
+import { AccountTypeSchema, ConsentExpiringEventSchema } from "@spark/schema";
 import { z } from "zod";
 import { Jobs } from "./constants";
 
@@ -39,6 +39,8 @@ export const JOB_SCHEMAS = {
   [Jobs.AccountSync]: AccountSyncJobDataSchema,
   [Jobs.InitialSync]: InitialSyncJobDataSchema,
   [Jobs.ConnectorSync]: ConnectorSyncJobDataSchema,
+  [Jobs.ConsentExpiring]: ConsentExpiringEventSchema,
+  [Jobs.ConsentLifecycleCheck]: EmptyJobDataSchema,
   [Jobs.OauthStateCleanup]: EmptyJobDataSchema,
   [Jobs.PeriodicSync]: EmptyJobDataSchema,
   [Jobs.ConnectorPeriodicSync]: EmptyJobDataSchema,

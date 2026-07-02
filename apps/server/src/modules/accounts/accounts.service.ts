@@ -28,6 +28,7 @@ export class AccountsService {
         account: financialAccounts,
         syncStatus: connectorConnections.syncStatus,
         lastSyncedAt: connectorConnections.lastSyncedAt,
+        consentExpiresAt: connectorConnections.consentExpiresAt,
       })
       .from(financialAccounts)
       .innerJoin(connectorConnections, eq(financialAccounts.connectionId, connectorConnections.id))
@@ -45,7 +46,11 @@ export class AccountsService {
       accounts: rows.map((row) =>
         toAccountDto(
           row.account,
-          { syncStatus: row.syncStatus, lastSyncedAt: row.lastSyncedAt },
+          {
+            syncStatus: row.syncStatus,
+            lastSyncedAt: row.lastSyncedAt,
+            consentExpiresAt: row.consentExpiresAt,
+          },
           snapshots.get(snapshotKey(row.account.connectionId, row.account.externalId)),
         ),
       ),
@@ -167,11 +172,12 @@ export class AccountsService {
   private async connectionState(connectionId: string): Promise<AccountConnectionState> {
     const connection = await this.db.query.connectorConnections.findFirst({
       where: eq(connectorConnections.id, connectionId),
-      columns: { syncStatus: true, lastSyncedAt: true },
+      columns: { syncStatus: true, lastSyncedAt: true, consentExpiresAt: true },
     });
     return {
       syncStatus: connection?.syncStatus ?? "ERROR",
       lastSyncedAt: connection?.lastSyncedAt ?? null,
+      consentExpiresAt: connection?.consentExpiresAt ?? null,
     };
   }
 

@@ -14,6 +14,9 @@ export enum MessageQueue {
 
 export enum Jobs {
   AccountSync = "AccountSync",
+  /** Outbound `consent.expiring` event for the notification channel. */
+  ConsentExpiring = "ConsentExpiring",
+  ConsentLifecycleCheck = "ConsentLifecycleCheck",
   ConnectorPeriodicSync = "ConnectorPeriodicSync",
   ConnectorSync = "ConnectorSync",
   InitialSync = "InitialSync",

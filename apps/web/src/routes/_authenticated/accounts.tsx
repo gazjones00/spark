@@ -43,6 +43,10 @@ function AccountsPage() {
   const reauthMutation = useReauthAccount();
 
   const accountsNeedingAttention = data.accounts.filter((account) => account.syncStatus !== "OK");
+  // Softer, proactive tier: consent estimated to lapse soon but still syncing.
+  const accountsExpiringSoon = data.accounts.filter(
+    (account) => account.syncStatus === "OK" && account.consentStatus === "EXPIRING_SOON",
+  );
 
   const handleEdit = (id: string) => {
     const account = data.accounts.find((a) => a.id === id);
@@ -82,6 +86,7 @@ function AccountsPage() {
 
       <AccountsAttentionBanner
         accounts={accountsNeedingAttention}
+        expiringAccounts={accountsExpiringSoon}
         onReauth={(providerId) => reauthMutation.mutate(providerId)}
       />
 
