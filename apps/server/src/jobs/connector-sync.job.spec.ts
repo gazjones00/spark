@@ -28,7 +28,7 @@ describe("ConnectorSyncJob", () => {
     });
   });
 
-  it("completes (no BullMQ retry) when the sync is rate-limited — nextSyncAt owns the reschedule (TASK-008 FR-4)", async () => {
+  it("completes (no BullMQ retry) when the sync is rate-limited — nextSyncAt owns the reschedule", async () => {
     const syncService = {
       syncConnection: vi.fn(async () => {
         throw new ConnectorRateLimitError("throttled", { retryAfterMs: 30_000 });

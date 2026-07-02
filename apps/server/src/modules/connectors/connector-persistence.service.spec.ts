@@ -117,7 +117,7 @@ describe("ConnectorPersistenceService.updateConnectionSyncState", () => {
     expect(state?.lastSyncedAt).toBeInstanceOf(Date);
   });
 
-  it("reschedules a rate-limited failure on the provider hint, not the generic backoff (TASK-008 FR-4)", async () => {
+  it("reschedules a rate-limited failure on the provider hint, not the generic backoff", async () => {
     const { service, connectionState } = createService();
     const before = Date.now();
 
@@ -142,7 +142,7 @@ describe("ConnectorPersistenceService.updateConnectionSyncState", () => {
     expect(state?.consecutiveFailures).toBe(1);
   });
 
-  it("applies the bounded default when the 429 carried no hint (TASK-008 AC-4)", async () => {
+  it("applies the bounded default when the 429 carried no hint", async () => {
     const { service, connectionState } = createService();
     const before = Date.now();
 
@@ -164,7 +164,7 @@ describe("ConnectorPersistenceService.updateConnectionSyncState", () => {
     expect(delay).toBeLessThanOrEqual(70_000);
   });
 
-  it("clamps a hostile Retry-After hint to the 1h ceiling (NFR-3)", async () => {
+  it("clamps a hostile Retry-After hint to the 1h ceiling", async () => {
     const { service, connectionState } = createService();
     const before = Date.now();
 
@@ -189,7 +189,7 @@ describe("ConnectorPersistenceService.updateConnectionSyncState", () => {
     expect(delay).toBeLessThanOrEqual(3_600_000 * 1.1 + 1_000);
   });
 
-  it("opens the breaker at the failure threshold: cool-down floor + counter (TASK-008 FR-6)", async () => {
+  it("opens the breaker at the failure threshold: cool-down floor + counter", async () => {
     // 4 prior failures; this one crosses the default threshold of 5.
     const { service, connectionState } = createService({ consecutiveFailures: 4 });
     const before = Date.now();

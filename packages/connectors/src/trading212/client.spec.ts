@@ -113,7 +113,7 @@ describe("Trading212Client", () => {
     await expect(client.getAccountSummary()).rejects.toBeInstanceOf(ConnectorAuthError);
   });
 
-  it("throws ConnectorRateLimitError carrying the parsed Retry-After hint on 429 (TASK-008 AC-2)", async () => {
+  it("throws ConnectorRateLimitError carrying the parsed Retry-After hint on 429", async () => {
     const fetchMock = (async () =>
       new Response("", {
         status: 429,
@@ -148,7 +148,7 @@ describe("Trading212Client", () => {
     });
   });
 
-  it("aborts a hung request after timeoutMs and maps it to ConnectorTimeoutError (TASK-008 AC-1)", async () => {
+  it("aborts a hung request after timeoutMs and maps it to ConnectorTimeoutError", async () => {
     const fetchMock = ((_input: unknown, init?: RequestInit) =>
       new Promise<Response>((_resolve, reject) => {
         init?.signal?.addEventListener("abort", () => reject(new Error("aborted")));

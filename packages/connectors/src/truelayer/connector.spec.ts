@@ -84,13 +84,13 @@ function createConnector(
 }
 
 describe("TrueLayerConnector", () => {
-  it("has a manifest that validates against ConnectorManifestSchema (AC-2)", () => {
+  it("has a manifest that validates against ConnectorManifestSchema", () => {
     expect(() => ConnectorManifestSchema.parse(TRUELAYER_MANIFEST)).not.toThrow();
     expect(TRUELAYER_MANIFEST.auth.type).toBe("OAUTH2");
     expect(TRUELAYER_MANIFEST.providerType).toBe("BANK");
   });
 
-  it("produces a complete ConnectorSyncResult with rawRecords (AC-3)", async () => {
+  it("produces a complete ConnectorSyncResult with rawRecords", async () => {
     const { connector, tokenProvider } = createConnector();
     const result = await connector.sync(createContext());
 
@@ -186,7 +186,7 @@ describe("TrueLayerConnector", () => {
     expect(result.transactions).toHaveLength(2);
   });
 
-  it("maps a 429 on accounts to ConnectorRateLimitError preserving the backoff hint (TASK-008)", async () => {
+  it("maps a 429 on accounts to ConnectorRateLimitError preserving the backoff hint", async () => {
     const { connector } = createConnector({
       accounts: new TrueLayerRateLimitError(45_000),
     });
@@ -224,7 +224,7 @@ describe("TrueLayerConnector", () => {
     );
   });
 
-  it("testConnection authenticates via the token provider (AC-4)", async () => {
+  it("testConnection authenticates via the token provider", async () => {
     const { connector, client, tokenProvider } = createConnector();
     await connector.testConnection(createContext());
     expect(tokenProvider.getAccessToken).toHaveBeenCalled();

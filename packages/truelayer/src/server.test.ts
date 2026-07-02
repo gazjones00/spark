@@ -443,7 +443,7 @@ describe("createTrueLayerClient data-endpoint error classification", () => {
   }
 });
 
-describe("createTrueLayerClient rate limiting (TASK-008)", () => {
+describe("createTrueLayerClient rate limiting", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });
@@ -452,7 +452,7 @@ describe("createTrueLayerClient rate limiting (TASK-008)", () => {
     return new Response("", { status: 429, headers });
   }
 
-  it("getTransactions: 429 with delta-seconds Retry-After carries retryAfterMs (AC-3)", async () => {
+  it("getTransactions: 429 with delta-seconds Retry-After carries retryAfterMs", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(() => Promise.resolve(rateLimitedResponse({ "Retry-After": "30" }))),
@@ -470,7 +470,7 @@ describe("createTrueLayerClient rate limiting (TASK-008)", () => {
     expect((error as TrueLayerRateLimitError).retryAfterMs).toBe(30_000);
   });
 
-  it("getTransactions: 429 with an HTTP-date Retry-After resolves a positive delay (AC-3)", async () => {
+  it("getTransactions: 429 with an HTTP-date Retry-After resolves a positive delay", async () => {
     const future = new Date(Date.now() + 120_000).toUTCString();
     vi.stubGlobal(
       "fetch",
@@ -488,7 +488,7 @@ describe("createTrueLayerClient rate limiting (TASK-008)", () => {
     expect(retryAfterMs!).toBeLessThanOrEqual(120_000);
   });
 
-  it("getBalance: 429 without backoff headers reports a null hint (AC-4)", async () => {
+  it("getBalance: 429 without backoff headers reports a null hint", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(() => Promise.resolve(rateLimitedResponse())),

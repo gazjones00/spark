@@ -21,7 +21,7 @@ const CONNECTOR_SYNC_INTERVAL_MINUTES = 5;
 const FAILED_CONNECTOR_RETRY_MINUTES = 30;
 /** Rate-limit backoff when the provider sent no usable hint. */
 const RATE_LIMIT_DEFAULT_BACKOFF_MS = 60_000;
-/** Bounds on the honoured provider hint (NFR-3): a garbage/hostile
+/** Bounds on the honoured provider hint: a garbage/hostile
  * Retry-After can neither stall a connection for hours nor busy-loop it. */
 const RATE_LIMIT_MIN_BACKOFF_MS = 1_000;
 const RATE_LIMIT_MAX_BACKOFF_MS = 3_600_000;
