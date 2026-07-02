@@ -11,20 +11,26 @@ vi.mock("@spark/db", () => ({
   sql: vi.fn(() => ({ __sql: true })),
 }));
 
-import { and, inArray, lte } from "@spark/db";
+import { and, inArray, lte, sql } from "@spark/db";
 import { Jobs } from "../modules/message-queue";
 import { ConnectorPeriodicSyncJob } from "./connector-periodic-sync.job";
 
 interface MockChains {
-  dueConnections: Array<{ id: string; userId: string }>;
+  /** One entry per drain page; the select chain serves them in order. */
+  duePages: Array<Array<{ id: string; userId: string }>>;
 }
 
-function createJob({ dueConnections }: MockChains) {
+function createJob({ duePages }: MockChains) {
+  let page = 0;
   const selectChain = {
     from: vi.fn().mockReturnThis(),
     where: vi.fn().mockReturnThis(),
     orderBy: vi.fn().mockReturnThis(),
-    limit: vi.fn().mockResolvedValue(dueConnections),
+    limit: vi.fn().mockImplementation(() => {
+      const due = duePages[page] ?? [];
+      page += 1;
+      return Promise.resolve(due);
+    }),
   };
   const updateChain = {
     set: vi.fn().mockReturnThis(),
@@ -46,13 +52,20 @@ function createJob({ dueConnections }: MockChains) {
   return { job, db, queue, tx, selectChain, updateChain };
 }
 
+function fullPage(size: number, offset = 0): Array<{ id: string; userId: string }> {
+  return Array.from({ length: size }, (_, index) => ({
+    id: `conn-${offset + index}`,
+    userId: `user-${offset + index}`,
+  }));
+}
+
 describe("ConnectorPeriodicSyncJob", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it("selects OK and ERROR connections gated by the backoff window, excluding NEEDS_REAUTH", async () => {
-    const { job } = createJob({ dueConnections: [{ id: "conn-1", userId: "user-1" }] });
+    const { job } = createJob({ duePages: [[{ id: "conn-1", userId: "user-1" }]] });
 
     await job.handle();
 
@@ -74,9 +87,11 @@ describe("ConnectorPeriodicSyncJob", () => {
 
   it("dispatches a ConnectorSync job for each due connection", async () => {
     const { job, queue } = createJob({
-      dueConnections: [
-        { id: "conn-1", userId: "user-1" },
-        { id: "conn-2", userId: "user-2" },
+      duePages: [
+        [
+          { id: "conn-1", userId: "user-1" },
+          { id: "conn-2", userId: "user-2" },
+        ],
       ],
     });
 
@@ -91,7 +106,7 @@ describe("ConnectorPeriodicSyncJob", () => {
   });
 
   it("dispatches nothing when no connections are due", async () => {
-    const { job, queue, tx } = createJob({ dueConnections: [] });
+    const { job, queue, tx } = createJob({ duePages: [[]] });
 
     await job.handle();
 
@@ -101,12 +116,73 @@ describe("ConnectorPeriodicSyncJob", () => {
   });
 
   it("skips the run when the advisory lock is not acquired", async () => {
-    const { job, queue, tx } = createJob({ dueConnections: [{ id: "conn-1", userId: "user-1" }] });
+    const { job, queue, tx } = createJob({
+      duePages: [[{ id: "conn-1", userId: "user-1" }]],
+    });
     tx.execute.mockResolvedValueOnce({ rows: [{ locked: false }] });
 
     await job.handle();
 
     expect(tx.select).not.toHaveBeenCalled();
     expect(queue.add).not.toHaveBeenCalled();
+  });
+
+  it("drains successive pages in one tick instead of stopping at the first batch", async () => {
+    const { job, queue, tx } = createJob({
+      duePages: [fullPage(100), fullPage(100, 100), fullPage(40, 200)],
+    });
+
+    await job.handle();
+
+    // Three reservation rounds inside the same locked transaction, then one
+    // dispatch per drained connection — 240 in a single tick.
+    expect(tx.update).toHaveBeenCalledTimes(3);
+    expect(queue.add).toHaveBeenCalledTimes(240);
+  });
+
+  it("stops draining at the page bound so a pathological backlog cannot pin the worker", async () => {
+    const { job, queue, tx } = createJob({
+      duePages: Array.from({ length: 30 }, (_, index) => fullPage(100, index * 100)),
+    });
+
+    await job.handle();
+
+    expect(tx.update).toHaveBeenCalledTimes(20);
+    expect(queue.add).toHaveBeenCalledTimes(2_000);
+  });
+
+  it("reserves with per-row jitter instead of a shared minute boundary", async () => {
+    const { job, updateChain } = createJob({
+      duePages: [[{ id: "conn-1", userId: "user-1" }]],
+    });
+
+    await job.handle();
+
+    // The reservation value is a SQL expression adding random() jitter, not
+    // a JS Date truncated to the minute.
+    const setArg = updateChain.set.mock.calls[0]?.[0] as { nextSyncAt: unknown };
+    expect(setArg.nextSyncAt).not.toBeInstanceOf(Date);
+    const jitterCall = vi.mocked(sql).mock.calls.find((callArgs) =>
+      Array.from(callArgs[0] as unknown as string[])
+        .join("")
+        .includes("random()"),
+    );
+    expect(jitterCall).toBeDefined();
+  });
+
+  it("deprioritises periodic dispatches so standard (initial) jobs preempt them", async () => {
+    const { job, queue } = createJob({
+      duePages: [[{ id: "conn-1", userId: "user-1" }]],
+    });
+
+    await job.handle();
+
+    // BullMQ pops the standard wait list before the prioritised set, so the
+    // periodic class must be the one carrying a priority value.
+    expect(queue.add).toHaveBeenCalledWith(
+      Jobs.ConnectorSync,
+      expect.anything(),
+      expect.objectContaining({ priority: expect.any(Number) }),
+    );
   });
 });
