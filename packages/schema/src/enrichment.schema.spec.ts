@@ -22,6 +22,13 @@ describe("RuleMatchersSchema", () => {
     expect(result.success).toBe(false);
   });
 
+  it("rejects a pattern with catastrophic backtracking potential", () => {
+    const result = RuleMatchersSchema.safeParse({
+      groups: [[{ field: "DESCRIPTION", op: "REGEX", value: "(a+)+$" }]],
+    });
+    expect(result.success).toBe(false);
+  });
+
   it("rejects BETWEEN without an upper bound, or with an inverted range", () => {
     expect(
       RuleMatchersSchema.safeParse({

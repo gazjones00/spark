@@ -20,11 +20,13 @@ function createService() {
         returning: () => Promise.resolve([]),
       }),
     }),
+    transaction: <T>(fn: (tx: unknown) => Promise<T>): Promise<T> => fn(db),
   };
 
   const queue = { add: vi.fn(async () => undefined) };
   const categoriesService = {
     assertValidCategoryId: vi.fn(async () => undefined),
+    lockCategoryReferences: vi.fn(async () => undefined),
   };
 
   const service = new CategoryRulesService(
@@ -51,7 +53,7 @@ describe("CategoryRulesService", () => {
     expect(queue.add).toHaveBeenCalledWith(Jobs.EnrichmentReapply, { userId: "user-1" });
   });
 
-  it("validates the target category before persisting", async () => {
+  it("validates the target category under the category-refs lock before persisting", async () => {
     const { service, categoriesService } = createService();
 
     await service.create("user-1", {
@@ -60,7 +62,15 @@ describe("CategoryRulesService", () => {
       priority: 0,
     });
 
-    expect(categoriesService.assertValidCategoryId).toHaveBeenCalledWith("user-1", "GROCERIES");
+    expect(categoriesService.lockCategoryReferences).toHaveBeenCalledWith(
+      expect.anything(),
+      "user-1",
+    );
+    expect(categoriesService.assertValidCategoryId).toHaveBeenCalledWith(
+      "user-1",
+      "GROCERIES",
+      expect.anything(),
+    );
   });
 
   it("delete of a missing rule reports deleted=false and skips the re-application job", async () => {

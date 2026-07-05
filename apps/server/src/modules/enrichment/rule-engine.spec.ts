@@ -82,6 +82,17 @@ describe("text conditions", () => {
     ).toBe(false);
   });
 
+  it("REGEX: a stored pattern with catastrophic backtracking degrades to non-match", () => {
+    // (a+)+$ is exponential against a non-matching subject; the compile-time
+    // safety check must refuse to run it rather than stall enrichment.
+    expect(
+      conditionMatches(
+        { field: "DESCRIPTION", op: "REGEX", value: "(a+)+$" },
+        context({ description: `${"a".repeat(60)}b` }),
+      ),
+    ).toBe(false);
+  });
+
   it("never matches a null subject", () => {
     expect(
       conditionMatches(

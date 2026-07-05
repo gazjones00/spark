@@ -1,4 +1,20 @@
+import safeRegex from "safe-regex2";
 import { z } from "zod";
+
+/**
+ * True when a rule pattern both compiles and is free of the exponential-
+ * backtracking shapes (nested quantifiers etc.) that would let one
+ * user-authored rule stall enrichment for everyone. Shared with the rule
+ * engine so hand-edited stored rows get the same guard as API input.
+ */
+export function isSafeRulePattern(pattern: string): boolean {
+  try {
+    new RegExp(pattern, "iu");
+  } catch {
+    return false;
+  }
+  return safeRegex(pattern);
+}
 
 /**
  * Canonical spending taxonomy: what money was spent ON, not how it moved.
@@ -242,6 +258,13 @@ export const TextRuleConditionSchema = z
         new RegExp(condition.value, "iu");
       } catch {
         ctx.addIssue({ code: "custom", message: "Invalid regular expression" });
+        return;
+      }
+      if (!isSafeRulePattern(condition.value)) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Pattern is too complex to match safely — simplify nested repetitions",
+        });
       }
     }
   })

@@ -7,7 +7,7 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { builtInCategoryDescriptors, spendingCategoryConfig } from "@spark/common";
-import { and, asc, eq, type Database } from "@spark/db";
+import { and, asc, eq, sql, type Database, type DatabaseExecutor } from "@spark/db";
 import { categoryRules, transactionCategoryOverrides, userCategories } from "@spark/db/schema";
 import {
   CATEGORY_COLORS,
@@ -131,60 +131,89 @@ export class CategoriesService {
    * Deletion is blocked while rules or overrides reference the category, so
    * stored references never dangle. Stale enrichment rows (derived before an
    * earlier rule change) are converged by the re-application job.
+   *
+   * The in-use checks and the delete run under the per-user category-refs
+   * lock so a concurrent rule/override write can't slip a new reference in
+   * between the checks passing and the row disappearing.
    */
   async delete(
     userId: string,
     input: DeleteUserCategoryInput,
   ): Promise<DeleteUserCategoryResponse> {
-    const referencingRules = await this.db
-      .select({ id: categoryRules.id })
-      .from(categoryRules)
-      .where(and(eq(categoryRules.userId, userId), eq(categoryRules.category, input.categoryId)))
-      .limit(1);
-    if (referencingRules.length > 0) {
-      throw new ConflictException(
-        "This category is used by a rule. Update or delete the rule first.",
-      );
-    }
+    const deleted = await this.db.transaction(async (tx) => {
+      await this.lockCategoryReferences(tx, userId);
 
-    const referencingOverrides = await this.db
-      .select({ id: transactionCategoryOverrides.id })
-      .from(transactionCategoryOverrides)
-      .where(
-        and(
-          eq(transactionCategoryOverrides.userId, userId),
-          eq(transactionCategoryOverrides.category, input.categoryId),
-        ),
-      )
-      .limit(1);
-    if (referencingOverrides.length > 0) {
-      throw new ConflictException(
-        "This category is applied to transactions. Recategorize them first.",
-      );
-    }
+      const referencingRules = await tx
+        .select({ id: categoryRules.id })
+        .from(categoryRules)
+        .where(and(eq(categoryRules.userId, userId), eq(categoryRules.category, input.categoryId)))
+        .limit(1);
+      if (referencingRules.length > 0) {
+        throw new ConflictException(
+          "This category is used by a rule. Update or delete the rule first.",
+        );
+      }
 
-    const rows = await this.db
-      .delete(userCategories)
-      .where(and(eq(userCategories.id, input.categoryId), eq(userCategories.userId, userId)))
-      .returning({ id: userCategories.id });
+      const referencingOverrides = await tx
+        .select({ id: transactionCategoryOverrides.id })
+        .from(transactionCategoryOverrides)
+        .where(
+          and(
+            eq(transactionCategoryOverrides.userId, userId),
+            eq(transactionCategoryOverrides.category, input.categoryId),
+          ),
+        )
+        .limit(1);
+      if (referencingOverrides.length > 0) {
+        throw new ConflictException(
+          "This category is applied to transactions. Recategorize them first.",
+        );
+      }
 
-    if (rows.length > 0) {
+      const rows = await tx
+        .delete(userCategories)
+        .where(and(eq(userCategories.id, input.categoryId), eq(userCategories.userId, userId)))
+        .returning({ id: userCategories.id });
+      return rows.length > 0;
+    });
+
+    if (deleted) {
       await this.queue.add(Jobs.EnrichmentReapply, { userId });
       this.logger.log({ event: "category.deleted", userId, categoryId: input.categoryId });
     }
-    return { deleted: rows.length > 0 };
+    return { deleted };
+  }
+
+  /**
+   * Serializes a user's category-reference writes (rule/override inserts and
+   * updates) against custom-category deletes. `category` columns are
+   * polymorphic — built-in enum value or `user_categories` id — so the
+   * dangling-reference invariant can't be a foreign key; this transaction-
+   * scoped advisory lock enforces it instead. Callers must hold an open
+   * transaction and take the lock before validating the reference.
+   */
+  async lockCategoryReferences(tx: DatabaseExecutor, userId: string): Promise<void> {
+    await tx.execute(
+      sql`SELECT pg_advisory_xact_lock(hashtext('category-refs'), hashtext(${userId}))`,
+    );
   }
 
   /**
    * Write-time validation for category references: a built-in taxonomy
-   * value, or a custom category owned by this user.
+   * value, or a custom category owned by this user. Pass the executor of a
+   * transaction holding the category-refs lock so the validated category
+   * can't be deleted before the reference commits.
    */
-  async assertValidCategoryId(userId: string, categoryId: string): Promise<void> {
+  async assertValidCategoryId(
+    userId: string,
+    categoryId: string,
+    db: DatabaseExecutor = this.db,
+  ): Promise<void> {
     if (SpendingCategorySchema.safeParse(categoryId).success) {
       return;
     }
 
-    const rows = await this.db
+    const rows = await db
       .select({ id: userCategories.id })
       .from(userCategories)
       .where(and(eq(userCategories.id, categoryId), eq(userCategories.userId, userId)))

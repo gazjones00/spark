@@ -168,6 +168,10 @@ export function RuleEditor({ open, onOpenChange, rule, onSubmit, isPending }: Ru
             setError("Amounts must be numbers");
             return;
           }
+          if (condition.op === "BETWEEN" && max === undefined) {
+            setError("BETWEEN needs an upper bound");
+            return;
+          }
           built.push({
             field: "AMOUNT",
             op: condition.op as RuleAmountOperator,

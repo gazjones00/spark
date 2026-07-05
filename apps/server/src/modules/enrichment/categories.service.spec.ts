@@ -43,11 +43,14 @@ function createService(options: FakeOptions = {}) {
         returning: () => Promise.resolve(options.deleteResult ?? []),
       }),
     }),
+    // The advisory category-refs lock taken inside delete's transaction.
+    execute: vi.fn(async () => undefined),
+    transaction: <T>(fn: (tx: unknown) => Promise<T>): Promise<T> => fn(db),
   };
 
   const queue = { add: vi.fn(async () => undefined) };
   const service = new CategoriesService(db as never, queue as never);
-  return { service, queue };
+  return { service, queue, db };
 }
 
 const CATEGORY_ROW = {
@@ -115,7 +118,7 @@ describe("CategoriesService", () => {
   });
 
   it("delete of an unreferenced category enqueues re-application", async () => {
-    const { service, queue } = createService({
+    const { service, queue, db } = createService({
       selectResults: [[], []],
       deleteResult: [{ id: CATEGORY_ROW.id }],
     });
@@ -123,6 +126,8 @@ describe("CategoriesService", () => {
     const result = await service.delete("user-1", { categoryId: CATEGORY_ROW.id });
 
     expect(result.deleted).toBe(true);
+    // The in-use checks and delete run under the category-refs advisory lock.
+    expect(db.execute).toHaveBeenCalledTimes(1);
     expect(queue.add).toHaveBeenCalledWith(Jobs.EnrichmentReapply, { userId: "user-1" });
   });
 

@@ -13,7 +13,6 @@ export interface DefaultCategoryInput {
   providerClassification?: string[] | null;
   /** Canonical connector transaction type (DEPOSIT, DIVIDEND, BUY, …). */
   providerType?: string | null;
-  description?: string | null;
 }
 
 /**

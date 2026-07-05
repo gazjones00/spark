@@ -93,6 +93,7 @@ export const CategorySpendSchema = z
     category: z.string(),
     /** Decimal string: SQL numeric sum of the month's DEBIT amounts. */
     total: z.string(),
+    /** DEBIT transactions only, matching `total`'s scope. */
     transactionCount: z.number().int(),
   })
   .meta({ id: "CategorySpend" });

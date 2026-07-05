@@ -1,9 +1,10 @@
-import type {
-  AmountRuleCondition,
-  CategoryId,
-  RuleCondition,
-  RuleMatchers,
-  TextRuleCondition,
+import {
+  isSafeRulePattern,
+  type AmountRuleCondition,
+  type CategoryId,
+  type RuleCondition,
+  type RuleMatchers,
+  type TextRuleCondition,
 } from "@spark/schema";
 
 /**
@@ -92,14 +93,11 @@ function compileTextCondition(condition: TextRuleCondition): Predicate {
     case "ENDS_WITH":
       return text((haystack) => haystack.endsWith(needle));
     case "REGEX": {
-      // Patterns are compile-checked and length-capped at the API boundary;
-      // a stored pattern that no longer compiles degrades to a non-match.
-      let regex: RegExp | null = null;
-      try {
-        regex = new RegExp(condition.value, "iu");
-      } catch {
-        regex = null;
-      }
+      // Patterns are compile-, length-, and backtracking-complexity-checked
+      // at the API boundary; re-check here so a stored pattern that fails any
+      // of those (e.g. a hand-edited row) degrades to a non-match instead of
+      // stalling enrichment.
+      const regex = isSafeRulePattern(condition.value) ? new RegExp(condition.value, "iu") : null;
       return (context) => {
         const subject = subjectOf(context);
         return subject !== null && regex !== null && regex.test(subject);

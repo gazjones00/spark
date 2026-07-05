@@ -42,7 +42,7 @@ export interface DashboardData {
  * reads a small `transactions.list` page.
  */
 export function useDashboardData(): DashboardData {
-  const { resolve } = useCategories();
+  const { resolve, isLoading: categoriesLoading } = useCategories();
   const accountsQuery = useQuery({
     // Key matches accounts.tsx so the cache is shared across routes.
     queryKey: queryKeys.accounts,
@@ -105,11 +105,14 @@ export function useDashboardData(): DashboardData {
     recentTransactions,
     hasAccounts: accounts.length > 0,
     hasTransactions: recentTransactions.length > 0,
+    // Categories are part of the load: without them custom-category slices
+    // briefly resolve to "Unknown" even though the spend data is ready.
     isLoading:
       accountsQuery.isLoading ||
       recentQuery.isLoading ||
       summaryQuery.isLoading ||
-      seriesQuery.isLoading,
+      seriesQuery.isLoading ||
+      categoriesLoading,
     isError:
       accountsQuery.isError || recentQuery.isError || summaryQuery.isError || seriesQuery.isError,
     refetch: () => {

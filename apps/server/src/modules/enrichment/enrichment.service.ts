@@ -155,14 +155,17 @@ export class EnrichmentService {
     userId: string,
     input: SetTransactionCategoryInput,
   ): Promise<SetTransactionCategoryResponse> {
-    await this.categoriesService.assertValidCategoryId(userId, input.category);
-
     const transaction = await this.loadUserTransaction(userId, input.transactionId);
     if (!transaction) {
       throw new NotFoundException("Transaction not found");
     }
 
     await this.db.transaction(async (tx) => {
+      // Validate under the category-refs lock so the referenced custom
+      // category can't be deleted before this override commits.
+      await this.categoriesService.lockCategoryReferences(tx, userId);
+      await this.categoriesService.assertValidCategoryId(userId, input.category, tx);
+
       await tx
         .insert(transactionCategoryOverrides)
         .values({
@@ -366,7 +369,10 @@ function buildContext(transaction: EnrichableTransaction): RuleEvaluationContext
   return {
     normalizedMerchant: normalized.length > 0 ? normalized : null,
     description: transaction.description,
-    amountAbs: Math.abs(Number(transaction.amount)) || 0,
+    // A malformed canonical amount becomes NaN, which fails every amount
+    // comparison — safer than coercing to 0, which would match AT_MOST /
+    // zero-bound rules.
+    amountAbs: Math.abs(Number(transaction.amount)),
     providerCategory,
   };
 }
@@ -396,6 +402,5 @@ function defaultCategory(transaction: EnrichableTransaction): CategoryId {
       ? (transaction.metadata.transactionClassification as string[])
       : null,
     providerType: transaction.type,
-    description: transaction.description,
   });
 }

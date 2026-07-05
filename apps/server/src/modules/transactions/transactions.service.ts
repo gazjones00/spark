@@ -176,9 +176,8 @@ export class TransactionsService {
     // Amounts are stored unsigned with direction in the transaction type;
     // abs() keeps totals correct for any provider that signs them. A missing
     // type counts as DEBIT.
-    const debitTotal = sql`sum(abs(${financialTransactions.amount})) FILTER (
-      WHERE coalesce(${financialTransactions.metadata}->>'truelayerTransactionType', 'DEBIT') = 'DEBIT'
-    )`;
+    const isDebit = sql`coalesce(${financialTransactions.metadata}->>'truelayerTransactionType', 'DEBIT') = 'DEBIT'`;
+    const debitTotal = sql`sum(abs(${financialTransactions.amount})) FILTER (WHERE ${isDebit})`;
     const creditTotal = sql`sum(abs(${financialTransactions.amount})) FILTER (
       WHERE ${financialTransactions.metadata}->>'truelayerTransactionType' = 'CREDIT'
     )`;
@@ -205,7 +204,8 @@ export class TransactionsService {
         currency: financialTransactions.currency,
         category: enrichedCategory,
         total: sql<string>`${debitTotal}::text`,
-        transactionCount: sql<number>`count(*)::int`,
+        // Count matches the total's scope: spend rows only, credits excluded.
+        transactionCount: sql<number>`(count(*) FILTER (WHERE ${isDebit}))::int`,
       })
       .from(financialTransactions)
       .innerJoin(financialAccounts, accountsJoin)

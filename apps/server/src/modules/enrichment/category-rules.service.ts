@@ -44,39 +44,47 @@ export class CategoryRulesService {
   }
 
   async create(userId: string, input: CreateCategoryRuleInput): Promise<CategoryRule> {
-    await this.categoriesService.assertValidCategoryId(userId, input.category);
     const now = new Date();
-    const rows = await this.db
-      .insert(categoryRules)
-      .values({
-        id: crypto.randomUUID(),
-        userId,
-        matchers: input.matchers,
-        category: input.category,
-        priority: input.priority,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .returning();
+    // Validation and insert share a transaction holding the category-refs
+    // lock, so the referenced custom category can't be deleted in between.
+    const rows = await this.db.transaction(async (tx) => {
+      await this.categoriesService.lockCategoryReferences(tx, userId);
+      await this.categoriesService.assertValidCategoryId(userId, input.category, tx);
+      return tx
+        .insert(categoryRules)
+        .values({
+          id: crypto.randomUUID(),
+          userId,
+          matchers: input.matchers,
+          category: input.category,
+          priority: input.priority,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .returning();
+    });
 
     await this.enqueueReapply(userId);
     return toCategoryRuleOrThrow(rows[0]!);
   }
 
   async update(userId: string, input: UpdateCategoryRuleInput): Promise<CategoryRule> {
-    if (input.category !== undefined) {
-      await this.categoriesService.assertValidCategoryId(userId, input.category);
-    }
-    const rows = await this.db
-      .update(categoryRules)
-      .set({
-        ...(input.matchers !== undefined ? { matchers: input.matchers } : {}),
-        ...(input.category !== undefined ? { category: input.category } : {}),
-        ...(input.priority !== undefined ? { priority: input.priority } : {}),
-        updatedAt: new Date(),
-      })
-      .where(and(eq(categoryRules.id, input.ruleId), eq(categoryRules.userId, userId)))
-      .returning();
+    const rows = await this.db.transaction(async (tx) => {
+      if (input.category !== undefined) {
+        await this.categoriesService.lockCategoryReferences(tx, userId);
+        await this.categoriesService.assertValidCategoryId(userId, input.category, tx);
+      }
+      return tx
+        .update(categoryRules)
+        .set({
+          ...(input.matchers !== undefined ? { matchers: input.matchers } : {}),
+          ...(input.category !== undefined ? { category: input.category } : {}),
+          ...(input.priority !== undefined ? { priority: input.priority } : {}),
+          updatedAt: new Date(),
+        })
+        .where(and(eq(categoryRules.id, input.ruleId), eq(categoryRules.userId, userId)))
+        .returning();
+    });
 
     const row = rows.at(0);
     if (!row) {
