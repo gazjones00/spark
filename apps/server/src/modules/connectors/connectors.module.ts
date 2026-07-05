@@ -5,13 +5,14 @@ import { env } from "@spark/env/server";
 import { TruelayerClient } from "../../providers/truelayer/truelayer.client";
 import { TruelayerConnectorTokenService } from "../../providers/truelayer/truelayer-connector-token.service";
 import { CryptoModule } from "../crypto";
+import { EnrichmentModule } from "../enrichment";
 import { ConnectorConnectionService } from "./connector-connection.service";
 import { ConnectorPersistenceService } from "./connector-persistence.service";
 import { ConnectorRegistryService } from "./connector-registry.service";
 import { ConnectorSyncService } from "./connector-sync.service";
 import { CONNECTORS } from "./connector.tokens";
 import { ConnectorsController } from "./connectors.controller";
-import { TransactionRollupService } from "./transaction-rollup.service";
+import { DailyBalanceService } from "./daily-balance.service";
 
 // Each connector is its own provider so it can receive injected
 // dependencies (the TrueLayer connector needs the client + token provider
@@ -36,7 +37,7 @@ const connectorProviders: Provider[] = [
 ];
 
 @Module({
-  imports: [CryptoModule],
+  imports: [CryptoModule, EnrichmentModule],
   controllers: [ConnectorsController],
   providers: [
     ...connectorProviders,
@@ -44,14 +45,14 @@ const connectorProviders: Provider[] = [
     ConnectorPersistenceService,
     ConnectorSyncService,
     ConnectorConnectionService,
-    TransactionRollupService,
+    DailyBalanceService,
   ],
   exports: [
     ConnectorRegistryService,
     ConnectorPersistenceService,
     ConnectorSyncService,
     ConnectorConnectionService,
-    TransactionRollupService,
+    DailyBalanceService,
   ],
 })
 export class ConnectorsModule {}

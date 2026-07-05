@@ -8,6 +8,7 @@ const calls = vi.hoisted(() => ({
   transactionsList: vi.fn(),
   monthlySummary: vi.fn(),
   balanceSeries: vi.fn(),
+  categoriesList: vi.fn(),
 }));
 
 vi.mock("@spark/orpc", () => ({
@@ -18,6 +19,7 @@ vi.mock("@spark/orpc", () => ({
       monthlySummary: { call: calls.monthlySummary },
       balanceSeries: { call: calls.balanceSeries },
     },
+    categories: { list: { call: calls.categoriesList } },
   },
 }));
 
@@ -60,11 +62,17 @@ describe("useDashboardData", () => {
           income: "2000",
           expenses: "750.25",
           categories: [
-            { category: "PURCHASE", total: "120.50" },
-            { category: "NOT_A_REAL_CATEGORY", total: "10" },
+            { category: "SHOPPING", total: "120.50" },
+            { category: "cat-coffee", total: "10" },
           ],
         },
         { currency: "USD", income: "99", expenses: "1", categories: [] },
+      ],
+    });
+    calls.categoriesList.mockResolvedValue({
+      categories: [
+        { id: "SHOPPING", label: "Shopping", color: "var(--chart-2)", builtIn: true },
+        { id: "cat-coffee", label: "Coffee", color: "var(--chart-3)", builtIn: false },
       ],
     });
     calls.balanceSeries.mockResolvedValue({
@@ -94,33 +102,33 @@ describe("useDashboardData", () => {
     expect(calls.transactionsList).toHaveBeenCalledWith({ limit: 5 });
   });
 
-  it("picks the summary matching the dominant currency and maps category colours", async () => {
+  it("picks the summary matching the dominant currency and resolves category references for display", async () => {
     const { result } = renderDashboardData();
 
-    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    await waitFor(() => expect(result.current.spendingByCategory).toHaveLength(2));
 
-    const [purchase, unknown] = result.current.spendingByCategory;
-    expect(purchase.category).toBe("PURCHASE");
-    expect(purchase.amount).toBe(120.5);
-    expect(purchase.fill).toBeTruthy();
-    // Unmapped provider categories are folded into UNKNOWN so downstream
-    // categoryConfig lookups (e.g. the spending chart's labels) never crash.
-    expect(unknown.category).toBe("UNKNOWN");
-    expect(unknown.amount).toBe(10);
-    expect(unknown.fill).toBeTruthy();
+    const [shopping, coffee] = result.current.spendingByCategory;
+    // Built-in reference resolved via the categories list.
+    expect(shopping.category).toBe("SHOPPING");
+    expect(shopping.label).toBe("Shopping");
+    expect(shopping.amount).toBe(120.5);
+    expect(shopping.fill).toBe("var(--chart-2)");
+    // Custom category ids resolve to the user's label and colour — the pie
+    // reflects overrides/rules instead of re-deriving defaults client-side.
+    expect(coffee.category).toBe("cat-coffee");
+    expect(coffee.label).toBe("Coffee");
+    expect(coffee.amount).toBe(10);
+    expect(coffee.fill).toBe("var(--chart-3)");
   });
 
-  it("merges multiple unmapped categories into a single UNKNOWN slice", async () => {
+  it("degrades unknown category references (e.g. a just-deleted custom category) to a neutral slice", async () => {
     calls.monthlySummary.mockResolvedValue({
       totals: [
         {
           currency: "GBP",
           income: "0",
           expenses: "30",
-          categories: [
-            { category: "MYSTERY_A", total: "10" },
-            { category: "MYSTERY_B", total: "20" },
-          ],
+          categories: [{ category: "cat-deleted", total: "30" }],
         },
       ],
     });
@@ -130,8 +138,10 @@ describe("useDashboardData", () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     expect(result.current.spendingByCategory).toHaveLength(1);
-    expect(result.current.spendingByCategory[0].category).toBe("UNKNOWN");
+    expect(result.current.spendingByCategory[0].category).toBe("cat-deleted");
+    expect(result.current.spendingByCategory[0].label).toBe("Unknown");
     expect(result.current.spendingByCategory[0].amount).toBe(30);
+    expect(result.current.spendingByCategory[0].fill).toBeTruthy();
   });
 
   it("labels fallback totals with the fallback summary's currency", async () => {

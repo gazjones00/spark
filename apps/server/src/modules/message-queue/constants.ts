@@ -19,6 +19,8 @@ export enum Jobs {
   ConsentLifecycleCheck = "ConsentLifecycleCheck",
   ConnectorPeriodicSync = "ConnectorPeriodicSync",
   ConnectorSync = "ConnectorSync",
+  /** Re-derives a user's transaction enrichment after a rule change. */
+  EnrichmentReapply = "EnrichmentReapply",
   InitialSync = "InitialSync",
   OauthStateCleanup = "OauthStateCleanup",
   PeriodicSync = "PeriodicSync",

@@ -21,6 +21,7 @@ function createService(fixture: AggregateFixture = {}) {
   const selectChain = {
     from: vi.fn().mockReturnThis(),
     innerJoin: vi.fn().mockReturnThis(),
+    leftJoin: vi.fn().mockReturnThis(),
     where: vi.fn().mockReturnThis(),
     groupBy: vi.fn().mockReturnThis(),
     having: vi.fn().mockReturnThis(),
@@ -60,10 +61,12 @@ describe("TransactionsService.monthlySummary", () => {
         { currency: "GBP", income: "1200.50", expenses: "830.25", transactionCount: 140 },
         { currency: "USD", income: "10.00", expenses: "5.00", transactionCount: 3 },
       ],
+      // Category spend is keyed by the enriched reference: a built-in value
+      // or a custom category id.
       categories: [
-        { currency: "GBP", category: "PURCHASE", total: "600.25", transactionCount: 90 },
-        { currency: "GBP", category: "DIRECT_DEBIT", total: "230.00", transactionCount: 12 },
-        { currency: "USD", category: "PURCHASE", total: "5.00", transactionCount: 2 },
+        { currency: "GBP", category: "SHOPPING", total: "600.25", transactionCount: 90 },
+        { currency: "GBP", category: "cat-coffee", total: "230.00", transactionCount: 12 },
+        { currency: "USD", category: "SHOPPING", total: "5.00", transactionCount: 2 },
       ],
     });
 
@@ -77,8 +80,8 @@ describe("TransactionsService.monthlySummary", () => {
         expenses: "830.25",
         transactionCount: 140,
         categories: [
-          { category: "PURCHASE", total: "600.25", transactionCount: 90 },
-          { category: "DIRECT_DEBIT", total: "230.00", transactionCount: 12 },
+          { category: "SHOPPING", total: "600.25", transactionCount: 90 },
+          { category: "cat-coffee", total: "230.00", transactionCount: 12 },
         ],
       },
       {
@@ -86,7 +89,7 @@ describe("TransactionsService.monthlySummary", () => {
         income: "10.00",
         expenses: "5.00",
         transactionCount: 3,
-        categories: [{ category: "PURCHASE", total: "5.00", transactionCount: 2 }],
+        categories: [{ category: "SHOPPING", total: "5.00", transactionCount: 2 }],
       },
     ]);
   });

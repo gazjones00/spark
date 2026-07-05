@@ -1,6 +1,6 @@
 import { BadRequestException, Inject, Injectable } from "@nestjs/common";
 import { TRUELAYER_PROVIDER_ID, truelayerAccountExternalId } from "@spark/connectors";
-import { type Database, and, asc, desc, eq, gte, lt, lte, or, sql } from "@spark/db";
+import { type Database, and, desc, eq, gte, lt, lte, or, sql } from "@spark/db";
 import type {
   BalanceSeriesInput,
   BalanceSeriesResponse,
@@ -14,8 +14,10 @@ import {
   accountDailyBalances,
   financialAccounts,
   financialTransactions,
-  transactionDailyRollups,
+  merchants,
+  transactionEnrichments,
 } from "@spark/db/schema";
+import { CategorySource, CategorySourceSchema, SpendingCategory } from "@spark/schema";
 import { DATABASE_CONNECTION } from "../database";
 
 const DEFAULT_LIMIT = 25;
@@ -50,9 +52,8 @@ export class TransactionsService {
     }
 
     if (input.category) {
-      conditions.push(
-        sql`${financialTransactions.metadata}->>'transactionCategory' = ${input.category}`,
-      );
+      // Matches the derived canonical category (built-in value or custom id).
+      conditions.push(eq(transactionEnrichments.category, input.category));
     }
 
     if (input.search) {
@@ -103,6 +104,10 @@ export class TransactionsService {
         currency: financialTransactions.currency,
         metadata: financialTransactions.metadata,
         updatedAt: financialTransactions.updatedAt,
+        enrichedCategory: transactionEnrichments.category,
+        enrichedSource: transactionEnrichments.source,
+        merchantId: merchants.id,
+        merchantDisplayName: merchants.displayName,
       })
       .from(financialTransactions)
       .innerJoin(
@@ -112,6 +117,11 @@ export class TransactionsService {
           eq(financialTransactions.accountExternalId, financialAccounts.externalId),
         ),
       )
+      .leftJoin(
+        transactionEnrichments,
+        eq(transactionEnrichments.transactionId, financialTransactions.id),
+      )
+      .leftJoin(merchants, eq(merchants.id, transactionEnrichments.merchantId))
       .where(and(...conditions))
       .orderBy(desc(financialTransactions.occurredAt), desc(financialTransactions.id))
       .limit(limit + 1);
@@ -132,9 +142,11 @@ export class TransactionsService {
   }
 
   /**
-   * Monthly income/expense totals and category spend, computed in SQL over
-   * the daily rollups — full-history-correct (no page cap) and exact decimal
-   * strings from `numeric` aggregation. Grouped per currency: cross-currency
+   * Monthly income/expense totals and category spend, aggregated in SQL over
+   * the month's base rows — exact decimal strings from `numeric` aggregation,
+   * and both queries share one scope so totals and categories can never
+   * disagree. Category spend joins the enrichment layer, so overrides, rules,
+   * and custom categories are reflected. Grouped per currency: cross-currency
    * sums are meaningless without FX, so each currency reports separately and
    * the caller picks which to display.
    *
@@ -150,44 +162,61 @@ export class TransactionsService {
     const monthStart = `${month}-01`;
     const monthEnd = nextMonthStart(month);
 
-    const scope = and(
-      eq(financialAccounts.userId, userId),
-      eq(transactionDailyRollups.providerId, TRUELAYER_PROVIDER_ID),
-      gte(transactionDailyRollups.day, monthStart),
-      lt(transactionDailyRollups.day, monthEnd),
-    );
-
     const accountsJoin = and(
-      eq(transactionDailyRollups.connectionId, financialAccounts.connectionId),
-      eq(transactionDailyRollups.accountExternalId, financialAccounts.externalId),
+      eq(financialTransactions.connectionId, financialAccounts.connectionId),
+      eq(financialTransactions.accountExternalId, financialAccounts.externalId),
     );
+    // UTC calendar-day bucketing, matching the daily balance series.
+    const monthScope = and(
+      eq(financialAccounts.userId, userId),
+      eq(financialTransactions.providerId, TRUELAYER_PROVIDER_ID),
+      sql`(${financialTransactions.occurredAt} AT TIME ZONE 'UTC')::date >= ${monthStart}::date`,
+      sql`(${financialTransactions.occurredAt} AT TIME ZONE 'UTC')::date < ${monthEnd}::date`,
+    );
+    // Amounts are stored unsigned with direction in the transaction type;
+    // abs() keeps totals correct for any provider that signs them. A missing
+    // type counts as DEBIT.
+    const isDebit = sql`coalesce(${financialTransactions.metadata}->>'truelayerTransactionType', 'DEBIT') = 'DEBIT'`;
+    const debitTotal = sql`sum(abs(${financialTransactions.amount})) FILTER (WHERE ${isDebit})`;
+    const creditTotal = sql`sum(abs(${financialTransactions.amount})) FILTER (
+      WHERE ${financialTransactions.metadata}->>'truelayerTransactionType' = 'CREDIT'
+    )`;
 
     const totals = await this.db
       .select({
-        currency: transactionDailyRollups.currency,
-        income: sql<string>`coalesce(sum(${transactionDailyRollups.creditTotal}), 0)::text`,
-        expenses: sql<string>`coalesce(sum(${transactionDailyRollups.debitTotal}), 0)::text`,
-        transactionCount: sql<number>`coalesce(sum(${transactionDailyRollups.transactionCount}), 0)::int`,
+        currency: financialTransactions.currency,
+        income: sql<string>`coalesce(${creditTotal}, 0)::text`,
+        expenses: sql<string>`coalesce(${debitTotal}, 0)::text`,
+        transactionCount: sql<number>`count(*)::int`,
       })
-      .from(transactionDailyRollups)
+      .from(financialTransactions)
       .innerJoin(financialAccounts, accountsJoin)
-      .where(scope)
-      .groupBy(transactionDailyRollups.currency)
-      .orderBy(desc(sql`sum(${transactionDailyRollups.transactionCount})`));
+      .where(monthScope)
+      .groupBy(financialTransactions.currency)
+      .orderBy(desc(sql`count(*)`));
+
+    // A row without an enrichment row (shouldn't happen — enrichment is
+    // written with the sync) counts as OTHER rather than vanishing.
+    const enrichedCategory = sql<string>`coalesce(${transactionEnrichments.category}, 'OTHER')`;
 
     const categories = await this.db
       .select({
-        currency: transactionDailyRollups.currency,
-        category: transactionDailyRollups.category,
-        total: sql<string>`sum(${transactionDailyRollups.debitTotal})::text`,
-        transactionCount: sql<number>`sum(${transactionDailyRollups.transactionCount})::int`,
+        currency: financialTransactions.currency,
+        category: enrichedCategory,
+        total: sql<string>`${debitTotal}::text`,
+        // Count matches the total's scope: spend rows only, credits excluded.
+        transactionCount: sql<number>`(count(*) FILTER (WHERE ${isDebit}))::int`,
       })
-      .from(transactionDailyRollups)
+      .from(financialTransactions)
       .innerJoin(financialAccounts, accountsJoin)
-      .where(scope)
-      .groupBy(transactionDailyRollups.currency, transactionDailyRollups.category)
-      .having(sql`sum(${transactionDailyRollups.debitTotal}) > 0`)
-      .orderBy(desc(sql`sum(${transactionDailyRollups.debitTotal})`));
+      .leftJoin(
+        transactionEnrichments,
+        eq(transactionEnrichments.transactionId, financialTransactions.id),
+      )
+      .where(monthScope)
+      .groupBy(financialTransactions.currency, enrichedCategory)
+      .having(sql`${debitTotal} > 0`)
+      .orderBy(desc(debitTotal));
 
     const summaries = new Map<string, CurrencyMonthlySummary>();
     for (const row of totals) {
@@ -248,24 +277,27 @@ export class TransactionsService {
       )
       .orderBy(accountDailyBalances.day, desc(accountDailyBalances.observedAt));
 
+    // Days that had transactions but no observed balance still get a point
+    // (carried forward). UTC bucketing matches the balance rows'.
+    const transactionDay = sql<string>`((${financialTransactions.occurredAt} AT TIME ZONE 'UTC')::date)::text`;
     const transactionDays = await this.db
-      .selectDistinct({ day: transactionDailyRollups.day })
-      .from(transactionDailyRollups)
+      .selectDistinct({ day: transactionDay })
+      .from(financialTransactions)
       .innerJoin(
         financialAccounts,
         and(
-          eq(transactionDailyRollups.connectionId, financialAccounts.connectionId),
-          eq(transactionDailyRollups.accountExternalId, financialAccounts.externalId),
+          eq(financialTransactions.connectionId, financialAccounts.connectionId),
+          eq(financialTransactions.accountExternalId, financialAccounts.externalId),
         ),
       )
       .where(
         and(
           eq(financialAccounts.userId, userId),
-          eq(transactionDailyRollups.providerId, TRUELAYER_PROVIDER_ID),
-          gte(transactionDailyRollups.day, since),
+          eq(financialTransactions.providerId, TRUELAYER_PROVIDER_ID),
+          sql`(${financialTransactions.occurredAt} AT TIME ZONE 'UTC')::date >= ${since}::date`,
         ),
       )
-      .orderBy(asc(transactionDailyRollups.day));
+      .orderBy(transactionDay);
 
     const balanceByDay = new Map(balances.map((row) => [row.day, row]));
     const allDays = [
@@ -305,8 +337,21 @@ export class TransactionsService {
     currency: string;
     metadata: Record<string, unknown>;
     updatedAt: Date;
+    enrichedCategory: string | null;
+    enrichedSource: string | null;
+    merchantId: string | null;
+    merchantDisplayName: string | null;
   }): SavedTransaction {
     const metadata = row.metadata;
+    // Enrichment is written in the same unit of work as the base row, so
+    // it's present for every synced transaction; the OTHER fallback only
+    // guards a missing row from ever breaking the API shape. Stored
+    // categories are opaque references (built-in value or custom category
+    // id), validated at write time.
+    const category = row.enrichedCategory ?? SpendingCategory.OTHER;
+    const source = CategorySourceSchema.safeParse(row.enrichedSource);
+    const categorySource = source.success ? source.data : CategorySource.PROVIDER_DEFAULT;
+
     return {
       id: row.id,
       transactionId:
@@ -332,6 +377,12 @@ export class TransactionsService {
       runningBalance:
         (metadata.runningBalance as SavedTransaction["runningBalance"] | undefined) ?? null,
       meta: (metadata.meta as SavedTransaction["meta"] | undefined) ?? null,
+      category,
+      categorySource,
+      merchant:
+        row.merchantId && row.merchantDisplayName
+          ? { id: row.merchantId, displayName: row.merchantDisplayName }
+          : null,
       updatedAt: row.updatedAt.toISOString(),
     };
   }

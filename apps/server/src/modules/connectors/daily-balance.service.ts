@@ -1,45 +1,39 @@
 import { Injectable } from "@nestjs/common";
 import type { ConnectorSyncResult } from "@spark/connectors";
-import { and, eq, inArray, sql, type Database } from "@spark/db";
-import {
-  accountDailyBalances,
-  financialTransactions,
-  transactionDailyRollups,
-} from "@spark/db/schema";
-
-type RollupDb = Database | Parameters<Parameters<Database["transaction"]>[0]>[0];
+import { and, eq, inArray, sql, type DatabaseExecutor } from "@spark/db";
+import { accountDailyBalances, financialTransactions } from "@spark/db/schema";
 
 /** Distinct UTC days per account external id. */
-export type RollupBuckets = Map<string, Set<string>>;
+export type DayBuckets = Map<string, Set<string>>;
 
-export interface RefreshRollupsInput {
+export interface RefreshDailyBalancesInput {
   userId: string;
   connectionId: string;
   transactions: ConnectorSyncResult["transactions"];
   /**
    * Buckets the batch's rows occupied BEFORE the upsert (see
-   * {@link TransactionRollupService.captureExistingBuckets}). Without them an
+   * {@link DailyBalanceService.captureExistingBuckets}). Without them an
    * update that moves a transaction to a different day would leave the old
-   * day's bucket stale — the new batch only names the new day.
+   * day's balance row stale — the new batch only names the new day.
    */
-  previousBuckets?: RollupBuckets;
+  previousBuckets?: DayBuckets;
 }
 
 /**
- * Maintains the incremental dashboard aggregates (`transaction_daily_rollups`
- * and `account_daily_balances`) for the buckets a sync batch touches.
+ * Maintains the `account_daily_balances` read model (the balance-series
+ * source) for the (account, day) buckets a sync batch touches.
  *
  * Buckets are RECOMPUTED from the base `financial_transactions` rows — never
  * incremented — because the sync path updates existing transactions on
- * conflict (amount, category, even the day can move), so `+= amount`
- * maintenance would drift. Delete-then-insert also converges when an update
- * empties a bucket entirely: the stale row disappears instead of lingering.
+ * conflict (amount, even the day can move), so incremental maintenance would
+ * drift. Delete-then-insert also converges when an update empties a bucket
+ * entirely: the stale row disappears instead of lingering.
  *
  * Must run inside the same transaction as the transaction upserts so the
- * aggregates can never be observed out of step with the base rows.
+ * balance rows can never be observed out of step with the base rows.
  */
 @Injectable()
-export class TransactionRollupService {
+export class DailyBalanceService {
   /**
    * Reads the (account, day) buckets the batch's rows currently sit in.
    * MUST run before the transaction upserts: the upsert overwrites
@@ -47,11 +41,11 @@ export class TransactionRollupService {
    * day. Same transaction as the upsert, so the read is consistent.
    */
   async captureExistingBuckets(
-    db: RollupDb,
+    db: DatabaseExecutor,
     connectionId: string,
     transactions: ConnectorSyncResult["transactions"],
-  ): Promise<RollupBuckets> {
-    const buckets: RollupBuckets = new Map();
+  ): Promise<DayBuckets> {
+    const buckets: DayBuckets = new Map();
     if (transactions.length === 0) {
       return buckets;
     }
@@ -78,7 +72,7 @@ export class TransactionRollupService {
     return buckets;
   }
 
-  async refreshForBatch(db: RollupDb, input: RefreshRollupsInput): Promise<void> {
+  async refreshForBatch(db: DatabaseExecutor, input: RefreshDailyBalancesInput): Promise<void> {
     const daysByAccount = groupTouchedDaysByAccount(input.transactions);
     for (const [accountExternalId, days] of input.previousBuckets ?? []) {
       for (const day of days) {
@@ -91,63 +85,15 @@ export class TransactionRollupService {
   }
 
   /**
-   * Recomputes every affected (account, day) bucket from base rows for one
-   * account. All aggregation happens in SQL over the `numeric` column — no
-   * float accumulation.
+   * Recomputes every affected (account, day) balance row from base rows for
+   * one account.
    */
   private async recomputeBuckets(
-    db: RollupDb,
-    input: RefreshRollupsInput,
+    db: DatabaseExecutor,
+    input: RefreshDailyBalancesInput,
     accountExternalId: string,
     days: string[],
   ): Promise<void> {
-    await db
-      .delete(transactionDailyRollups)
-      .where(
-        and(
-          eq(transactionDailyRollups.connectionId, input.connectionId),
-          eq(transactionDailyRollups.accountExternalId, accountExternalId),
-          inArray(transactionDailyRollups.day, days),
-        ),
-      );
-
-    // Amounts are stored unsigned by the TrueLayer mappers, but abs() keeps
-    // the totals correct for any provider that signs them.
-    await db.execute(sql`
-      INSERT INTO transaction_daily_rollups (
-        id, user_id, connection_id, account_external_id, provider_id,
-        day, currency, category, debit_total, credit_total, transaction_count, updated_at
-      )
-      SELECT
-        gen_random_uuid(),
-        ${input.userId},
-        connection_id,
-        account_external_id,
-        provider_id,
-        (occurred_at AT TIME ZONE 'UTC')::date,
-        currency,
-        coalesce(metadata->>'transactionCategory', 'UNKNOWN'),
-        coalesce(sum(abs(amount)) FILTER (
-          WHERE coalesce(metadata->>'truelayerTransactionType', 'DEBIT') = 'DEBIT'
-        ), 0),
-        coalesce(sum(abs(amount)) FILTER (
-          WHERE metadata->>'truelayerTransactionType' = 'CREDIT'
-        ), 0),
-        count(*)::int,
-        now()
-      FROM financial_transactions
-      WHERE connection_id = ${input.connectionId}
-        AND account_external_id = ${accountExternalId}
-        AND (occurred_at AT TIME ZONE 'UTC')::date = ANY(${sql.param(days)}::date[])
-      GROUP BY
-        connection_id,
-        account_external_id,
-        provider_id,
-        (occurred_at AT TIME ZONE 'UTC')::date,
-        currency,
-        coalesce(metadata->>'transactionCategory', 'UNKNOWN')
-    `);
-
     await db
       .delete(accountDailyBalances)
       .where(
@@ -192,10 +138,8 @@ export class TransactionRollupService {
 }
 
 /** Distinct UTC days touched per account, derived from the sync batch. */
-function groupTouchedDaysByAccount(
-  transactions: ConnectorSyncResult["transactions"],
-): RollupBuckets {
-  const result: RollupBuckets = new Map();
+function groupTouchedDaysByAccount(transactions: ConnectorSyncResult["transactions"]): DayBuckets {
+  const result: DayBuckets = new Map();
   for (const transaction of transactions) {
     const occurredAt = new Date(transaction.occurredAt);
     if (Number.isNaN(occurredAt.getTime())) {
@@ -206,7 +150,7 @@ function groupTouchedDaysByAccount(
   return result;
 }
 
-function addBucket(buckets: RollupBuckets, accountExternalId: string, day: string): void {
+function addBucket(buckets: DayBuckets, accountExternalId: string, day: string): void {
   const days = buckets.get(accountExternalId);
   if (days) {
     days.add(day);

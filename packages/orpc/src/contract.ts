@@ -1,8 +1,10 @@
 import { oc } from "@orpc/contract";
 
 import { accountsRouter } from "./contracts/accounts.ts";
+import { categoriesRouter } from "./contracts/categories.ts";
 import { connectorsRouter } from "./contracts/connectors.ts";
 import { healthRoute } from "./contracts/health.ts";
+import { rulesRouter } from "./contracts/rules.ts";
 import { settingsRouter } from "./contracts/settings.ts";
 import { transactionsRouter } from "./contracts/transactions.ts";
 import { truelayerRouter } from "./contracts/truelayer.ts";
@@ -14,6 +16,8 @@ export const contract = oc.router({
   connectors: connectorsRouter,
   settings: settingsRouter,
   transactions: transactionsRouter,
+  rules: rulesRouter,
+  categories: categoriesRouter,
 });
 
 export type Contract = typeof contract;
@@ -27,7 +31,35 @@ export {
   BalanceSeriesInputSchema,
   BalanceSeriesPointSchema,
   BalanceSeriesResponseSchema,
+  CATEGORY_COLORS,
+  CategoryColorSchema,
+  CategoryDescriptorSchema,
+  CategoryIdSchema,
+  CategoryRuleSchema,
+  CategorySourceSchema,
   CategorySpendSchema,
+  ClearTransactionCategoryInputSchema,
+  ClearTransactionCategoryResponseSchema,
+  CreateCategoryRuleInputSchema,
+  CreateUserCategoryInputSchema,
+  DeleteCategoryRuleInputSchema,
+  DeleteCategoryRuleResponseSchema,
+  DeleteUserCategoryInputSchema,
+  DeleteUserCategoryResponseSchema,
+  ListCategoriesResponseSchema,
+  ListCategoryRulesResponseSchema,
+  MerchantRefSchema,
+  RuleAmountOperatorSchema,
+  RuleConditionGroupSchema,
+  RuleConditionSchema,
+  RuleMatchersSchema,
+  RuleTextOperatorSchema,
+  SetTransactionCategoryInputSchema,
+  SetTransactionCategoryResponseSchema,
+  SpendingCategorySchema,
+  UpdateCategoryRuleInputSchema,
+  UpdateUserCategoryInputSchema,
+  UserCategorySchema,
   ChangePasswordInputSchema,
   ChangePasswordResponseSchema,
   ConsentStatusSchema,
@@ -77,14 +109,41 @@ export type {
   BalanceSeriesInput,
   BalanceSeriesPoint,
   BalanceSeriesResponse,
+  CategoryColor,
+  CategoryDescriptor,
+  CategoryId,
+  CategoryRule,
+  CategorySource,
   CategorySpend,
+  ClearTransactionCategoryInput,
+  ClearTransactionCategoryResponse,
+  CreateCategoryRuleInput,
+  CreateUserCategoryInput,
   CurrencyMonthlySummary,
+  DeleteCategoryRuleInput,
+  DeleteCategoryRuleResponse,
+  DeleteUserCategoryInput,
+  DeleteUserCategoryResponse,
+  ListCategoriesResponse,
+  ListCategoryRulesResponse,
   ListTransactionsInput,
   ListTransactionsResponse,
+  MerchantRef,
   MonthlySummaryInput,
   MonthlySummaryResponse,
+  RuleAmountOperator,
+  RuleCondition,
+  RuleConditionGroup,
+  RuleMatchers,
+  RuleTextOperator,
   SavedTransaction,
+  SetTransactionCategoryInput,
+  SetTransactionCategoryResponse,
+  SpendingCategory,
   TrueLayerAccount,
+  UpdateCategoryRuleInput,
+  UpdateUserCategoryInput,
+  UserCategory,
 } from "@spark/schema";
 
 export type {

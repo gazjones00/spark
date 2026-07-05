@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 
-import { categoryConfig } from "@spark/common";
+import { queryKeys } from "@/lib/query-keys";
 import { orpc } from "@spark/orpc";
 import type { SavedTransaction } from "@spark/orpc/contract";
 
@@ -10,6 +10,7 @@ import {
   type BalanceHistory,
   type SpendingByCategory,
 } from "../lib/dashboard-derivations";
+import { useCategories } from "./useCategories";
 
 /** The dashboard's recent-activity list shows the five newest transactions. */
 const RECENT_TRANSACTIONS_LIMIT = 5;
@@ -41,24 +42,25 @@ export interface DashboardData {
  * reads a small `transactions.list` page.
  */
 export function useDashboardData(): DashboardData {
+  const { resolve, isLoading: categoriesLoading } = useCategories();
   const accountsQuery = useQuery({
     // Key matches accounts.tsx so the cache is shared across routes.
-    queryKey: ["accounts"],
+    queryKey: queryKeys.accounts,
     queryFn: () => orpc.accounts.list.call({}),
   });
 
   const recentQuery = useQuery({
-    queryKey: ["transactions", { limit: RECENT_TRANSACTIONS_LIMIT }],
+    queryKey: [...queryKeys.transactions, { limit: RECENT_TRANSACTIONS_LIMIT }],
     queryFn: () => orpc.transactions.list.call({ limit: RECENT_TRANSACTIONS_LIMIT }),
   });
 
   const summaryQuery = useQuery({
-    queryKey: ["transactions", "monthly-summary"],
+    queryKey: [...queryKeys.transactions, "monthly-summary"],
     queryFn: () => orpc.transactions.monthlySummary.call({}),
   });
 
   const seriesQuery = useQuery({
-    queryKey: ["transactions", "balance-series"],
+    queryKey: [...queryKeys.transactions, "balance-series"],
     queryFn: () => orpc.transactions.balanceSeries.call({}),
   });
 
@@ -75,21 +77,18 @@ export function useDashboardData(): DashboardData {
   const summary = totals.find((entry) => entry.currency === accountCurrency) ?? totals[0];
   const currency = summary?.currency ?? accountCurrency;
 
-  // Rollups store raw provider categories; anything the UI has no config for
-  // is folded into UNKNOWN (merged, since the pie keys slices by category).
-  const spendingByCategory: SpendingByCategory[] = [];
-  for (const entry of summary?.categories ?? []) {
-    const category = (
-      entry.category in categoryConfig ? entry.category : "UNKNOWN"
-    ) as SpendingByCategory["category"];
-    const amount = Number(entry.total);
-    const existing = spendingByCategory.find((slice) => slice.category === category);
-    if (existing) {
-      existing.amount += amount;
-    } else {
-      spendingByCategory.push({ category, amount, fill: categoryConfig[category].color });
-    }
-  }
+  // The server aggregates the month's spend by enriched category (overrides,
+  // rules, and custom categories included); the client only resolves each
+  // reference to its display label and colour.
+  const spendingByCategory: SpendingByCategory[] = (summary?.categories ?? []).map((entry) => {
+    const descriptor = resolve(entry.category);
+    return {
+      category: entry.category,
+      label: descriptor.label,
+      amount: Number(entry.total),
+      fill: descriptor.color,
+    };
+  });
 
   const balanceSeries: BalanceHistory[] = (seriesQuery.data?.points ?? []).map((point) => ({
     date: point.date,
@@ -106,11 +105,14 @@ export function useDashboardData(): DashboardData {
     recentTransactions,
     hasAccounts: accounts.length > 0,
     hasTransactions: recentTransactions.length > 0,
+    // Categories are part of the load: without them custom-category slices
+    // briefly resolve to "Unknown" even though the spend data is ready.
     isLoading:
       accountsQuery.isLoading ||
       recentQuery.isLoading ||
       summaryQuery.isLoading ||
-      seriesQuery.isLoading,
+      seriesQuery.isLoading ||
+      categoriesLoading,
     isError:
       accountsQuery.isError || recentQuery.isError || summaryQuery.isError || seriesQuery.isError,
     refetch: () => {

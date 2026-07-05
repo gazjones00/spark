@@ -15,6 +15,7 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedTransactionsRouteImport } from './routes/_authenticated/transactions'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as AuthenticatedRulesRouteImport } from './routes/_authenticated/rules'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedAccountsRouteImport } from './routes/_authenticated/accounts'
 import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings/index'
@@ -22,6 +23,7 @@ import { Route as AuthenticatedSettingsSecurityRouteImport } from './routes/_aut
 import { Route as AuthenticatedSettingsPreferencesRouteImport } from './routes/_authenticated/settings/preferences'
 import { Route as AuthenticatedSettingsNotificationsRouteImport } from './routes/_authenticated/settings/notifications'
 import { Route as AuthenticatedSettingsDangerZoneRouteImport } from './routes/_authenticated/settings/danger-zone'
+import { Route as AuthenticatedSettingsCategoriesRouteImport } from './routes/_authenticated/settings/categories'
 import { Route as AuthenticatedSettingsAccountsRouteImport } from './routes/_authenticated/settings/accounts'
 import { Route as AuthenticatedAccountsConnectRouteImport } from './routes/_authenticated/accounts_.connect'
 
@@ -53,6 +55,11 @@ const AuthenticatedTransactionsRoute =
 const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedRulesRoute = AuthenticatedRulesRouteImport.update({
+  id: '/rules',
+  path: '/rules',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
@@ -95,6 +102,12 @@ const AuthenticatedSettingsDangerZoneRoute =
     path: '/danger-zone',
     getParentRoute: () => AuthenticatedSettingsRoute,
   } as any)
+const AuthenticatedSettingsCategoriesRoute =
+  AuthenticatedSettingsCategoriesRouteImport.update({
+    id: '/categories',
+    path: '/categories',
+    getParentRoute: () => AuthenticatedSettingsRoute,
+  } as any)
 const AuthenticatedSettingsAccountsRoute =
   AuthenticatedSettingsAccountsRouteImport.update({
     id: '/accounts',
@@ -114,10 +127,12 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/accounts': typeof AuthenticatedAccountsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/rules': typeof AuthenticatedRulesRoute
   '/settings': typeof AuthenticatedSettingsRouteWithChildren
   '/transactions': typeof AuthenticatedTransactionsRoute
   '/accounts/connect': typeof AuthenticatedAccountsConnectRoute
   '/settings/accounts': typeof AuthenticatedSettingsAccountsRoute
+  '/settings/categories': typeof AuthenticatedSettingsCategoriesRoute
   '/settings/danger-zone': typeof AuthenticatedSettingsDangerZoneRoute
   '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
   '/settings/preferences': typeof AuthenticatedSettingsPreferencesRoute
@@ -130,9 +145,11 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/accounts': typeof AuthenticatedAccountsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/rules': typeof AuthenticatedRulesRoute
   '/transactions': typeof AuthenticatedTransactionsRoute
   '/accounts/connect': typeof AuthenticatedAccountsConnectRoute
   '/settings/accounts': typeof AuthenticatedSettingsAccountsRoute
+  '/settings/categories': typeof AuthenticatedSettingsCategoriesRoute
   '/settings/danger-zone': typeof AuthenticatedSettingsDangerZoneRoute
   '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
   '/settings/preferences': typeof AuthenticatedSettingsPreferencesRoute
@@ -147,10 +164,12 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/_authenticated/accounts': typeof AuthenticatedAccountsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/rules': typeof AuthenticatedRulesRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRouteWithChildren
   '/_authenticated/transactions': typeof AuthenticatedTransactionsRoute
   '/_authenticated/accounts_/connect': typeof AuthenticatedAccountsConnectRoute
   '/_authenticated/settings/accounts': typeof AuthenticatedSettingsAccountsRoute
+  '/_authenticated/settings/categories': typeof AuthenticatedSettingsCategoriesRoute
   '/_authenticated/settings/danger-zone': typeof AuthenticatedSettingsDangerZoneRoute
   '/_authenticated/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
   '/_authenticated/settings/preferences': typeof AuthenticatedSettingsPreferencesRoute
@@ -165,10 +184,12 @@ export interface FileRouteTypes {
     | '/signup'
     | '/accounts'
     | '/dashboard'
+    | '/rules'
     | '/settings'
     | '/transactions'
     | '/accounts/connect'
     | '/settings/accounts'
+    | '/settings/categories'
     | '/settings/danger-zone'
     | '/settings/notifications'
     | '/settings/preferences'
@@ -181,9 +202,11 @@ export interface FileRouteTypes {
     | '/signup'
     | '/accounts'
     | '/dashboard'
+    | '/rules'
     | '/transactions'
     | '/accounts/connect'
     | '/settings/accounts'
+    | '/settings/categories'
     | '/settings/danger-zone'
     | '/settings/notifications'
     | '/settings/preferences'
@@ -197,10 +220,12 @@ export interface FileRouteTypes {
     | '/signup'
     | '/_authenticated/accounts'
     | '/_authenticated/dashboard'
+    | '/_authenticated/rules'
     | '/_authenticated/settings'
     | '/_authenticated/transactions'
     | '/_authenticated/accounts_/connect'
     | '/_authenticated/settings/accounts'
+    | '/_authenticated/settings/categories'
     | '/_authenticated/settings/danger-zone'
     | '/_authenticated/settings/notifications'
     | '/_authenticated/settings/preferences'
@@ -259,6 +284,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/rules': {
+      id: '/_authenticated/rules'
+      path: '/rules'
+      fullPath: '/rules'
+      preLoaderRoute: typeof AuthenticatedRulesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -308,6 +340,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsDangerZoneRouteImport
       parentRoute: typeof AuthenticatedSettingsRoute
     }
+    '/_authenticated/settings/categories': {
+      id: '/_authenticated/settings/categories'
+      path: '/categories'
+      fullPath: '/settings/categories'
+      preLoaderRoute: typeof AuthenticatedSettingsCategoriesRouteImport
+      parentRoute: typeof AuthenticatedSettingsRoute
+    }
     '/_authenticated/settings/accounts': {
       id: '/_authenticated/settings/accounts'
       path: '/accounts'
@@ -327,6 +366,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedSettingsRouteChildren {
   AuthenticatedSettingsAccountsRoute: typeof AuthenticatedSettingsAccountsRoute
+  AuthenticatedSettingsCategoriesRoute: typeof AuthenticatedSettingsCategoriesRoute
   AuthenticatedSettingsDangerZoneRoute: typeof AuthenticatedSettingsDangerZoneRoute
   AuthenticatedSettingsNotificationsRoute: typeof AuthenticatedSettingsNotificationsRoute
   AuthenticatedSettingsPreferencesRoute: typeof AuthenticatedSettingsPreferencesRoute
@@ -336,6 +376,7 @@ interface AuthenticatedSettingsRouteChildren {
 
 const AuthenticatedSettingsRouteChildren: AuthenticatedSettingsRouteChildren = {
   AuthenticatedSettingsAccountsRoute: AuthenticatedSettingsAccountsRoute,
+  AuthenticatedSettingsCategoriesRoute: AuthenticatedSettingsCategoriesRoute,
   AuthenticatedSettingsDangerZoneRoute: AuthenticatedSettingsDangerZoneRoute,
   AuthenticatedSettingsNotificationsRoute:
     AuthenticatedSettingsNotificationsRoute,
@@ -352,6 +393,7 @@ const AuthenticatedSettingsRouteWithChildren =
 interface AuthenticatedRouteChildren {
   AuthenticatedAccountsRoute: typeof AuthenticatedAccountsRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedRulesRoute: typeof AuthenticatedRulesRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRouteWithChildren
   AuthenticatedTransactionsRoute: typeof AuthenticatedTransactionsRoute
   AuthenticatedAccountsConnectRoute: typeof AuthenticatedAccountsConnectRoute
@@ -360,6 +402,7 @@ interface AuthenticatedRouteChildren {
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAccountsRoute: AuthenticatedAccountsRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedRulesRoute: AuthenticatedRulesRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRouteWithChildren,
   AuthenticatedTransactionsRoute: AuthenticatedTransactionsRoute,
   AuthenticatedAccountsConnectRoute: AuthenticatedAccountsConnectRoute,

@@ -2,8 +2,9 @@ import type { ConnectorSyncResult } from "@spark/connectors";
 import { SyncStatus } from "@spark/common";
 import { connectorConnections } from "@spark/db/schema";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { EnrichmentService } from "../enrichment";
 import { ConnectorPersistenceService } from "./connector-persistence.service";
-import type { TransactionRollupService } from "./transaction-rollup.service";
+import type { DailyBalanceService } from "./daily-balance.service";
 
 function emptyResult(overrides: Partial<ConnectorSyncResult> = {}): ConnectorSyncResult {
   return {
@@ -56,18 +57,22 @@ function createService(options: { consecutiveFailures?: number } = {}) {
     transaction: vi.fn((cb: (txArg: unknown) => unknown) => cb(tx)),
   };
 
-  const rollupService = {
+  const dailyBalanceService = {
     captureExistingBuckets: vi.fn(async () => new Map<string, Set<string>>()),
     refreshForBatch: vi.fn(async () => undefined),
   };
+  const enrichmentService = {
+    enrichBatch: vi.fn(async () => []),
+  };
   const service = new ConnectorPersistenceService(
     db as never,
-    rollupService as unknown as TransactionRollupService,
+    dailyBalanceService as unknown as DailyBalanceService,
+    enrichmentService as unknown as EnrichmentService,
   );
   const connectionState = () =>
     setCalls.find((call) => call.table === connectorConnections)?.payload;
 
-  return { service, connectionState, rollupService };
+  return { service, connectionState, dailyBalanceService, enrichmentService };
 }
 
 describe("ConnectorPersistenceService.updateConnectionSyncState", () => {
@@ -253,11 +258,11 @@ describe("ConnectorPersistenceService.updateConnectionSyncState", () => {
     expect(state).not.toHaveProperty("consecutiveFailures");
   });
 
-  it("refreshes the daily rollups inside the persistence transaction", async () => {
-    const { service, rollupService } = createService();
+  it("refreshes the daily balances inside the persistence transaction", async () => {
+    const { service, dailyBalanceService } = createService();
     const result = emptyResult();
     const previousBuckets = new Map([["truelayer:account:acc-1", new Set(["2026-06-01"])]]);
-    rollupService.captureExistingBuckets.mockResolvedValueOnce(previousBuckets);
+    dailyBalanceService.captureExistingBuckets.mockResolvedValueOnce(previousBuckets);
 
     await service.persistSyncResult({
       userId: "user-1",
@@ -267,12 +272,12 @@ describe("ConnectorPersistenceService.updateConnectionSyncState", () => {
 
     // Pre-upsert buckets are captured and handed to the refresh, so an
     // update that moves a transaction across days recomputes the old day.
-    expect(rollupService.captureExistingBuckets).toHaveBeenCalledWith(
+    expect(dailyBalanceService.captureExistingBuckets).toHaveBeenCalledWith(
       expect.anything(),
       "conn-1",
       result.transactions,
     );
-    expect(rollupService.refreshForBatch).toHaveBeenCalledWith(expect.anything(), {
+    expect(dailyBalanceService.refreshForBatch).toHaveBeenCalledWith(expect.anything(), {
       userId: "user-1",
       connectionId: "conn-1",
       transactions: result.transactions,

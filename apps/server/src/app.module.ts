@@ -10,6 +10,7 @@ import { LoggerModule } from "nestjs-pino";
 import { AccountsModule } from "./modules/accounts";
 import { ConnectorsModule } from "./modules/connectors";
 import { CryptoModule } from "./modules/crypto";
+import { EnrichmentModule } from "./modules/enrichment";
 import { HealthModule } from "./modules/health";
 import { SettingsModule } from "./modules/settings";
 import { TransactionsModule } from "./modules/transactions";
@@ -46,6 +47,7 @@ declare module "@orpc/nest" {
     }),
     ConnectorsModule,
     AccountsModule,
+    EnrichmentModule,
     TransactionsModule,
     SettingsModule,
     HealthModule,
