@@ -1,6 +1,4 @@
-import type { Account, SavedTransaction } from "@spark/orpc/contract";
-
-type TransactionCategory = SavedTransaction["transactionCategory"];
+import type { Account } from "@spark/orpc/contract";
 
 /** A single point on the "Balance Over Time" chart. */
 export interface BalanceHistory {
@@ -8,9 +6,11 @@ export interface BalanceHistory {
   balance: number;
 }
 
-/** A slice of the "Spending by Category" pie. `fill` is attached downstream. */
+/** A slice of the "Spending by Category" pie, resolved for display. */
 export interface SpendingByCategory {
-  category: TransactionCategory;
+  /** Enriched category reference: built-in value or custom category id. */
+  category: string;
+  label: string;
   amount: number;
   fill: string;
 }

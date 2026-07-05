@@ -9,14 +9,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { categoryConfig } from "@spark/common";
-import type { Account, SavedTransaction } from "@spark/orpc/contract";
-
-type TransactionCategory = SavedTransaction["transactionCategory"];
+import { useCategories } from "@/features/finance/hooks/useCategories";
+import type { Account } from "@spark/orpc/contract";
 
 export interface TransactionFilters {
   search: string;
-  category: TransactionCategory | "all";
+  /** Category reference (built-in value or custom category id) or "all". */
+  category: string | "all";
   accountId: string | "all";
   dateRange: "all" | "7days" | "30days" | "90days";
 }
@@ -27,16 +26,12 @@ interface TransactionFiltersProps {
   accounts?: Account[];
 }
 
-const categories: (TransactionCategory | "all")[] = [
-  "all",
-  ...(Object.keys(categoryConfig) as TransactionCategory[]),
-];
-
 export function TransactionFiltersBar({
   filters,
   onFiltersChange,
   accounts = [],
 }: TransactionFiltersProps) {
+  const { categories } = useCategories();
   const hasActiveFilters =
     filters.search ||
     filters.category !== "all" ||
@@ -69,7 +64,7 @@ export function TransactionFiltersBar({
         onValueChange={(value) =>
           onFiltersChange({
             ...filters,
-            category: value as TransactionCategory | "all",
+            category: value ?? "all",
           })
         }
       >
@@ -77,9 +72,10 @@ export function TransactionFiltersBar({
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          {categories.map((cat) => (
-            <SelectItem key={cat} value={cat}>
-              {cat === "all" ? "All Categories" : categoryConfig[cat].label}
+          <SelectItem value="all">All Categories</SelectItem>
+          {categories.map((category) => (
+            <SelectItem key={category.id} value={category.id}>
+              {category.label}
             </SelectItem>
           ))}
         </SelectContent>

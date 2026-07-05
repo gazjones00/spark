@@ -10,6 +10,7 @@ import {
   type TransactionFilters,
 } from "@/features/finance/components/TransactionFilters";
 import { TransactionsTable } from "@/features/finance/components/TransactionsTable";
+import { queryKeys } from "@/lib/query-keys";
 import { orpc } from "@spark/orpc";
 
 const PAGE_SIZE = 25;
@@ -20,11 +21,11 @@ export const Route = createFileRoute("/_authenticated/transactions")({
   loader: ({ context }) => {
     if (typeof window === "undefined") return;
     void context.queryClient.prefetchQuery({
-      queryKey: ["accounts"],
+      queryKey: queryKeys.accounts,
       queryFn: () => orpc.accounts.list.call({}),
     });
     void context.queryClient.prefetchQuery({
-      queryKey: ["transactions", { limit: PAGE_SIZE }],
+      queryKey: [...queryKeys.transactions, { limit: PAGE_SIZE }],
       queryFn: () => orpc.transactions.list.call({ limit: PAGE_SIZE }),
     });
   },
@@ -48,7 +49,7 @@ function TransactionsPage() {
   }, [filters.accountId, filters.category, filters.dateRange, deferredSearch]);
 
   const accountsQuery = useQuery({
-    queryKey: ["accounts"],
+    queryKey: queryKeys.accounts,
     queryFn: () => orpc.accounts.list.call({}),
   });
 
@@ -89,7 +90,7 @@ function TransactionsPage() {
   }, [cursor, deferredSearch, filters.accountId, filters.category, filters.dateRange]);
 
   const transactionsQuery = useQuery({
-    queryKey: ["transactions", transactionQueryInput],
+    queryKey: [...queryKeys.transactions, transactionQueryInput],
     queryFn: () => orpc.transactions.list.call(transactionQueryInput),
     refetchOnMount: "always",
     placeholderData: keepPreviousData,

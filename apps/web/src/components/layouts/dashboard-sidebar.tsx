@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
-import { LayoutDashboard, Landmark, Receipt, Plus, LogOut, Settings } from "lucide-react";
+import { LayoutDashboard, Landmark, Receipt, Wand2, Plus, LogOut, Settings } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { SparkMark } from "@/components/spark-mark";
@@ -20,6 +20,11 @@ export const navItems = [
     label: "Transactions",
     href: "/transactions",
     icon: Receipt,
+  },
+  {
+    label: "Rules",
+    href: "/rules",
+    icon: Wand2,
   },
 ] as const;
 

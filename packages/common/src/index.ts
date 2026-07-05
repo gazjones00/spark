@@ -6,6 +6,14 @@ export {
   resilientFetch,
   type ResilientFetchOptions,
 } from "./utils/http.ts";
-export { categoryConfig } from "./finance/category-config.ts";
+export {
+  mapDefaultSpendingCategory,
+  type DefaultCategoryInput,
+} from "./finance/default-category-mapping.ts";
+export { normalizeMerchant } from "./finance/merchant-normalizer.ts";
+export {
+  builtInCategoryDescriptors,
+  spendingCategoryConfig,
+} from "./finance/spending-category-config.ts";
 export { SyncStatus, SyncStatusSchema } from "./finance/sync-status.ts";
 export type { SyncStatusType } from "./finance/sync-status.ts";

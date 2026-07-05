@@ -1,6 +1,6 @@
 import type { ConnectorSyncResult } from "@spark/connectors";
 import { describe, expect, it, vi } from "vitest";
-import { TransactionRollupService } from "./transaction-rollup.service";
+import { DailyBalanceService } from "./daily-balance.service";
 
 function makeTransaction(
   overrides: Partial<ConnectorSyncResult["transactions"][number]> = {},
@@ -31,11 +31,11 @@ function createService(existingRows: Array<{ accountExternalId: string; occurred
     select: vi.fn(() => selectChain),
     execute: vi.fn().mockResolvedValue(undefined),
   };
-  const service = new TransactionRollupService();
+  const service = new DailyBalanceService();
   return { service, db, deleteChain, selectChain };
 }
 
-describe("TransactionRollupService", () => {
+describe("DailyBalanceService", () => {
   it("recomputes one bucket set per touched account", async () => {
     const { service, db } = createService();
 
@@ -52,13 +52,12 @@ describe("TransactionRollupService", () => {
       ],
     });
 
-    // Two accounts → two recompute rounds, each doing two deletes (rollups +
-    // balances) and two insert-selects.
-    expect(db.delete).toHaveBeenCalledTimes(4);
-    expect(db.execute).toHaveBeenCalledTimes(4);
+    // Two accounts → two recompute rounds, each one delete + one insert-select.
+    expect(db.delete).toHaveBeenCalledTimes(2);
+    expect(db.execute).toHaveBeenCalledTimes(2);
   });
 
-  it("recomputes from base rows in SQL (delete-then-insert-select, grouped)", async () => {
+  it("recomputes from base rows in SQL (delete-then-insert-select)", async () => {
     const { service, db } = createService();
 
     await service.refreshForBatch(db as never, {
@@ -77,11 +76,9 @@ describe("TransactionRollupService", () => {
         .join(""),
     );
 
-    expect(statements[0]).toContain("INSERT INTO transaction_daily_rollups");
-    expect(statements[0]).toContain("GROUP BY");
+    expect(statements[0]).toContain("INSERT INTO account_daily_balances");
+    expect(statements[0]).toContain("DISTINCT ON");
     expect(statements[0]).toContain("FROM financial_transactions");
-    expect(statements[1]).toContain("INSERT INTO account_daily_balances");
-    expect(statements[1]).toContain("DISTINCT ON");
   });
 
   it("does nothing for a batch with no transactions", async () => {
@@ -142,9 +139,9 @@ describe("TransactionRollupService", () => {
     });
 
     // One account → one recompute round; its day list carries both days.
-    expect(db.execute).toHaveBeenCalledTimes(2);
-    const rollupInsert = db.execute.mock.calls[0]?.[0] as { queryChunks?: unknown[] };
-    const params = (rollupInsert.queryChunks ?? []).flatMap((chunk) =>
+    expect(db.execute).toHaveBeenCalledTimes(1);
+    const balanceInsert = db.execute.mock.calls[0]?.[0] as { queryChunks?: unknown[] };
+    const params = (balanceInsert.queryChunks ?? []).flatMap((chunk) =>
       typeof chunk === "object" && chunk !== null && "value" in chunk
         ? [(chunk as { value: unknown }).value]
         : [],

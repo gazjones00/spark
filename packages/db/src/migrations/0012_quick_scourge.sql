@@ -1,0 +1,1 @@
+DROP TABLE "transaction_daily_rollups" CASCADE;

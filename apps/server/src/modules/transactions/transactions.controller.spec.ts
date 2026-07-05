@@ -25,6 +25,9 @@ function makeTransaction(): SavedTransaction {
     merchantName: null,
     runningBalance: null,
     meta: null,
+    category: "SHOPPING",
+    categorySource: "PROVIDER_DEFAULT",
+    merchant: null,
     updatedAt: "2026-06-29T10:00:00.000Z",
   };
 }

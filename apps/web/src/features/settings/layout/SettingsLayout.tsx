@@ -1,5 +1,5 @@
 import { Link, useLocation } from "@tanstack/react-router";
-import { User, Lock, Bell, SlidersHorizontal, Landmark, AlertTriangle } from "lucide-react";
+import { User, Lock, Bell, SlidersHorizontal, Landmark, Tag, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/page-header";
 
@@ -8,6 +8,7 @@ const tabs = [
   { href: "/settings/security", label: "Security", icon: Lock },
   { href: "/settings/notifications", label: "Notifications", icon: Bell },
   { href: "/settings/preferences", label: "Preferences", icon: SlidersHorizontal },
+  { href: "/settings/categories", label: "Categories", icon: Tag },
   { href: "/settings/accounts", label: "Connected Accounts", icon: Landmark },
   { href: "/settings/danger-zone", label: "Danger Zone", icon: AlertTriangle },
 ];

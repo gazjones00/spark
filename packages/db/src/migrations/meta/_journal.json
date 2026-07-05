@@ -71,6 +71,27 @@
       "when": 1783026293812,
       "tag": "0009_luxuriant_hedge_knight",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1783030486675,
+      "tag": "0010_ordinary_eternals",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1783032506467,
+      "tag": "0011_magical_terrax",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1783241224139,
+      "tag": "0012_quick_scourge",
+      "breakpoints": true
     }
   ]
 }

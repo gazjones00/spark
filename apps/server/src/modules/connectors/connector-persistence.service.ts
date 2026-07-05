@@ -2,7 +2,7 @@ import { Inject, Injectable, Logger } from "@nestjs/common";
 import type { ConnectorSyncResult } from "@spark/connectors";
 import { SyncStatus } from "@spark/common";
 import { env } from "@spark/env/server";
-import { eq, type Database } from "@spark/db";
+import { eq, type Database, type DatabaseExecutor } from "@spark/db";
 import {
   balanceSnapshots,
   connectorConnections,
@@ -16,7 +16,8 @@ import {
   rawProviderRecords,
 } from "@spark/db/schema";
 import { DATABASE_CONNECTION } from "../database";
-import { TransactionRollupService } from "./transaction-rollup.service";
+import { EnrichmentService, type EnrichableTransaction } from "../enrichment";
+import { DailyBalanceService } from "./daily-balance.service";
 
 const CONNECTOR_SYNC_INTERVAL_MINUTES = 5;
 const FAILED_CONNECTOR_RETRY_MINUTES = 30;
@@ -42,15 +43,14 @@ export interface PersistConnectorSyncResultResult {
   recordsWritten: number;
 }
 
-type ConnectorPersistenceDb = Database | Parameters<Parameters<Database["transaction"]>[0]>[0];
-
 @Injectable()
 export class ConnectorPersistenceService {
   private readonly logger = new Logger(ConnectorPersistenceService.name);
 
   constructor(
     @Inject(DATABASE_CONNECTION) private readonly db: Database,
-    private readonly rollupService: TransactionRollupService,
+    private readonly dailyBalanceService: DailyBalanceService,
+    private readonly enrichmentService: EnrichmentService,
   ) {}
 
   async persistSyncResult(
@@ -60,7 +60,7 @@ export class ConnectorPersistenceService {
   }
 
   private async persistSyncResultInTransaction(
-    db: ConnectorPersistenceDb,
+    db: DatabaseExecutor,
     input: PersistConnectorSyncResultInput,
   ): Promise<PersistConnectorSyncResultResult> {
     const now = new Date();
@@ -71,19 +71,27 @@ export class ConnectorPersistenceService {
     recordsWritten += await this.persistInstruments(db, input);
     // Captured before the upsert overwrites occurred_at: an update that moves
     // a transaction to a different day must recompute the OLD day too.
-    const previousBuckets = await this.rollupService.captureExistingBuckets(
+    const previousBuckets = await this.dailyBalanceService.captureExistingBuckets(
       db,
       input.connectionId,
       input.result.transactions,
     );
-    recordsWritten += await this.persistTransactions(db, input);
-    // Same transaction as the upserts: the dashboard aggregates can never be
+    const persistedTransactions = await this.persistTransactions(db, input);
+    recordsWritten += persistedTransactions.length;
+    // Same transaction as the upserts: the balance series can never be
     // observed out of step with the base rows.
-    await this.rollupService.refreshForBatch(db, {
+    await this.dailyBalanceService.refreshForBatch(db, {
       userId: input.userId,
       connectionId: input.connectionId,
       transactions: input.result.transactions,
       previousBuckets,
+    });
+    // Derived enrichment, re-derived in the SAME unit of work as the upserts
+    // so every canonical row always has a current enrichment row. User
+    // overrides/rules win by precedence, so a resync never clobbers edits.
+    await this.enrichmentService.enrichBatch(db, {
+      userId: input.userId,
+      transactions: persistedTransactions,
     });
     recordsWritten += await this.persistHoldings(db, input);
     recordsWritten += await this.persistBalanceSnapshots(db, input);
@@ -116,7 +124,7 @@ export class ConnectorPersistenceService {
   }
 
   private async updateConnectionSyncState(
-    db: ConnectorPersistenceDb,
+    db: DatabaseExecutor,
     input: PersistConnectorSyncResultInput,
     now: Date,
     firstError: ConnectorSyncResult["errors"][number] | undefined,
@@ -218,7 +226,7 @@ export class ConnectorPersistenceService {
   }
 
   private async loadConsecutiveFailures(
-    db: ConnectorPersistenceDb,
+    db: DatabaseExecutor,
     connectionId: string,
   ): Promise<number> {
     const rows = await db
@@ -230,7 +238,7 @@ export class ConnectorPersistenceService {
   }
 
   private async persistRawRecords(
-    db: ConnectorPersistenceDb,
+    db: DatabaseExecutor,
     input: PersistConnectorSyncResultInput,
   ): Promise<number> {
     if (input.result.rawRecords.length === 0) {
@@ -264,7 +272,7 @@ export class ConnectorPersistenceService {
   }
 
   private async persistAccounts(
-    db: ConnectorPersistenceDb,
+    db: DatabaseExecutor,
     input: PersistConnectorSyncResultInput,
   ): Promise<number> {
     let written = 0;
@@ -303,7 +311,7 @@ export class ConnectorPersistenceService {
   }
 
   private async persistInstruments(
-    db: ConnectorPersistenceDb,
+    db: DatabaseExecutor,
     input: PersistConnectorSyncResultInput,
   ): Promise<number> {
     let written = 0;
@@ -343,11 +351,12 @@ export class ConnectorPersistenceService {
     return written;
   }
 
+  /** Upserts the batch and returns the persisted rows in enrichable shape. */
   private async persistTransactions(
-    db: ConnectorPersistenceDb,
+    db: DatabaseExecutor,
     input: PersistConnectorSyncResultInput,
-  ): Promise<number> {
-    let written = 0;
+  ): Promise<EnrichableTransaction[]> {
+    const persisted: EnrichableTransaction[] = [];
     const now = new Date();
 
     for (const transaction of input.result.transactions) {
@@ -397,14 +406,25 @@ export class ConnectorPersistenceService {
           },
         })
         .returning({ id: financialTransactions.id });
-      written += rows.length;
+
+      const row = rows.at(0);
+      if (row) {
+        persisted.push({
+          id: row.id,
+          providerId: transaction.providerId,
+          type: transaction.type,
+          description: transaction.description,
+          amount: String(transaction.amount),
+          metadata: transaction.metadata,
+        });
+      }
     }
 
-    return written;
+    return persisted;
   }
 
   private async persistHoldings(
-    db: ConnectorPersistenceDb,
+    db: DatabaseExecutor,
     input: PersistConnectorSyncResultInput,
   ): Promise<number> {
     let written = 0;
@@ -458,7 +478,7 @@ export class ConnectorPersistenceService {
   }
 
   private async persistBalanceSnapshots(
-    db: ConnectorPersistenceDb,
+    db: DatabaseExecutor,
     input: PersistConnectorSyncResultInput,
   ): Promise<number> {
     if (input.result.balanceSnapshots.length === 0) {
@@ -496,7 +516,7 @@ export class ConnectorPersistenceService {
   }
 
   private async persistPortfolioSnapshots(
-    db: ConnectorPersistenceDb,
+    db: DatabaseExecutor,
     input: PersistConnectorSyncResultInput,
   ): Promise<number> {
     if (input.result.portfolioSnapshots.length === 0) {
@@ -535,7 +555,7 @@ export class ConnectorPersistenceService {
   }
 
   private async persistCursors(
-    db: ConnectorPersistenceDb,
+    db: DatabaseExecutor,
     input: PersistConnectorSyncResultInput,
     now: Date,
   ): Promise<number> {

@@ -7,11 +7,13 @@ import type { SavedTransaction } from "@spark/orpc/contract";
 
 const listAccounts = vi.hoisted(() => vi.fn());
 const listTransactions = vi.hoisted(() => vi.fn());
+const listCategories = vi.hoisted(() => vi.fn());
 
 vi.mock("@spark/orpc", () => ({
   orpc: {
     accounts: { list: { call: listAccounts } },
     transactions: { list: { call: listTransactions } },
+    categories: { list: { call: listCategories } },
   },
 }));
 
@@ -43,6 +45,9 @@ function makeTransaction(overrides: Partial<SavedTransaction> = {}): SavedTransa
     merchantName: null,
     runningBalance: null,
     meta: null,
+    category: "SHOPPING",
+    categorySource: "PROVIDER_DEFAULT",
+    merchant: null,
     updatedAt: "2026-06-29T10:00:00.000Z",
     ...overrides,
   };
@@ -62,6 +67,7 @@ function renderTransactions() {
 describe("transactions route", () => {
   it("renders the transactions returned by the API", async () => {
     listAccounts.mockResolvedValue({ accounts: [] });
+    listCategories.mockResolvedValue({ categories: [] });
     listTransactions.mockResolvedValue({
       transactions: [makeTransaction()],
       nextCursor: null,
@@ -74,8 +80,23 @@ describe("transactions route", () => {
     expect(await screen.findByText("Coffee Shop")).toBeDefined();
   });
 
+  it("marks manually categorized transactions so users know rules won't change them", async () => {
+    listAccounts.mockResolvedValue({ accounts: [] });
+    listCategories.mockResolvedValue({ categories: [] });
+    listTransactions.mockResolvedValue({
+      transactions: [makeTransaction({ categorySource: "USER_OVERRIDE" })],
+      nextCursor: null,
+      hasMore: false,
+    });
+
+    renderTransactions();
+
+    expect(await screen.findByText("Manual")).toBeDefined();
+  });
+
   it("requests the first page with the route's page size", async () => {
     listAccounts.mockResolvedValue({ accounts: [] });
+    listCategories.mockResolvedValue({ categories: [] });
     listTransactions.mockResolvedValue({ transactions: [], nextCursor: null, hasMore: false });
 
     renderTransactions();

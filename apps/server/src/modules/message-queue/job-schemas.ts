@@ -30,6 +30,10 @@ export const ConnectorSyncJobDataSchema = z.strictObject({
   requestedAt: z.iso.datetime().optional(),
 });
 
+export const EnrichmentReapplyJobDataSchema = z.strictObject({
+  userId: z.string().min(1),
+});
+
 // Cron-triggered jobs are enqueued with `{}` (message-queue.explorer.ts) and
 // their handlers take no arguments; any payload content indicates a stale or
 // tampered job, so reject it.
@@ -40,6 +44,7 @@ export const JOB_SCHEMAS = {
   [Jobs.InitialSync]: InitialSyncJobDataSchema,
   [Jobs.ConnectorSync]: ConnectorSyncJobDataSchema,
   [Jobs.ConsentExpiring]: ConsentExpiringEventSchema,
+  [Jobs.EnrichmentReapply]: EnrichmentReapplyJobDataSchema,
   [Jobs.ConsentLifecycleCheck]: EmptyJobDataSchema,
   [Jobs.OauthStateCleanup]: EmptyJobDataSchema,
   [Jobs.PeriodicSync]: EmptyJobDataSchema,

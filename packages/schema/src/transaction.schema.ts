@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { CategoryIdSchema, CategorySourceSchema, MerchantRefSchema } from "./enrichment.schema.ts";
 import {
   CurrencySchema,
   RunningBalanceSchema,
@@ -24,6 +25,12 @@ export const SavedTransactionSchema = z
     merchantName: z.string().nullable(),
     runningBalance: RunningBalanceSchema.nullable(),
     meta: TransactionMetaSchema.nullable(),
+    // Derived enrichment layer (never provider data): canonical spending
+    // category (built-in value or custom category id), where it came from,
+    // and the resolved normalized merchant.
+    category: CategoryIdSchema,
+    categorySource: CategorySourceSchema,
+    merchant: MerchantRefSchema.nullable(),
     updatedAt: z.iso.datetime(),
   })
   .meta({ id: "SavedTransaction" });
@@ -33,22 +40,21 @@ export type SavedTransaction = z.infer<typeof SavedTransactionSchema>;
 export const CreateTransactionSchema = SavedTransactionSchema.omit({
   id: true,
   updatedAt: true,
+  // Enrichment is derived, never written alongside provider data.
+  category: true,
+  categorySource: true,
+  merchant: true,
 }).meta({ id: "CreateTransaction" });
 
 export type CreateTransaction = z.infer<typeof CreateTransactionSchema>;
-
-export const UpdateTransactionSchema = CreateTransactionSchema.partial()
-  .extend({ id: z.uuid() })
-  .meta({ id: "UpdateTransaction" });
-
-export type UpdateTransaction = z.infer<typeof UpdateTransactionSchema>;
 
 export const ListTransactionsInputSchema = z
   .object({
     limit: z.coerce.number().pipe(z.int().min(1).max(100)).optional(),
     cursor: z.string().optional(),
     accountId: z.string().optional(),
-    category: TransactionCategorySchema.optional(),
+    /** Filters on the derived canonical category (built-in or custom id). */
+    category: CategoryIdSchema.optional(),
     search: z.string().trim().min(1).max(100).optional(),
     from: z.iso.datetime().optional(),
     to: z.iso.datetime().optional(),
@@ -80,7 +86,10 @@ export type MonthlySummaryInput = z.infer<typeof MonthlySummaryInputSchema>;
 
 export const CategorySpendSchema = z
   .object({
-    /** Category label as stored on the rollup (provider category or UNKNOWN). */
+    /**
+     * Enriched category reference: a built-in spending category value or a
+     * custom category id (OTHER for rows not yet enriched).
+     */
     category: z.string(),
     /** Decimal string: SQL numeric sum of the month's DEBIT amounts. */
     total: z.string(),

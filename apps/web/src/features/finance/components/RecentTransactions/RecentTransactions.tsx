@@ -3,7 +3,7 @@ import { ArrowRight } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
-import { categoryConfig } from "@spark/common";
+import { useCategories } from "@/features/finance/hooks/useCategories";
 import type { SavedTransaction } from "@spark/orpc/contract";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -13,6 +13,7 @@ interface RecentTransactionsProps {
 }
 
 export function RecentTransactions({ transactions }: RecentTransactionsProps) {
+  const { resolve } = useCategories();
   const recentTransactions = transactions.slice(0, 5);
 
   return (
@@ -45,16 +46,16 @@ export function RecentTransactions({ transactions }: RecentTransactionsProps) {
                 <div className="flex items-center gap-3">
                   <div
                     className="size-2 rounded-none"
-                    style={{
-                      backgroundColor: categoryConfig[transaction.transactionCategory].color,
-                    }}
+                    style={{ backgroundColor: resolve(transaction.category).color }}
                   />
                   <div>
                     <p className="text-sm font-medium">
-                      {transaction.merchantName ?? transaction.description}
+                      {transaction.merchant?.displayName ??
+                        transaction.merchantName ??
+                        transaction.description}
                     </p>
                     <p className="text-muted-foreground text-xs">
-                      {categoryConfig[transaction.transactionCategory].label} •{" "}
+                      {resolve(transaction.category).label} •{" "}
                       {new Date(transaction.timestamp).toLocaleDateString()}
                     </p>
                   </div>

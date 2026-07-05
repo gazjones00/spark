@@ -7,7 +7,6 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { categoryConfig } from "@spark/common";
 import { type SpendingByCategory } from "@/features/finance/lib/dashboard-derivations";
 import { formatCurrency } from "@/lib/utils";
 
@@ -18,9 +17,11 @@ interface SpendingChartProps {
 }
 
 export function SpendingChart({ data, currency }: SpendingChartProps) {
+  // Slices arrive already resolved (label + colour), including custom
+  // categories the built-in config knows nothing about.
   const chartConfig = data.reduce((acc, item) => {
     acc[item.category] = {
-      label: categoryConfig[item.category].label,
+      label: item.label,
       color: item.fill,
     };
     return acc;
@@ -41,7 +42,7 @@ export function SpendingChart({ data, currency }: SpendingChartProps) {
                 <ChartTooltipContent
                   formatter={(value, name) => [
                     formatCurrency(Number(value), currency),
-                    categoryConfig[name as keyof typeof categoryConfig]?.label || name,
+                    chartConfig[name as string]?.label ?? name,
                   ]}
                 />
               }
@@ -67,7 +68,7 @@ export function SpendingChart({ data, currency }: SpendingChartProps) {
             <div key={item.category} className="flex items-center gap-2">
               <div className="size-2.5" style={{ backgroundColor: item.fill }} />
               <span className="text-muted-foreground font-mono text-[10px] font-medium uppercase tracking-[0.1em]">
-                {categoryConfig[item.category].label}
+                {item.label}
               </span>
             </div>
           ))}
