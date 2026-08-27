@@ -1,10 +1,10 @@
-import { BadRequestException, Controller, Get, Query, Res } from "@nestjs/common";
+import { Controller, Get, Query, Res } from "@nestjs/common";
 import { Throttle } from "@nestjs/throttler";
 import { Implement, implement } from "@orpc/nest";
 import { AllowAnonymous, Session, type UserSession } from "@thallesp/nestjs-better-auth";
 import { contract } from "@spark/orpc/contract";
 import type { Response } from "express";
-import { TruelayerCallbackQuerySchema } from "@spark/schema";
+import { TruelayerCallbackErrorQuerySchema, TruelayerCallbackQuerySchema } from "@spark/schema";
 import { InvalidOauthStateError, TruelayerService } from "./truelayer.service";
 
 @Controller()
@@ -14,23 +14,28 @@ export class TruelayerController {
   /**
    * The one deliberate non-oRPC HTTP edge: oRPC cannot serve a 302 redirect.
    * Public (@AllowAnonymous) and internet-facing, so it carries a stricter
-   * rate limit than the global default, and validates its input with a
-   * single explicit Zod parse — oRPC `.input()` schemas are the contract
-   * boundary everywhere else.
+   * rate limit than the global default, and validates its input with explicit
+   * Zod parses — oRPC `.input()` schemas are the contract boundary everywhere
+   * else.
    */
   @Get("truelayer/callback")
   @AllowAnonymous()
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   callback(@Query() query: unknown, @Res() res: Response) {
-    const parsed = TruelayerCallbackQuerySchema.safeParse(query);
-    if (!parsed.success) {
-      throw new BadRequestException("Invalid callback parameters");
+    const granted = TruelayerCallbackQuerySchema.safeParse(query);
+    if (granted.success) {
+      return res.redirect(
+        this.truelayerService.buildCallbackRedirectUrl(granted.data.code, granted.data.state),
+      );
     }
-    const redirectUrl = this.truelayerService.buildCallbackRedirectUrl(
-      parsed.data.code,
-      parsed.data.state,
+    // No usable `code` (cancelled, refused, or a bare redirect): send the
+    // error back to the web app rather than raw JSON on the API origin.
+    const failed = TruelayerCallbackErrorQuerySchema.safeParse(query);
+    return res.redirect(
+      this.truelayerService.buildCallbackErrorRedirectUrl(
+        failed.success ? failed.data.error : undefined,
+      ),
     );
-    return res.redirect(redirectUrl);
   }
 
   @Implement(contract.truelayer.generateAuthLink)

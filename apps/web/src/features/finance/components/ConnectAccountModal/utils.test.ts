@@ -1,6 +1,6 @@
 import { ORPCError } from "@orpc/client";
 import { describe, expect, it } from "vitest";
-import { describeConnectError } from "./utils";
+import { describeCallbackError, describeConnectError } from "./utils";
 
 describe("describeConnectError", () => {
   it("branches structurally on a defined NEEDS_REAUTH error", () => {
@@ -47,5 +47,28 @@ describe("describeConnectError", () => {
   it("does not treat a plain Error with a matching message as defined", () => {
     const described = describeConnectError(new Error("NEEDS_REAUTH"));
     expect(described.recoverable).toBe(false);
+  });
+});
+
+describe("describeCallbackError", () => {
+  it("frames a cancelled consent as a cancellation rather than a failure", () => {
+    const described = describeCallbackError("access_denied");
+    expect(described.title).toBe("Connection Cancelled");
+    expect(described.recoverable).toBe(true);
+    expect(described.message).toContain("No accounts were connected");
+  });
+
+  it("maps a provider outage to a try-again-later message", () => {
+    const described = describeCallbackError("temporarily_unavailable");
+    expect(described.recoverable).toBe(false);
+    expect(described.message).toContain("few minutes");
+  });
+
+  it("falls back to generic copy for the API's connection_failed and unknown codes", () => {
+    for (const code of ["connection_failed", "some_new_provider_code"]) {
+      const described = describeCallbackError(code);
+      expect(described.title).toBeUndefined();
+      expect(described.message).toBe("We couldn't complete the bank connection. Please try again.");
+    }
   });
 });

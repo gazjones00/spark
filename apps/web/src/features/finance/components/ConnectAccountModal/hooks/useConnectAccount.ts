@@ -3,7 +3,7 @@ import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { orpc } from "@spark/orpc";
 import type { Account } from "@spark/truelayer/types";
-import { describeConnectError } from "../utils";
+import { describeCallbackError, describeConnectError, type ConnectErrorDetail } from "../utils";
 
 export type Step = "start" | "loading" | "select-accounts" | "saving" | "success" | "error";
 
@@ -14,20 +14,21 @@ interface UseConnectAccountOptions {
 export function useConnectAccount(options?: UseConnectAccountOptions) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const search = useSearch({ strict: false }) as { code?: string; state?: string };
+  const search = useSearch({ strict: false }) as {
+    code?: string;
+    state?: string;
+    error?: string;
+  };
 
   const [open, setOpen] = React.useState(false);
   const [step, setStep] = React.useState<Step>("start");
   const [accounts, setAccounts] = React.useState<Account[]>([]);
   const [selectedAccountIds, setSelectedAccountIds] = React.useState<Set<string>>(new Set());
   const [oauthState, setOauthState] = React.useState<string | null>(null);
-  const [errorMessage, setErrorMessage] = React.useState("");
-  const [errorRecoverable, setErrorRecoverable] = React.useState(false);
+  const [error, setError] = React.useState<ConnectErrorDetail | null>(null);
 
-  const handleMutationError = React.useCallback((error: unknown) => {
-    const described = describeConnectError(error);
-    setErrorMessage(described.message);
-    setErrorRecoverable(described.recoverable);
+  const handleMutationError = React.useCallback((failure: unknown) => {
+    setError(describeConnectError(failure));
     setStep("error");
   }, []);
 
@@ -67,20 +68,33 @@ export function useConnectAccount(options?: UseConnectAccountOptions) {
   });
 
   React.useEffect(() => {
-    if (search.code && search.state && !open) {
+    if (open) return;
+
+    const showError = (detail: ConnectErrorDetail) => {
+      setOpen(true);
+      setError(detail);
+      setStep("error");
+    };
+
+    if (search.error) {
+      // The consent journey ended without a code — usually a user cancel.
+      showError(describeCallbackError(search.error));
+    } else if (search.code && search.state) {
       setOpen(true);
       setStep("loading");
       exchangeCodeMutation.mutate({ code: search.code, state: search.state });
-      navigate({ to: "/accounts/connect", search: {}, replace: true });
-    } else if (search.code && !search.state && !open) {
+    } else if (search.code) {
       // Missing state parameter - potential CSRF attack
-      setOpen(true);
-      setErrorMessage("Invalid authorization response: missing state parameter");
-      setErrorRecoverable(false);
-      setStep("error");
-      navigate({ to: "/accounts/connect", search: {}, replace: true });
+      showError({
+        message: "Invalid authorization response: missing state parameter",
+        recoverable: false,
+      });
+    } else {
+      return;
     }
-  }, [search.code, search.state, open, navigate]);
+
+    navigate({ to: "/accounts/connect", search: {}, replace: true });
+  }, [search.code, search.state, search.error, open, navigate]);
 
   const handleStartConnection = () => {
     setStep("loading");
@@ -122,8 +136,7 @@ export function useConnectAccount(options?: UseConnectAccountOptions) {
       setAccounts([]);
       setSelectedAccountIds(new Set());
       setOauthState(null);
-      setErrorMessage("");
-      setErrorRecoverable(false);
+      setError(null);
     }, 200);
   };
 
@@ -137,8 +150,7 @@ export function useConnectAccount(options?: UseConnectAccountOptions) {
     step,
     accounts,
     selectedAccountIds,
-    errorMessage,
-    errorRecoverable,
+    error,
     handleStartConnection,
     handleAccountToggle,
     handleSelectAll,

@@ -287,6 +287,19 @@ export const TruelayerCallbackQuerySchema = z
 
 export type TruelayerCallbackQuery = z.infer<typeof TruelayerCallbackQuerySchema>;
 
+/**
+ * A cancelled or refused consent: an OAuth `error` code and no `code`, or (on
+ * some abandon paths) nothing at all. The echoed `state` is unused — nothing
+ * was granted, so there is no exchange to bind it to.
+ */
+export const TruelayerCallbackErrorQuerySchema = z
+  .object({
+    error: z.string().min(1).optional(),
+  })
+  .meta({ id: "TruelayerCallbackErrorQuery" });
+
+export type TruelayerCallbackErrorQuery = z.infer<typeof TruelayerCallbackErrorQuerySchema>;
+
 export const TrueLayerTokenResponseSchema = z
   .object({
     access_token: z.string(),

@@ -1,4 +1,3 @@
-import { BadRequestException } from "@nestjs/common";
 import { call } from "@orpc/server";
 import type { UserSession } from "@thallesp/nestjs-better-auth";
 import { AuthLinkResponseSchema, SaveAccountsResponseSchema } from "@spark/schema";
@@ -20,6 +19,9 @@ function createController(overrides: Partial<Record<keyof TruelayerService, unkn
     buildCallbackRedirectUrl: vi.fn(
       (code: string, state: string) =>
         `https://app.test/accounts/connect?code=${code}&state=${state}`,
+    ),
+    buildCallbackErrorRedirectUrl: vi.fn(
+      (error?: string) => `https://app.test/accounts/connect?error=${error ?? "connection_failed"}`,
     ),
     ...overrides,
   };
@@ -105,11 +107,37 @@ describe("TruelayerController.callback (the one non-oRPC edge)", () => {
     );
   });
 
-  it("rejects malformed callback queries with a 400 and never redirects", () => {
-    const { controller } = createController();
+  it("redirects a cancelled consent back to the web app carrying the error code", () => {
+    const { controller, service } = createController();
     const res = { redirect: vi.fn() } as unknown as Response;
 
-    expect(() => controller.callback({ unexpected: "junk" }, res)).toThrow(BadRequestException);
-    expect(res.redirect).not.toHaveBeenCalled();
+    controller.callback({ error: "access_denied", state: STATE }, res);
+
+    expect(service.buildCallbackErrorRedirectUrl).toHaveBeenCalledWith("access_denied");
+    expect(service.buildCallbackRedirectUrl).not.toHaveBeenCalled();
+    expect(res.redirect).toHaveBeenCalledWith(
+      "https://app.test/accounts/connect?error=access_denied",
+    );
+  });
+
+  it("redirects a codeless or malformed callback without an error code", () => {
+    const { controller, service } = createController();
+    const res = { redirect: vi.fn() } as unknown as Response;
+
+    controller.callback({ unexpected: "junk" }, res);
+
+    expect(service.buildCallbackErrorRedirectUrl).toHaveBeenCalledWith(undefined);
+    expect(res.redirect).toHaveBeenCalledWith(
+      "https://app.test/accounts/connect?error=connection_failed",
+    );
+  });
+
+  it("keeps the error code even when the echoed state is unusable", () => {
+    const { controller, service } = createController();
+    const res = { redirect: vi.fn() } as unknown as Response;
+
+    controller.callback({ error: "access_denied", state: "forged" }, res);
+
+    expect(service.buildCallbackErrorRedirectUrl).toHaveBeenCalledWith("access_denied");
   });
 });
