@@ -6,6 +6,7 @@ export {
 } from "./consent-lifecycle.config";
 export { ConnectorConnectionService } from "./connector-connection.service";
 export type {
+  ConnectorConnectionAccounts,
   ConnectorConnectionSummary,
   CreateConnectorConnectionInput,
 } from "./connector-connection.service";
