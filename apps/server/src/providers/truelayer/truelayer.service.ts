@@ -17,6 +17,12 @@ import { CryptoService } from "../../modules/crypto";
 
 const STATE_EXPIRY_MINUTES = 10;
 
+// TrueLayer's error codes are lowercase OAuth slugs; anything else (provider
+// free text, injected junk) collapses to the fallback rather than being
+// reflected into a redirect URL.
+const CALLBACK_ERROR_CODE_PATTERN = /^[a-z][a-z0-9_]{0,63}$/;
+const CALLBACK_ERROR_FALLBACK = "connection_failed";
+
 /**
  * The OAuth state row is missing, expired, or tokenless. User-recoverable by
  * restarting the connect flow; mapped to the INVALID_OAUTH_STATE typed error
@@ -55,12 +61,30 @@ export class TruelayerService {
   ) {}
 
   buildCallbackRedirectUrl(code: string, state?: string): string {
-    const frontendUrl = new URL("/accounts/connect", env.CORS_ORIGIN);
+    const frontendUrl = this.connectPageUrl();
     frontendUrl.searchParams.set("code", code);
     if (state) {
       frontendUrl.searchParams.set("state", state);
     }
     return frontendUrl.toString();
+  }
+
+  /**
+   * Where an abandoned or refused consent lands. The state row is left to
+   * expire on its own — nothing was granted, so there is no token to clean up.
+   */
+  buildCallbackErrorRedirectUrl(error?: string): string {
+    const frontendUrl = this.connectPageUrl();
+    const code = error?.toLowerCase();
+    frontendUrl.searchParams.set(
+      "error",
+      code && CALLBACK_ERROR_CODE_PATTERN.test(code) ? code : CALLBACK_ERROR_FALLBACK,
+    );
+    return frontendUrl.toString();
+  }
+
+  private connectPageUrl(): URL {
+    return new URL("/accounts/connect", env.CORS_ORIGIN);
   }
 
   async generateAuthLink(input: GenerateAuthLinkInput) {

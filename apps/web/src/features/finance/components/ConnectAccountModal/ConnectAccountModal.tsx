@@ -20,8 +20,7 @@ export function ConnectAccountModal({ trigger, onSuccess }: ConnectAccountModalP
     step,
     accounts,
     selectedAccountIds,
-    errorMessage,
-    errorRecoverable,
+    error,
     handleStartConnection,
     handleAccountToggle,
     handleSelectAll,
@@ -64,10 +63,12 @@ export function ConnectAccountModal({ trigger, onSuccess }: ConnectAccountModalP
           <SuccessStep count={selectedAccountIds.size} onClose={handleClose} />
         )}
 
-        {step === "error" && (
+        {step === "error" && error && (
           <ErrorStep
-            message={errorMessage}
-            recoverable={errorRecoverable}
+            message={error.message}
+            recoverable={error.recoverable}
+            title={error.title}
+            description={error.description}
             onClose={handleClose}
             onRetry={handleRetry}
           />

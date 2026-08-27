@@ -9,6 +9,8 @@ import { ConnectAccountModal } from "@/features/finance/components/ConnectAccoun
 const searchSchema = z.object({
   code: z.string().optional(),
   state: z.string().optional(),
+  /** Set when the API redirects a cancelled or refused consent back here. */
+  error: z.string().optional(),
 });
 
 export const Route = createFileRoute("/_authenticated/accounts_/connect")({
