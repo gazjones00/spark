@@ -10,6 +10,7 @@ import type {
   SaveAccountsInput as SaveAccountsPayload,
   SaveAccountsResponse,
 } from "@spark/schema";
+import { candidateAccountIds, resolveReconnectTarget } from "./reconnect-target";
 import { TruelayerClient } from "./truelayer.client";
 import { DATABASE_CONNECTION } from "../../modules/database";
 import { ConnectorConnectionService } from "../../modules/connectors";
@@ -209,11 +210,11 @@ export class TruelayerService {
     const accounts = oauthState.accounts ?? [];
     const accountsToSave = accounts.filter((account) => accountIds.includes(account.accountId));
 
-    // New connections land on the connector path (docs/adr/0001): the token
-    // record becomes the encrypted connector credential blob, the selected
-    // accounts become the connection's allow-list, and the connector
-    // scheduler owns syncing. No truelayer_* rows are written.
-    await this.connectorConnectionService.createOAuthConnection({
+    // Connections land on the connector path (docs/adr/0001): the token record
+    // becomes the encrypted connector credential blob, the selected accounts
+    // become the connection's allow-list, and the connector scheduler owns
+    // syncing. No truelayer_* rows are written.
+    const connectionInput = {
       userId,
       providerId: TRUELAYER_PROVIDER_ID,
       environment: env.TRUELAYER_ENV,
@@ -225,7 +226,25 @@ export class TruelayerService {
       metadata: {
         accountIds: accountsToSave.map((account) => account.accountId),
       },
-    });
+    };
+
+    // A reconnect comes back through this same path carrying nothing that ties
+    // it to the consent it replaces, so the granted accounts are what identify
+    // it. Matching on the full grant rather than the user's selection: a
+    // narrowed selection is still the same bank connection.
+    const reconnectTargetId = await this.findReconnectTarget(
+      userId,
+      accounts.map((account) => account.accountId),
+    );
+
+    if (reconnectTargetId === null) {
+      await this.connectorConnectionService.createOAuthConnection(connectionInput);
+    } else {
+      await this.connectorConnectionService.reconnectOAuthConnection({
+        ...connectionInput,
+        connectionId: reconnectTargetId,
+      });
+    }
 
     // Delete the oauth state row now that tokens have been used
     await this.db.delete(truelayerOauthStates).where(eq(truelayerOauthStates.state, state));
@@ -233,5 +252,30 @@ export class TruelayerService {
     return {
       savedCount: accountsToSave.length,
     };
+  }
+
+  /**
+   * The connection this grant re-authorises, or null when it is a new one.
+   * Scoped to the user's TrueLayer connections in the current environment;
+   * identity comes from the accounts each one covers.
+   */
+  private async findReconnectTarget(
+    userId: string,
+    grantedAccountIds: string[],
+  ): Promise<string | null> {
+    const connections = await this.connectorConnectionService.listConnectionAccounts(
+      userId,
+      TRUELAYER_PROVIDER_ID,
+      env.TRUELAYER_ENV,
+    );
+
+    return resolveReconnectTarget(
+      connections.map((connection) => ({
+        connectionId: connection.id,
+        accountIds: candidateAccountIds(connection.metadata, connection.accountExternalIds),
+        createdAt: connection.createdAt,
+      })),
+      grantedAccountIds,
+    );
   }
 }

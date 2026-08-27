@@ -14,14 +14,14 @@ import {
   type ConnectorConnectionOption,
   type ConnectorManifest,
 } from "@spark/connectors";
-import { and, eq, type Database } from "@spark/db";
-import { connectorConnections } from "@spark/db/schema";
+import { and, eq, inArray, type Database } from "@spark/db";
+import { connectorConnections, financialAccounts } from "@spark/db/schema";
 import type { SyncStatusType } from "@spark/common";
 import { CryptoService } from "../crypto";
 import { DATABASE_CONNECTION } from "../database";
 import { Jobs, MessageQueue } from "../message-queue";
 import type { MessageQueueService } from "../message-queue";
-import { consentExpiryFor } from "./consent-lifecycle.config";
+import { clearedSyncFailure, grantedConsent } from "./connection-state";
 import { ConnectorRegistryService } from "./connector-registry.service";
 import { ConnectorSyncService } from "./connector-sync.service";
 
@@ -51,6 +51,20 @@ export interface CreateOAuthConnectionInput {
   credentials: Record<string, string>;
   /** Server-derived metadata, e.g. the accountIds allow-list. */
   metadata?: Record<string, unknown>;
+}
+
+export interface ReconnectOAuthConnectionInput extends CreateOAuthConnectionInput {
+  /** The connection whose lapsed consent this grant renews. */
+  connectionId: string;
+}
+
+/** A connection paired with the accounts it is known to cover. */
+export interface ConnectorConnectionAccounts {
+  id: string;
+  metadata: Record<string, unknown>;
+  createdAt: Date;
+  /** externalIds of the accounts this connection has synced. */
+  accountExternalIds: string[];
 }
 
 export interface ConnectorConnectionSummary {
@@ -99,16 +113,7 @@ export class ConnectorConnectionService {
   async createOAuthConnection(
     input: CreateOAuthConnectionInput,
   ): Promise<ConnectorConnectionSummary> {
-    const connector = this.registry.get(input.providerId);
-    if (!connector) {
-      throw new NotFoundException(`Connector provider not found: ${input.providerId}`);
-    }
-    const manifest = connector.manifest;
-    if (manifest.auth.type !== ConnectorAuthType.OAuth2) {
-      throw new BadRequestException(`Provider ${manifest.id} does not use OAuth2 credentials.`);
-    }
-    this.assertEnvironment(manifest.environments, input.environment);
-
+    const manifest = this.resolveOAuthManifest(input.providerId, input.environment);
     const metadata = input.metadata ?? {};
     await this.verifyConnection(
       { ...input, connectionOptions: undefined },
@@ -123,6 +128,85 @@ export class ConnectorConnectionService {
       metadata,
       input.credentials,
     );
+  }
+
+  /**
+   * Rotates a re-authorised OAuth grant onto the connection it renews rather
+   * than inserting a second one. The row keeps its id, so the accounts,
+   * transactions and enrichment hanging off it survive the reconnect; a fresh
+   * row would strand them behind a dead connection and surface the same bank
+   * account twice. Everything the lapsed consent stamped — credentials,
+   * allow-list, failure counters, consent clock — is replaced by this grant's.
+   */
+  async reconnectOAuthConnection(
+    input: ReconnectOAuthConnectionInput,
+  ): Promise<ConnectorConnectionSummary> {
+    const manifest = this.resolveOAuthManifest(input.providerId, input.environment);
+    const metadata = input.metadata ?? {};
+    await this.verifyConnection(
+      { ...input, connectionOptions: undefined },
+      manifest,
+      metadata,
+      input.credentials,
+    );
+
+    const keyId = this.cryptoService.getCurrentKeyId();
+    const encryptedCredentials = await this.cryptoService.encryptToString(
+      JSON.stringify(input.credentials),
+      keyId,
+    );
+    const now = new Date();
+
+    const [row] = await this.db
+      .update(connectorConnections)
+      .set({
+        encryptedCredentials,
+        credentialKeyId: keyId,
+        capabilities: [...manifest.capabilities],
+        metadata,
+        // A reconnected connection is healthy until its own next sync says
+        // otherwise: the errors on the row belong to the consent just replaced.
+        ...clearedSyncFailure(),
+        ...grantedConsent(manifest.id, now),
+        nextSyncAt: addMinutes(now, INITIAL_SYNC_RESERVATION_MINUTES),
+        updatedAt: now,
+      })
+      .where(
+        and(
+          eq(connectorConnections.id, input.connectionId),
+          eq(connectorConnections.userId, input.userId),
+        ),
+      )
+      .returning();
+
+    if (!row) {
+      throw new NotFoundException("Connector connection not found.");
+    }
+
+    // Distinct job id per reconnect: the connect-time `:initial` id is likely
+    // still held by that run's completed job, which BullMQ would dedupe
+    // against, leaving the reconnected connection waiting for a periodic tick.
+    await this.enqueueSync(
+      row.id,
+      row.userId,
+      now,
+      `connector:${row.id}:reconnect:${now.getTime()}`,
+    );
+
+    return this.toSummary(row);
+  }
+
+  private resolveOAuthManifest(providerId: string, environment: string): ConnectorManifest {
+    const connector = this.registry.get(providerId);
+    if (!connector) {
+      throw new NotFoundException(`Connector provider not found: ${providerId}`);
+    }
+    const manifest = connector.manifest;
+    if (manifest.auth.type !== ConnectorAuthType.OAuth2) {
+      throw new BadRequestException(`Provider ${manifest.id} does not use OAuth2 credentials.`);
+    }
+    this.assertEnvironment(manifest.environments, environment);
+    return manifest;
   }
 
   private async insertConnection(
@@ -153,11 +237,8 @@ export class ConnectorConnectionService {
         capabilities: [...manifest.capabilities],
         metadata,
         nextSyncAt: addMinutes(now, INITIAL_SYNC_RESERVATION_MINUTES),
-        // A reconnect creates a fresh connection row, so a surviving row's
-        // consent columns are always from its own grant; the warning stamp
-        // starts clear. Null expiry (unknown lifetime) is never flagged.
-        consentGrantedAt: now,
-        consentExpiresAt: consentExpiryFor(manifest.id, now),
+        // Null expiry (an unknown consent lifetime) is never flagged.
+        ...grantedConsent(manifest.id, now),
         createdAt: now,
         updatedAt: now,
       })
@@ -169,7 +250,7 @@ export class ConnectorConnectionService {
       );
     }
 
-    await this.enqueueInitialSync(row.id, row.userId, now);
+    await this.enqueueSync(row.id, row.userId, now, `connector:${row.id}:initial`);
 
     return this.toSummary(row);
   }
@@ -186,6 +267,68 @@ export class ConnectorConnectionService {
       .where(eq(connectorConnections.userId, userId))
       .orderBy(connectorConnections.createdAt);
     return rows.map((row) => this.toSummary(row));
+  }
+
+  /**
+   * The user's connections for one provider and environment, each with the
+   * accounts it covers — the allow-list it was created with plus the accounts
+   * it has actually synced. Callers use it to decide whether an incoming grant
+   * re-authorises a connection they already hold; the tables live here, so the
+   * query does too.
+   */
+  async listConnectionAccounts(
+    userId: string,
+    providerId: string,
+    environment: string,
+  ): Promise<ConnectorConnectionAccounts[]> {
+    const connections = await this.db
+      .select({
+        id: connectorConnections.id,
+        metadata: connectorConnections.metadata,
+        createdAt: connectorConnections.createdAt,
+      })
+      .from(connectorConnections)
+      .where(
+        and(
+          eq(connectorConnections.userId, userId),
+          eq(connectorConnections.providerId, providerId),
+          eq(connectorConnections.environment, environment),
+        ),
+      );
+
+    if (connections.length === 0) {
+      return [];
+    }
+
+    const accountRows = await this.db
+      .select({
+        connectionId: financialAccounts.connectionId,
+        externalId: financialAccounts.externalId,
+      })
+      .from(financialAccounts)
+      .where(
+        inArray(
+          financialAccounts.connectionId,
+          connections.map((connection) => connection.id),
+        ),
+      );
+
+    const externalIdsByConnection = new Map<string, string[]>();
+    for (const row of accountRows) {
+      const externalIds = externalIdsByConnection.get(row.connectionId);
+      if (externalIds) {
+        externalIds.push(row.externalId);
+      } else {
+        externalIdsByConnection.set(row.connectionId, [row.externalId]);
+      }
+    }
+
+    return connections.map((connection) => ({
+      id: connection.id,
+      metadata: connection.metadata,
+      createdAt: connection.createdAt,
+      accountExternalIds: externalIdsByConnection.get(connection.id) ?? [],
+    }));
   }
 
   async deleteConnection(userId: string, connectionId: string): Promise<void> {
@@ -408,10 +551,11 @@ export class ConnectorConnectionService {
     };
   }
 
-  private async enqueueInitialSync(
+  private async enqueueSync(
     connectionId: string,
     userId: string,
     requestedAt: Date,
+    jobId: string,
   ): Promise<void> {
     try {
       await this.queue.add(
@@ -422,7 +566,7 @@ export class ConnectorConnectionService {
           requestedAt: requestedAt.toISOString(),
         },
         {
-          jobId: `connector:${connectionId}:initial`,
+          jobId,
           attempts: 3,
           backoff: {
             type: "exponential",
@@ -434,7 +578,7 @@ export class ConnectorConnectionService {
       );
     } catch (error) {
       this.logger.warn(
-        `Failed to enqueue initial connector sync for connection ${connectionId}: ${
+        `Failed to enqueue connector sync for connection ${connectionId}: ${
           error instanceof Error ? error.message : String(error)
         }`,
       );
