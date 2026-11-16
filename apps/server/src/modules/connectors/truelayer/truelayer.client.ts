@@ -14,17 +14,17 @@ import {
   type GetBalanceOptions,
   type Balance,
   type RevokeAccessOptions,
+  type TrueLayerConfig,
 } from "@spark/truelayer/server";
-import { TRUELAYER_MODULE_OPTIONS } from "./truelayer.constants";
-import type { TruelayerModuleOptions } from "./truelayer.interfaces";
+import { TRUELAYER_CONFIG } from "./truelayer.config";
 
 @Injectable()
 export class TruelayerClient implements TrueLayerClient {
   private readonly client: TrueLayerClient;
 
   constructor(
-    @Inject(TRUELAYER_MODULE_OPTIONS)
-    private readonly options: TruelayerModuleOptions,
+    @Inject(TRUELAYER_CONFIG)
+    private readonly options: TrueLayerConfig,
   ) {
     this.client = createTrueLayerClient(options);
   }

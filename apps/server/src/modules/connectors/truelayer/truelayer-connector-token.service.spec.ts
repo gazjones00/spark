@@ -1,7 +1,7 @@
 import { ConnectorAuthError, ConnectorError, type ConnectorSyncContext } from "@spark/connectors";
 import { TrueLayerAuthError, type TokenResponse } from "@spark/truelayer/server";
 import { describe, expect, it, vi } from "vitest";
-import type { CryptoService } from "../../modules/crypto";
+import type { CryptoService } from "../../crypto";
 import type { TruelayerClient } from "./truelayer.client";
 import {
   TruelayerConnectorTokenService,

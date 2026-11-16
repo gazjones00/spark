@@ -4,7 +4,7 @@ import {
   truelayerAccountIdFromExternalId,
 } from "@spark/connectors";
 import type { TrueLayerAccount } from "@spark/schema";
-import type { AccountMove } from "../../modules/connectors";
+import type { AccountMove } from "../account-relocation";
 
 /** An account an existing connection is known to cover. */
 export interface KnownAccount {
