@@ -8,8 +8,8 @@ import {
 import { eq, sql, type Database } from "@spark/db";
 import { connectorConnections } from "@spark/db/schema";
 import { TrueLayerAuthError, type TokenResponse } from "@spark/truelayer/server";
-import { CryptoService } from "../../modules/crypto";
-import { DATABASE_CONNECTION } from "../../modules/database";
+import { CryptoService } from "../../crypto";
+import { DATABASE_CONNECTION } from "../../database";
 import { TruelayerClient } from "./truelayer.client";
 
 /** Refresh slightly before expiry so a token never dies mid-sync. */

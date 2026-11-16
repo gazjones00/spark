@@ -19,8 +19,6 @@ import { DatabaseModule } from "./modules/database";
 import { createBullMQDriver, MessageQueueModule } from "./modules/message-queue";
 import { rootLogger } from "./observability/logging.config";
 import { reportError } from "./observability/sentry";
-import { TruelayerModule } from "./providers/truelayer";
-import { TruelayerController } from "./providers/truelayer/truelayer.controller";
 
 declare module "@orpc/nest" {
   interface ORPCGlobalContext {
@@ -53,13 +51,6 @@ declare module "@orpc/nest" {
     HealthModule,
     BullBoardModule.forRoot(),
     AuthModule.forRoot({ auth }),
-    TruelayerModule.forRoot({
-      environment: env.TRUELAYER_ENV,
-      clientId: env.TRUELAYER_CLIENT_ID,
-      clientSecret: env.TRUELAYER_CLIENT_SECRET,
-      redirectUri: env.TRUELAYER_REDIRECT_URI,
-      timeoutMs: env.PROVIDER_HTTP_TIMEOUT_MS,
-    }),
     ORPCModule.forRootAsync({
       useFactory: (request: Request) => ({
         interceptors: [
@@ -79,7 +70,6 @@ declare module "@orpc/nest" {
       inject: [REQUEST],
     }),
   ],
-  controllers: [TruelayerController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule {}

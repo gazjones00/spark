@@ -13,9 +13,9 @@ import type {
 } from "@spark/schema";
 import { knownAccounts, planReconnect, type ReconnectPlan } from "./reconnect-plan";
 import { TruelayerClient } from "./truelayer.client";
-import { DATABASE_CONNECTION } from "../../modules/database";
-import { ConnectorConnectionService } from "../../modules/connectors";
-import { CryptoService } from "../../modules/crypto";
+import { DATABASE_CONNECTION } from "../../database";
+import { ConnectorConnectionService } from "../connector-connection.service";
+import { CryptoService } from "../../crypto";
 
 const STATE_EXPIRY_MINUTES = 10;
 
