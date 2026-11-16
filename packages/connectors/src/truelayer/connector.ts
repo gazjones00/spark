@@ -182,8 +182,7 @@ export class TrueLayerConnector implements FinancialConnector {
   }
 
   /**
-   * Incremental window derived from the per-account cursor checkpoint,
-   * mirroring the bespoke TransactionSyncService.calculateFromDate semantics:
+   * Incremental window derived from the per-account cursor checkpoint:
    * no checkpoint → full historical window; stale checkpoint → capped at
    * MAX_SYNC_DAYS; fresh checkpoint → at least DEFAULT_SYNC_DAYS, with a
    * one-day overlap so boundary transactions are re-fetched (upserts dedupe).

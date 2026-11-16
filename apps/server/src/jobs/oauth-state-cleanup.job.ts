@@ -13,7 +13,7 @@ const MAX_BATCHES = 20;
  * to keep the sweeper clear of an in-flight flow racing the boundary.
  */
 const EXPIRY_BUFFER_MS = 60 * 60 * 1000;
-/** Distinct from the scheduler locks (4242001 legacy, 4242002 connector). */
+/** Distinct from the connector scheduler lock (4242002). */
 const SWEEPER_LOCK_KEY = 4242003;
 
 /**

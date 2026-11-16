@@ -13,7 +13,6 @@ export enum MessageQueue {
 }
 
 export enum Jobs {
-  AccountSync = "AccountSync",
   /** Outbound `consent.expiring` event for the notification channel. */
   ConsentExpiring = "ConsentExpiring",
   ConsentLifecycleCheck = "ConsentLifecycleCheck",
@@ -21,7 +20,5 @@ export enum Jobs {
   ConnectorSync = "ConnectorSync",
   /** Re-derives a user's transaction enrichment after a rule change. */
   EnrichmentReapply = "EnrichmentReapply",
-  InitialSync = "InitialSync",
   OauthStateCleanup = "OauthStateCleanup",
-  PeriodicSync = "PeriodicSync",
 }

@@ -1,17 +1,6 @@
 export { TruelayerModule } from "./truelayer.module";
 export { TruelayerClient } from "./truelayer.client";
-export {
-  TruelayerConnectionService,
-  ConnectionNotFoundError,
-  TokenExpiredError,
-  TokenRefreshError,
-} from "./truelayer.connection.service";
 export { TruelayerService } from "./truelayer.service";
-export {
-  TruelayerAccountStatusService,
-  type UpdateAccountStatusOptions,
-} from "./truelayer-account-status.service";
-export { syncStatusFromError } from "./sync-status-from-error";
 export { TruelayerController } from "./truelayer.controller";
 export { TRUELAYER_MODULE_OPTIONS, TRUELAYER_CLIENT } from "./truelayer.constants";
 export type {

@@ -18,23 +18,22 @@ describe("JOB_SCHEMAS", () => {
     }
   });
 
-  it("accepts a valid AccountSync payload", () => {
-    const result = JOB_SCHEMAS[Jobs.AccountSync].safeParse({
-      accountId: "acc-1",
+  it("accepts a valid ConnectorSync payload", () => {
+    const result = JOB_SCHEMAS[Jobs.ConnectorSync].safeParse({
       connectionId: "conn-1",
-      accountType: "SAVINGS",
+      userId: "user-1",
+      requestedAt: "2026-11-16T12:00:00.000Z",
     });
     expect(result.success).toBe(true);
   });
 
   it("rejects missing/undefined ids and stale shapes", () => {
-    expect(JOB_SCHEMAS[Jobs.AccountSync].safeParse({ accountId: undefined }).success).toBe(false);
+    expect(JOB_SCHEMAS[Jobs.ConnectorSync].safeParse({ connectionId: undefined }).success).toBe(
+      false,
+    );
+    expect(JOB_SCHEMAS[Jobs.ConnectorSync].safeParse({ connectionId: "" }).success).toBe(false);
     expect(
-      JOB_SCHEMAS[Jobs.AccountSync].safeParse({ accountId: "", connectionId: "" }).success,
-    ).toBe(false);
-    expect(
-      JOB_SCHEMAS[Jobs.AccountSync].safeParse({
-        accountId: "acc-1",
+      JOB_SCHEMAS[Jobs.ConnectorSync].safeParse({
         connectionId: "conn-1",
         legacyField: true,
       }).success,
@@ -51,8 +50,10 @@ describe("JOB_SCHEMAS", () => {
   });
 
   it("accepts the empty cron payload and rejects payloads with content", () => {
-    expect(JOB_SCHEMAS[Jobs.PeriodicSync].safeParse({}).success).toBe(true);
-    expect(JOB_SCHEMAS[Jobs.PeriodicSync].safeParse({ smuggled: true }).success).toBe(false);
+    expect(JOB_SCHEMAS[Jobs.ConnectorPeriodicSync].safeParse({}).success).toBe(true);
+    expect(JOB_SCHEMAS[Jobs.ConnectorPeriodicSync].safeParse({ smuggled: true }).success).toBe(
+      false,
+    );
   });
 });
 
@@ -66,24 +67,24 @@ describe("MessageQueueExplorer.dispatch", () => {
     // irrelevant to this path.
     explorer = new MessageQueueExplorer(null as never, null as never, null as never, null as never);
     handler = vi.fn().mockResolvedValue(undefined);
-    handlers = new Map([[Jobs.AccountSync, handler]]);
+    handlers = new Map([[Jobs.ConnectorSync, handler]]);
   });
 
   it("runs the handler with the parsed payload when valid", async () => {
     await explorer.dispatch(handlers, {
       id: "job-1",
-      name: Jobs.AccountSync,
-      data: { accountId: "acc-1", connectionId: "conn-1" },
+      name: Jobs.ConnectorSync,
+      data: { connectionId: "conn-1", userId: "user-1" },
     });
-    expect(handler).toHaveBeenCalledWith({ accountId: "acc-1", connectionId: "conn-1" });
+    expect(handler).toHaveBeenCalledWith({ connectionId: "conn-1", userId: "user-1" });
   });
 
   it("throws UnrecoverableError (permanent, no retries) for invalid payloads", async () => {
     await expect(
       explorer.dispatch(handlers, {
         id: "job-2",
-        name: Jobs.AccountSync,
-        data: { accountId: undefined, connectionId: "conn-1" },
+        name: Jobs.ConnectorSync,
+        data: { connectionId: undefined, userId: "user-1" },
       }),
     ).rejects.toBeInstanceOf(UnrecoverableError);
     expect(handler).not.toHaveBeenCalled();
@@ -94,8 +95,8 @@ describe("MessageQueueExplorer.dispatch", () => {
     const error = await explorer
       .dispatch(handlers, {
         id: "job-3",
-        name: Jobs.AccountSync,
-        data: { accountId: "acc-1", connectionId: "conn-1" },
+        name: Jobs.ConnectorSync,
+        data: { connectionId: "conn-1" },
       })
       .catch((e: unknown) => e);
     expect(error).toBeInstanceOf(Error);
@@ -105,7 +106,7 @@ describe("MessageQueueExplorer.dispatch", () => {
 
   it("warns and returns for unknown job names", async () => {
     await expect(
-      explorer.dispatch(handlers, { id: "job-4", name: Jobs.ConnectorSync, data: {} }),
+      explorer.dispatch(handlers, { id: "job-4", name: Jobs.EnrichmentReapply, data: {} }),
     ).resolves.toBeUndefined();
   });
 });
@@ -113,12 +114,12 @@ describe("MessageQueueExplorer.dispatch", () => {
 describe("MessageQueueExplorer.explore", () => {
   @Processor(MessageQueue.DEFAULT)
   class TestProcessor {
-    @Process(Jobs.AccountSync)
-    async handleAccountSync(_data: unknown) {}
+    @Process(Jobs.ConnectorSync)
+    async handleConnectorSync(_data: unknown) {}
 
-    @Process(Jobs.PeriodicSync)
+    @Process(Jobs.ConnectorPeriodicSync)
     @Cron("*/5 * * * *")
-    async handlePeriodicSync(_data: unknown) {}
+    async handleConnectorPeriodicSync(_data: unknown) {}
   }
 
   function buildExplorer(instances: object[]) {
@@ -165,9 +166,9 @@ describe("MessageQueueExplorer.explore", () => {
 
     expect(queueService.addCron).toHaveBeenCalledTimes(1);
     expect(queueService.addCron).toHaveBeenCalledWith(
-      "periodic-sync",
+      "connector-periodic-sync",
       "*/5 * * * *",
-      Jobs.PeriodicSync,
+      Jobs.ConnectorPeriodicSync,
       {},
     );
   });
@@ -175,14 +176,14 @@ describe("MessageQueueExplorer.explore", () => {
   it("throws when two processors register the same job", async () => {
     @Processor(MessageQueue.DEFAULT)
     class DuplicateProcessor {
-      @Process(Jobs.AccountSync)
+      @Process(Jobs.ConnectorSync)
       async handle(_data: unknown) {}
     }
 
     const { explorer } = buildExplorer([new TestProcessor(), new DuplicateProcessor()]);
 
     await expect(explorer.explore()).rejects.toThrow(
-      `Duplicate job handler registered for "${Jobs.AccountSync}"`,
+      `Duplicate job handler registered for "${Jobs.ConnectorSync}"`,
     );
   });
 });
