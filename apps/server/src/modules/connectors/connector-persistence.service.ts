@@ -17,6 +17,7 @@ import {
 } from "@spark/db/schema";
 import { DATABASE_CONNECTION } from "../database";
 import { EnrichmentService, type EnrichableTransaction } from "../enrichment";
+import { clearedSyncFailure } from "./connection-state";
 import { DailyBalanceService } from "./daily-balance.service";
 
 const CONNECTOR_SYNC_INTERVAL_MINUTES = 5;
@@ -161,12 +162,9 @@ export class ConnectorPersistenceService {
         });
       }
       state = {
-        syncStatus: SyncStatus.OK,
+        ...clearedSyncFailure(),
         lastSyncedAt: now,
         nextSyncAt: addMinutes(now, CONNECTOR_SYNC_INTERVAL_MINUTES),
-        consecutiveFailures: 0,
-        lastSyncErrorCode: null,
-        lastSyncErrorMessage: null,
         updatedAt: now,
       };
     }
