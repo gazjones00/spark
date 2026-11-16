@@ -480,7 +480,14 @@ describe("ConnectorConnectionService", () => {
     mockSelectChains(db, [
       [makeConnectionRow({ id: "connection-2", providerId: TRUELAYER_PROVIDER_ID })],
     ]);
-    const updateChain = chainMock(makeConnectionRow({ providerId: TRUELAYER_PROVIDER_ID }));
+    const updateChain = Object.assign(
+      chainMock(makeConnectionRow({ providerId: TRUELAYER_PROVIDER_ID })),
+      { from: vi.fn().mockReturnThis(), innerJoin: vi.fn().mockReturnThis() },
+    );
+    // The target's rotation returns its row; the override hand-over finds none.
+    updateChain.returning
+      .mockResolvedValueOnce([makeConnectionRow({ providerId: TRUELAYER_PROVIDER_ID })])
+      .mockResolvedValue([]);
     db.update.mockReturnValue(updateChain);
     const deleteChain = { where: vi.fn().mockResolvedValue(undefined) };
     (db as unknown as { delete: ReturnType<typeof vi.fn> }).delete = vi.fn(() => deleteChain);
@@ -517,6 +524,8 @@ describe("ConnectorConnectionService", () => {
     expect(updateChain.set).toHaveBeenCalledWith(
       expect.objectContaining({ connectionId: "connection-1", resource: "transactions:acc-card" }),
     );
+    // Crossing connections, overrides on left-behind transactions are handed over.
+    expect(updateChain.innerJoin).toHaveBeenCalledOnce();
     expect(deleteChain.where).toHaveBeenCalledOnce();
     expect(revoke).toHaveBeenCalledWith(
       expect.objectContaining({

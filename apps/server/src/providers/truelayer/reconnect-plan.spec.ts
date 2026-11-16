@@ -299,6 +299,8 @@ describe("planReconnect", () => {
             fromExternalId: "truelayer:account:acc-old",
             toExternalId: "truelayer:account:acc-new",
             cursorResources: [{ from: "transactions:acc-old", to: "transactions:acc-new" }],
+            // The metadata mirror of the id moves with it.
+            accountMetadata: { truelayerAccountId: "acc-new" },
           },
         ],
         retiredConnectionIds: [],
@@ -356,6 +358,7 @@ describe("planReconnect", () => {
           cursorResources: [
             { from: "transactions:acc-savings-old", to: "transactions:acc-savings-new" },
           ],
+          accountMetadata: { truelayerAccountId: "acc-savings-new" },
         },
       ]);
       expect(plan?.retiredConnectionIds).toEqual(["conn-savings"]);
@@ -375,5 +378,87 @@ describe("planReconnect", () => {
 
       expect(plan?.accountMoves).toEqual([]);
     });
+
+    it("never lets an earlier bank-identifier match take a row a later account owns by id", () => {
+      // Two cards at one bank sharing a partial number; the first granted one
+      // is new, the second is the known card under its existing id.
+      const amexCard = (accountId: string) =>
+        granted(accountId, CARD, {
+          accountType: "CREDIT_CARD",
+          provider: { providerId: "ob-amex" },
+        });
+
+      const plan = planReconnect(
+        [connection("conn-1", OLDER, [synced("card-known", CARD, "CREDIT_CARD", "ob-amex")])],
+        [amexCard("card-new"), amexCard("card-known")],
+        ["card-new", "card-known"],
+      );
+
+      expect(plan?.accountMoves).toEqual([]);
+    });
+
+    it("treats a bank-identifier match that fits two known accounts as no match", () => {
+      const plan = planReconnect(
+        [
+          connection("conn-1", OLDER, [
+            synced("acc-current", CURRENT_ACCOUNT),
+            synced("card-a", CARD, "CREDIT_CARD", "ob-amex"),
+            synced("card-b", CARD, "CREDIT_CARD", "ob-amex"),
+          ]),
+        ],
+        [
+          granted("acc-current", CURRENT_ACCOUNT),
+          granted("card-new", CARD, {
+            accountType: "CREDIT_CARD",
+            provider: { providerId: "ob-amex" },
+          }),
+        ],
+        ["acc-current", "card-new"],
+      );
+
+      expect(plan?.accountMoves).toEqual([]);
+    });
+
+    it("treats a known account two granted accounts both resemble as no match", () => {
+      const amexCard = (accountId: string) =>
+        granted(accountId, CARD, {
+          accountType: "CREDIT_CARD",
+          provider: { providerId: "ob-amex" },
+        });
+
+      const plan = planReconnect(
+        [connection("conn-1", OLDER, [synced("card-old", CARD, "CREDIT_CARD", "ob-amex")])],
+        [amexCard("card-x"), amexCard("card-y")],
+        ["card-x", "card-y"],
+      );
+
+      expect(plan?.accountMoves).toEqual([]);
+    });
+  });
+
+  it("keeps a narrowed source's existing exclusions instead of re-enabling them", () => {
+    // conn-card still holds rows for acc-excluded, but its allow-list had
+    // already dropped it.
+    const plan = planReconnect(
+      [
+        connection("conn-current", OLDER, [synced("acc-current", CURRENT_ACCOUNT)]),
+        connection(
+          "conn-card",
+          NEWER,
+          [synced("acc-card", CARD, "CREDIT_CARD"), synced("acc-excluded", SAVINGS_ACCOUNT)],
+          { accountIds: ["acc-card"] },
+        ),
+      ],
+      [
+        granted("acc-current", CURRENT_ACCOUNT),
+        granted("acc-card", CARD, { accountType: "CREDIT_CARD" }),
+      ],
+      ["acc-current", "acc-card"],
+    );
+
+    expect(plan?.retiredConnectionIds).toEqual([]);
+    expect(plan?.narrowedConnections).toEqual([
+      { connectionId: "conn-card", metadata: { accountIds: [] } },
+    ]);
   });
 });

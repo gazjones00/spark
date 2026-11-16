@@ -1,4 +1,4 @@
-import { alias, and, eq, ne, notExists, type DatabaseExecutor } from "@spark/db";
+import { alias, and, eq, ne, notExists, sql, type DatabaseExecutor } from "@spark/db";
 import {
   accountDailyBalances,
   balanceSnapshots,
@@ -7,7 +7,10 @@ import {
   financialTransactions,
   holdings,
   portfolioSnapshots,
+  transactionCategoryOverrides,
+  transactionEnrichments,
 } from "@spark/db/schema";
+import { CategorySource } from "@spark/schema";
 
 /**
  * An account carried onto a reconnected connection. Either half may change:
@@ -22,6 +25,11 @@ export interface AccountMove {
   toExternalId: string;
   /** Sync cursors keyed to the account, renamed alongside it. */
   cursorResources?: ReadonlyArray<{ from: string; to: string }>;
+  /**
+   * Merged into the account row's metadata, for provider fields that mirror
+   * the external id and must change with it.
+   */
+  accountMetadata?: Record<string, unknown>;
 }
 
 /**
@@ -32,8 +40,10 @@ export interface AccountMove {
  * A row that would collide with one the target already holds stays where it
  * is: the target's copy is the same bank record, and a retired source's
  * leftovers are removed with it. That keeps a reconnect from failing on an
- * orphan a deleted account left behind. Raw provider records and sync-run
- * history are per-connection audit trails and are not moved.
+ * orphan a deleted account left behind. A user's category override on a
+ * left-behind transaction is handed to the target's copy unless that copy has
+ * its own, which wins. Raw provider records and sync-run history are
+ * per-connection audit trails and are not moved.
  */
 export async function relocateAccount(
   db: DatabaseExecutor,
@@ -49,7 +59,16 @@ export async function relocateAccount(
   const existingAccount = alias(financialAccounts, "existing_account");
   await db
     .update(financialAccounts)
-    .set({ connectionId: targetConnectionId, externalId: toExternalId, updatedAt: now })
+    .set({
+      connectionId: targetConnectionId,
+      externalId: toExternalId,
+      ...(move.accountMetadata
+        ? {
+            metadata: sql`${financialAccounts.metadata} || ${JSON.stringify(move.accountMetadata)}::jsonb`,
+          }
+        : {}),
+      updatedAt: now,
+    })
     .where(
       and(
         eq(financialAccounts.connectionId, fromConnectionId),
@@ -92,6 +111,9 @@ export async function relocateAccount(
           : undefined,
       ),
     );
+  if (crossesConnections) {
+    await handOverCategoryOverrides(db, targetConnectionId, move, now);
+  }
 
   const existingDay = alias(accountDailyBalances, "existing_day");
   await db
@@ -209,5 +231,63 @@ export async function relocateAccount(
           ),
         ),
       );
+  }
+}
+
+/**
+ * A transaction left behind on the source (because the target already holds
+ * the same bank record) would take the user's category override down with
+ * it when the source is retired. Re-point such overrides at the target's
+ * copy, then reflect them in its enrichment the way a fresh derivation
+ * would: the override wins, the derived merchant stays.
+ */
+async function handOverCategoryOverrides(
+  db: DatabaseExecutor,
+  targetConnectionId: string,
+  move: AccountMove,
+  now: Date,
+): Promise<void> {
+  const leftover = alias(financialTransactions, "leftover_transaction");
+  const counterpart = alias(financialTransactions, "counterpart_transaction");
+  const counterpartOverride = alias(transactionCategoryOverrides, "counterpart_override");
+
+  const handedOver = await db
+    .update(transactionCategoryOverrides)
+    .set({ transactionId: sql`${counterpart.id}`, updatedAt: now })
+    .from(leftover)
+    .innerJoin(
+      counterpart,
+      and(
+        eq(counterpart.connectionId, targetConnectionId),
+        eq(counterpart.externalId, leftover.externalId),
+      ),
+    )
+    .where(
+      and(
+        eq(transactionCategoryOverrides.transactionId, leftover.id),
+        eq(leftover.connectionId, move.fromConnectionId),
+        eq(leftover.accountExternalId, move.fromExternalId),
+        notExists(
+          db
+            .select({ id: counterpartOverride.id })
+            .from(counterpartOverride)
+            .where(eq(counterpartOverride.transactionId, counterpart.id)),
+        ),
+      ),
+    )
+    .returning({
+      transactionId: transactionCategoryOverrides.transactionId,
+      category: transactionCategoryOverrides.category,
+    });
+
+  for (const override of handedOver) {
+    await db
+      .update(transactionEnrichments)
+      .set({
+        category: override.category,
+        source: CategorySource.USER_OVERRIDE,
+        derivedAt: now,
+      })
+      .where(eq(transactionEnrichments.transactionId, override.transactionId));
   }
 }

@@ -63,10 +63,7 @@ export function knownAccounts(
     });
   }
 
-  const allowList = Array.isArray(connectionMetadata.accountIds)
-    ? connectionMetadata.accountIds.filter((id): id is string => typeof id === "string")
-    : [];
-  for (const accountId of allowList) {
+  for (const accountId of allowListOf(connectionMetadata) ?? []) {
     if (!known.has(accountId)) {
       known.set(accountId, { accountId, synced: false, identityKeys: [] });
     }
@@ -163,42 +160,56 @@ export function planReconnect(
     .slice(1)
     .map((entry) => entry.candidate)
     .sort(compareByAge);
+  const targetAccountIds = new Set(target.accounts.map((account) => account.accountId));
+  const matched = new Map<string, { connection: ReconnectCandidate; known: KnownAccount }>();
   const claimed = new Map<string, Set<string>>(
     candidates.map((candidate) => [candidate.connectionId, new Set<string>()]),
   );
-  const targetAccountIds = new Set(target.accounts.map((account) => account.accountId));
-  const accountMoves: AccountMove[] = [];
+  const claim = (connection: ReconnectCandidate, found: Map<string, KnownAccount>) => {
+    for (const [accountId, known] of found) {
+      matched.set(accountId, { connection, known });
+      claimed.get(connection.connectionId)?.add(known.accountId);
+    }
+  };
+  const unmatched = () => selected.filter((account) => !matched.has(account.accountId));
+  const available = (connection: ReconnectCandidate) =>
+    connection.accounts.filter(
+      (known) => !claimed.get(connection.connectionId)?.has(known.accountId),
+    );
 
+  // Tiered so that no account can take a row another account owns by id:
+  // every exact id on the target is claimed before any bank-identifier match
+  // there, and the target is settled before other connections are searched.
+  claim(target, matchById(available(target), unmatched()));
+  claim(target, matchByIdentity(available(target), unmatched()));
+  // An id the target already knows (under another identity) cannot take a
+  // second account's history, so those accounts are not looked for elsewhere.
+  const movable = () => unmatched().filter((account) => !targetAccountIds.has(account.accountId));
+  for (const other of others) {
+    claim(other, matchById(available(other), movable()));
+  }
+  for (const other of others) {
+    claim(other, matchByIdentity(available(other), movable()));
+  }
+
+  const accountMoves: AccountMove[] = [];
   for (const account of selected) {
-    const onTarget = findMatch(target, account, claimed);
-    if (onTarget) {
-      claimed.get(target.connectionId)?.add(onTarget.accountId);
-      // Re-issued id: carry the history over to it, unless the target already
-      // holds something under the new id.
-      if (
-        onTarget.synced &&
-        onTarget.accountId !== account.accountId &&
-        !targetAccountIds.has(account.accountId)
-      ) {
-        accountMoves.push(move(target.connectionId, onTarget.accountId, account.accountId));
-      }
+    const match = matched.get(account.accountId);
+    if (!match?.known.synced) {
       continue;
     }
-    // The target already knows this id under another identity; moving a
-    // second account onto it would collide, so leave the source alone.
-    if (targetAccountIds.has(account.accountId)) {
+    const onTarget = match.connection === target;
+    // On the target, only a re-issued id moves anything — and never onto an
+    // id the target already holds rows under.
+    if (
+      onTarget &&
+      (match.known.accountId === account.accountId || targetAccountIds.has(account.accountId))
+    ) {
       continue;
     }
-    for (const other of others) {
-      const onOther = findMatch(other, account, claimed);
-      if (onOther) {
-        claimed.get(other.connectionId)?.add(onOther.accountId);
-        if (onOther.synced) {
-          accountMoves.push(move(other.connectionId, onOther.accountId, account.accountId));
-        }
-        break;
-      }
-    }
+    accountMoves.push(
+      move(match.connection.connectionId, match.known.accountId, account.accountId),
+    );
   }
 
   const retiredConnectionIds: string[] = [];
@@ -208,19 +219,22 @@ export function planReconnect(
     if (!taken || taken.size === 0) {
       continue;
     }
-    const kept = other.accounts
-      .map((account) => account.accountId)
-      .filter((accountId) => !taken.has(accountId));
-    if (kept.length === 0) {
+    if (other.accounts.every((known) => taken.has(known.accountId))) {
       retiredConnectionIds.push(other.connectionId);
-    } else {
-      // Pinned even if it had no allow-list: an absent list means "sync
-      // everything", which would pull the moved accounts straight back.
-      narrowedConnections.push({
-        connectionId: other.connectionId,
-        metadata: { ...other.metadata, accountIds: kept },
-      });
+      continue;
     }
+    // An existing allow-list keeps its exclusions: the moved accounts leave
+    // it and nothing joins. Without one the connection synced everything,
+    // which would pull the moved accounts straight back, so it is pinned to
+    // the accounts it keeps.
+    const allowList = allowListOf(other.metadata);
+    const accountIds = (allowList ?? other.accounts.map((known) => known.accountId)).filter(
+      (accountId) => !taken.has(accountId),
+    );
+    narrowedConnections.push({
+      connectionId: other.connectionId,
+      metadata: { ...other.metadata, accountIds },
+    });
   }
 
   return {
@@ -236,25 +250,55 @@ function countMatched(candidate: ReconnectCandidate, accounts: readonly GrantedI
     .length;
 }
 
-/** An exact id match beats a bank-identifier match on the same connection. */
-function findMatch(
-  candidate: ReconnectCandidate,
-  account: GrantedIdentity,
-  claimed: ReadonlyMap<string, ReadonlySet<string>>,
-): KnownAccount | undefined {
-  const taken = claimed.get(candidate.connectionId);
-  const available = candidate.accounts.filter((known) => !taken?.has(known.accountId));
-  return (
-    available.find((known) => known.accountId === account.accountId) ??
-    available.find((known) => known.identityKeys.some((key) => account.identityKeys.has(key)))
-  );
+function matchById(
+  available: readonly KnownAccount[],
+  accounts: readonly GrantedIdentity[],
+): Map<string, KnownAccount> {
+  const found = new Map<string, KnownAccount>();
+  for (const account of accounts) {
+    const known = available.find((candidate) => candidate.accountId === account.accountId);
+    if (known) {
+      found.set(account.accountId, known);
+    }
+  }
+  return found;
+}
+
+/**
+ * Bank-identifier matches, kept only when unambiguous both ways: one known
+ * account looks like the granted one, and no other granted account looks like
+ * it. Two cards at one bank can share a partial number; attaching one card's
+ * history to the other is worse than treating it as new.
+ */
+function matchByIdentity(
+  available: readonly KnownAccount[],
+  accounts: readonly GrantedIdentity[],
+): Map<string, KnownAccount> {
+  const candidates = new Map<string, KnownAccount>();
+  const claimants = new Map<string, number>();
+  for (const account of accounts) {
+    const lookalikes = available.filter((known) => sharesIdentity(known, account));
+    const [known] = lookalikes;
+    if (lookalikes.length === 1 && known) {
+      candidates.set(account.accountId, known);
+      claimants.set(known.accountId, (claimants.get(known.accountId) ?? 0) + 1);
+    }
+  }
+  return new Map([...candidates].filter(([, known]) => claimants.get(known.accountId) === 1));
 }
 
 function matches(known: KnownAccount, account: GrantedIdentity): boolean {
-  return (
-    known.accountId === account.accountId ||
-    known.identityKeys.some((key) => account.identityKeys.has(key))
-  );
+  return known.accountId === account.accountId || sharesIdentity(known, account);
+}
+
+function sharesIdentity(known: KnownAccount, account: GrantedIdentity): boolean {
+  return known.identityKeys.some((key) => account.identityKeys.has(key));
+}
+
+function allowListOf(metadata: Record<string, unknown>): string[] | null {
+  return Array.isArray(metadata.accountIds)
+    ? metadata.accountIds.filter((id): id is string => typeof id === "string")
+    : null;
 }
 
 function compareByAge(a: ReconnectCandidate, b: ReconnectCandidate): number {
@@ -274,6 +318,12 @@ function move(fromConnectionId: string, fromAccountId: string, toAccountId: stri
     cursorResources: [
       { from: transactionsResource(fromAccountId), to: transactionsResource(toAccountId) },
     ],
+    // The id is mirrored in metadata, which readers prefer over the external
+    // id (the allow-list rebuild on account deletion, the API's accountId);
+    // left stale it would point them at the old id until the next sync.
+    ...(fromAccountId === toAccountId
+      ? {}
+      : { accountMetadata: { truelayerAccountId: toAccountId } }),
   };
 }
 
