@@ -16,6 +16,7 @@ import { MessageQueue } from "../src/modules/message-queue/constants";
 
 const LEGACY_SCHEDULER_ID = "periodic-sync";
 const LEGACY_JOB_NAMES = new Set(["PeriodicSync", "AccountSync", "InitialSync"]);
+const LOCKED_JOB_MESSAGE = /locked by another worker/;
 const REMOVABLE_STATES: JobType[] = [
   "waiting",
   "delayed",
@@ -61,12 +62,29 @@ async function sweep(queueName: MessageQueue, withScheduler: boolean): Promise<v
     if (scheduler) {
       await queue.removeJobScheduler(LEGACY_SCHEDULER_ID);
     }
+    let removed = 0;
+    const locked: string[] = [];
     for (const job of removable) {
-      await job.remove();
+      try {
+        await job.remove();
+        removed += 1;
+      } catch (error) {
+        // A worker picked the job up after it was listed. BullMQ reports
+        // that only through the message; anything else is a real failure.
+        if (error instanceof Error && LOCKED_JOB_MESSAGE.test(error.message)) {
+          locked.push(job.id ?? "?");
+          continue;
+        }
+        throw error;
+      }
     }
-    console.log(
-      `${queueName}: removed ${scheduler ? "scheduler and " : ""}${removable.length} job(s)`,
-    );
+    console.log(`${queueName}: removed ${scheduler ? "scheduler and " : ""}${removed} job(s)`);
+    if (locked.length > 0) {
+      console.log(
+        `${queueName}: skipped ${locked.length} job(s) a worker had locked (re-run to retry):`,
+        locked,
+      );
+    }
   } finally {
     await queue.close();
   }
