@@ -21,6 +21,7 @@ import { CryptoService } from "../crypto";
 import { DATABASE_CONNECTION } from "../database";
 import { Jobs, MessageQueue } from "../message-queue";
 import type { MessageQueueService } from "../message-queue";
+import { relocateAccount, type AccountMove } from "./account-relocation";
 import { clearedSyncFailure, grantedConsent } from "./connection-state";
 import { ConnectorRegistryService } from "./connector-registry.service";
 import { ConnectorSyncService } from "./connector-sync.service";
@@ -56,6 +57,19 @@ export interface CreateOAuthConnectionInput {
 export interface ReconnectOAuthConnectionInput extends CreateOAuthConnectionInput {
   /** The connection whose lapsed consent this grant renews. */
   connectionId: string;
+  /**
+   * Accounts whose rows must follow them onto this connection: re-issued ids
+   * on the connection itself, and accounts taken over from the user's other
+   * connections that this grant also covers.
+   */
+  accountMoves?: readonly AccountMove[];
+  /**
+   * Other connections whose every account now lives here. Deleted in the same
+   * unit of work as the moves; their grants are revoked best-effort afterwards.
+   */
+  retiredConnectionIds?: readonly string[];
+  /** Other connections that gave up some accounts: their replacement metadata. */
+  narrowedConnections?: ReadonlyArray<{ connectionId: string; metadata: Record<string, unknown> }>;
 }
 
 /** A connection paired with the accounts it is known to cover. */
@@ -63,8 +77,8 @@ export interface ConnectorConnectionAccounts {
   id: string;
   metadata: Record<string, unknown>;
   createdAt: Date;
-  /** externalIds of the accounts this connection has synced. */
-  accountExternalIds: string[];
+  /** The accounts this connection has synced, with their provider metadata. */
+  accounts: Array<{ externalId: string; metadata: Record<string, unknown> }>;
 }
 
 export interface ConnectorConnectionSummary {
@@ -137,18 +151,33 @@ export class ConnectorConnectionService {
    * row would strand them behind a dead connection and surface the same bank
    * account twice. Everything the lapsed consent stamped — credentials,
    * allow-list, failure counters, consent clock — is replaced by this grant's.
+   *
+   * When the grant also covers accounts held by the user's other connections,
+   * those accounts move here with their history, and a connection left with
+   * nothing is retired, so one bank account never syncs on two connections.
    */
   async reconnectOAuthConnection(
     input: ReconnectOAuthConnectionInput,
   ): Promise<ConnectorConnectionSummary> {
     const manifest = this.resolveOAuthManifest(input.providerId, input.environment);
     const metadata = input.metadata ?? {};
+    const accountMoves = input.accountMoves ?? [];
+    const retiredConnectionIds = input.retiredConnectionIds ?? [];
+    const narrowedConnections = input.narrowedConnections ?? [];
     await this.verifyConnection(
       { ...input, connectionOptions: undefined },
       manifest,
       metadata,
       input.credentials,
     );
+
+    // Loaded up front: a retired row holds the only copy of its grant's
+    // credentials, which revocation needs after the row is gone.
+    const sourceConnections = await this.loadSourceConnections(input, [
+      ...accountMoves.map((move) => move.fromConnectionId),
+      ...retiredConnectionIds,
+      ...narrowedConnections.map((connection) => connection.connectionId),
+    ]);
 
     const keyId = this.cryptoService.getCurrentKeyId();
     const encryptedCredentials = await this.cryptoService.encryptToString(
@@ -157,31 +186,60 @@ export class ConnectorConnectionService {
     );
     const now = new Date();
 
-    const [row] = await this.db
-      .update(connectorConnections)
-      .set({
-        encryptedCredentials,
-        credentialKeyId: keyId,
-        capabilities: [...manifest.capabilities],
-        metadata,
-        // A reconnected connection is healthy until its own next sync says
-        // otherwise: the errors on the row belong to the consent just replaced.
-        ...clearedSyncFailure(),
-        ...grantedConsent(manifest.id, now),
-        nextSyncAt: addMinutes(now, INITIAL_SYNC_RESERVATION_MINUTES),
-        updatedAt: now,
-      })
-      .where(
-        and(
-          eq(connectorConnections.id, input.connectionId),
-          eq(connectorConnections.userId, input.userId),
-        ),
-      )
-      .returning();
+    const row = await this.db.transaction(async (tx) => {
+      const [updated] = await tx
+        .update(connectorConnections)
+        .set({
+          encryptedCredentials,
+          credentialKeyId: keyId,
+          capabilities: [...manifest.capabilities],
+          metadata,
+          // A reconnected connection is healthy until its own next sync says
+          // otherwise: the errors on the row belong to the consent just replaced.
+          ...clearedSyncFailure(),
+          ...grantedConsent(manifest.id, now),
+          nextSyncAt: addMinutes(now, INITIAL_SYNC_RESERVATION_MINUTES),
+          updatedAt: now,
+        })
+        .where(
+          and(
+            eq(connectorConnections.id, input.connectionId),
+            eq(connectorConnections.userId, input.userId),
+          ),
+        )
+        .returning();
 
-    if (!row) {
-      throw new NotFoundException("Connector connection not found.");
-    }
+      if (!updated) {
+        throw new NotFoundException("Connector connection not found.");
+      }
+
+      for (const move of accountMoves) {
+        await relocateAccount(tx, updated.id, move, now);
+      }
+      for (const narrowed of narrowedConnections) {
+        await tx
+          .update(connectorConnections)
+          .set({ metadata: narrowed.metadata, updatedAt: now })
+          .where(
+            and(
+              eq(connectorConnections.id, narrowed.connectionId),
+              eq(connectorConnections.userId, input.userId),
+            ),
+          );
+      }
+      if (retiredConnectionIds.length > 0) {
+        // Cascades take whatever did not move: rows the target already held.
+        await tx
+          .delete(connectorConnections)
+          .where(
+            and(
+              inArray(connectorConnections.id, [...retiredConnectionIds]),
+              eq(connectorConnections.userId, input.userId),
+            ),
+          );
+      }
+      return updated;
+    });
 
     // Distinct job id per reconnect: the connect-time `:initial` id is likely
     // still held by that run's completed job, which BullMQ would dedupe
@@ -193,7 +251,47 @@ export class ConnectorConnectionService {
       `connector:${row.id}:reconnect:${now.getTime()}`,
     );
 
+    // After commit, like a user-initiated delete: a retired connection's
+    // grant must not outlive it, but a provider outage must not undo the
+    // reconnect either.
+    for (const retiredId of retiredConnectionIds) {
+      const retired = sourceConnections.get(retiredId);
+      if (retired) {
+        await this.revokeUpstreamGrant(retired);
+      }
+    }
+
     return this.toSummary(row);
+  }
+
+  /**
+   * The caller's other connections a reconnect touches, keyed by id. A plan
+   * naming a connection that is gone or belongs to someone else is stale, and
+   * acting on part of it could strand accounts, so it is refused whole.
+   */
+  private async loadSourceConnections(
+    input: ReconnectOAuthConnectionInput,
+    connectionIds: string[],
+  ): Promise<Map<string, typeof connectorConnections.$inferSelect>> {
+    const ids = [...new Set(connectionIds)].filter((id) => id !== input.connectionId);
+    if (ids.length === 0) {
+      return new Map();
+    }
+
+    const rows = await this.db
+      .select()
+      .from(connectorConnections)
+      .where(
+        and(
+          inArray(connectorConnections.id, ids),
+          eq(connectorConnections.userId, input.userId),
+          eq(connectorConnections.providerId, input.providerId),
+        ),
+      );
+    if (rows.length !== ids.length) {
+      throw new NotFoundException("Connector connection not found.");
+    }
+    return new Map(rows.map((row) => [row.id, row]));
   }
 
   private resolveOAuthManifest(providerId: string, environment: string): ConnectorManifest {
@@ -304,6 +402,7 @@ export class ConnectorConnectionService {
       .select({
         connectionId: financialAccounts.connectionId,
         externalId: financialAccounts.externalId,
+        metadata: financialAccounts.metadata,
       })
       .from(financialAccounts)
       .where(
@@ -313,13 +412,14 @@ export class ConnectorConnectionService {
         ),
       );
 
-    const externalIdsByConnection = new Map<string, string[]>();
+    const accountsByConnection = new Map<string, ConnectorConnectionAccounts["accounts"]>();
     for (const row of accountRows) {
-      const externalIds = externalIdsByConnection.get(row.connectionId);
-      if (externalIds) {
-        externalIds.push(row.externalId);
+      const account = { externalId: row.externalId, metadata: row.metadata };
+      const accounts = accountsByConnection.get(row.connectionId);
+      if (accounts) {
+        accounts.push(account);
       } else {
-        externalIdsByConnection.set(row.connectionId, [row.externalId]);
+        accountsByConnection.set(row.connectionId, [account]);
       }
     }
 
@@ -327,7 +427,7 @@ export class ConnectorConnectionService {
       id: connection.id,
       metadata: connection.metadata,
       createdAt: connection.createdAt,
-      accountExternalIds: externalIdsByConnection.get(connection.id) ?? [],
+      accounts: accountsByConnection.get(connection.id) ?? [],
     }));
   }
 

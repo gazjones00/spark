@@ -38,6 +38,11 @@ function createService() {
     add: vi.fn(async () => undefined),
   };
   const db = createMockDb();
+  // Transactions run their callback against the same mock, so assertions on
+  // db.update/db.delete see writes made inside them.
+  (db as unknown as { transaction: ReturnType<typeof vi.fn> }).transaction = vi.fn(
+    async (fn: (tx: unknown) => Promise<unknown>) => fn(db),
+  );
 
   const service = new ConnectorConnectionService(
     registry as unknown as ConnectorRegistryService,
@@ -430,8 +435,12 @@ describe("ConnectorConnectionService", () => {
         { id: "connection-2", metadata: {}, createdAt },
       ],
       [
-        { connectionId: "connection-1", externalId: "truelayer:account:acc-1" },
-        { connectionId: "connection-1", externalId: "truelayer:account:acc-2" },
+        {
+          connectionId: "connection-1",
+          externalId: "truelayer:account:acc-1",
+          metadata: { truelayerAccountId: "acc-1" },
+        },
+        { connectionId: "connection-1", externalId: "truelayer:account:acc-2", metadata: {} },
       ],
     ]);
 
@@ -446,11 +455,139 @@ describe("ConnectorConnectionService", () => {
         id: "connection-1",
         metadata: { accountIds: ["acc-1"] },
         createdAt,
-        accountExternalIds: ["truelayer:account:acc-1", "truelayer:account:acc-2"],
+        accounts: [
+          { externalId: "truelayer:account:acc-1", metadata: { truelayerAccountId: "acc-1" } },
+          { externalId: "truelayer:account:acc-2", metadata: {} },
+        ],
       },
       // Synced nothing yet, so it reports no accounts rather than being dropped.
-      { id: "connection-2", metadata: {}, createdAt, accountExternalIds: [] },
+      { id: "connection-2", metadata: {}, createdAt, accounts: [] },
     ]);
+  });
+
+  it("carries accounts over and retires the connection it empties, revoking that grant after commit", async () => {
+    const { service, registry, cryptoService, queue, db } = createService();
+    const revoke = vi.fn(async () => undefined);
+    registry.get.mockReturnValue({
+      manifest: TRUELAYER_MANIFEST,
+      testConnection: vi.fn(),
+      sync: vi.fn(),
+      revoke,
+    } as unknown as FinancialConnector);
+    cryptoService.decryptFromString.mockResolvedValue(
+      JSON.stringify({ accessToken: "card-token", expiresAt: "2027-01-01T00:00:00.000Z" }),
+    );
+    mockSelectChains(db, [
+      [makeConnectionRow({ id: "connection-2", providerId: TRUELAYER_PROVIDER_ID })],
+    ]);
+    const updateChain = chainMock(makeConnectionRow({ providerId: TRUELAYER_PROVIDER_ID }));
+    db.update.mockReturnValue(updateChain);
+    const deleteChain = { where: vi.fn().mockResolvedValue(undefined) };
+    (db as unknown as { delete: ReturnType<typeof vi.fn> }).delete = vi.fn(() => deleteChain);
+
+    await service.reconnectOAuthConnection({
+      connectionId: "connection-1",
+      userId: "user-1",
+      providerId: TRUELAYER_PROVIDER_ID,
+      environment: "production",
+      credentials: { accessToken: "fresh-token" },
+      metadata: { accountIds: ["acc-current", "acc-card"] },
+      accountMoves: [
+        {
+          fromConnectionId: "connection-2",
+          fromExternalId: "truelayer:account:acc-card",
+          toExternalId: "truelayer:account:acc-card",
+          cursorResources: [{ from: "transactions:acc-card", to: "transactions:acc-card" }],
+        },
+      ],
+      retiredConnectionIds: ["connection-2"],
+    });
+
+    // The account row and the rows keyed to it are re-pointed at the target.
+    expect(updateChain.set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        connectionId: "connection-1",
+        externalId: "truelayer:account:acc-card",
+      }),
+    );
+    expect(updateChain.set).toHaveBeenCalledWith({
+      connectionId: "connection-1",
+      accountExternalId: "truelayer:account:acc-card",
+    });
+    expect(updateChain.set).toHaveBeenCalledWith(
+      expect.objectContaining({ connectionId: "connection-1", resource: "transactions:acc-card" }),
+    );
+    expect(deleteChain.where).toHaveBeenCalledOnce();
+    expect(revoke).toHaveBeenCalledWith(
+      expect.objectContaining({
+        connectionId: "connection-2",
+        credentials: { accessToken: "card-token", expiresAt: "2027-01-01T00:00:00.000Z" },
+      }),
+    );
+    // Revocation is outside the unit of work: a provider outage cannot roll
+    // the reconnect back.
+    const [transaction] = (db as unknown as { transaction: ReturnType<typeof vi.fn> }).transaction
+      .mock.invocationCallOrder;
+    expect(revoke.mock.invocationCallOrder[0]).toBeGreaterThan(transaction ?? Infinity);
+    expect(queue.add).toHaveBeenCalledOnce();
+  });
+
+  it("pins the allow-list of a connection that keeps some of its accounts", async () => {
+    const { service, registry, db } = createService();
+    registry.get.mockReturnValue({
+      manifest: TRUELAYER_MANIFEST,
+      testConnection: vi.fn(),
+      sync: vi.fn(),
+    } as unknown as FinancialConnector);
+    mockSelectChains(db, [
+      [makeConnectionRow({ id: "connection-2", providerId: TRUELAYER_PROVIDER_ID })],
+    ]);
+    const updateChain = chainMock(makeConnectionRow({ providerId: TRUELAYER_PROVIDER_ID }));
+    db.update.mockReturnValue(updateChain);
+    const del = vi.fn();
+    (db as unknown as { delete: ReturnType<typeof vi.fn> }).delete = del;
+
+    await service.reconnectOAuthConnection({
+      connectionId: "connection-1",
+      userId: "user-1",
+      providerId: TRUELAYER_PROVIDER_ID,
+      environment: "production",
+      credentials: { accessToken: "fresh-token" },
+      narrowedConnections: [
+        { connectionId: "connection-2", metadata: { accountIds: ["acc-savings"] } },
+      ],
+    });
+
+    expect(updateChain.set).toHaveBeenCalledWith(
+      expect.objectContaining({ metadata: { accountIds: ["acc-savings"] } }),
+    );
+    expect(del).not.toHaveBeenCalled();
+  });
+
+  it("refuses a plan naming a connection the user no longer holds, before writing anything", async () => {
+    const { service, registry, queue, db } = createService();
+    registry.get.mockReturnValue({
+      manifest: TRUELAYER_MANIFEST,
+      testConnection: vi.fn(),
+      sync: vi.fn(),
+    } as unknown as FinancialConnector);
+    mockSelectChains(db, [[]]);
+
+    await expect(
+      service.reconnectOAuthConnection({
+        connectionId: "connection-1",
+        userId: "user-1",
+        providerId: TRUELAYER_PROVIDER_ID,
+        environment: "production",
+        credentials: { accessToken: "fresh-token" },
+        retiredConnectionIds: ["someone-elses-connection"],
+      }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(
+      (db as unknown as { transaction: ReturnType<typeof vi.fn> }).transaction,
+    ).not.toHaveBeenCalled();
+    expect(db.update).not.toHaveBeenCalled();
+    expect(queue.add).not.toHaveBeenCalled();
   });
 
   it("skips the accounts query when the user has no connections for the provider", async () => {

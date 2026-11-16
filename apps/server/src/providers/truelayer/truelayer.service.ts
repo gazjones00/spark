@@ -9,8 +9,9 @@ import type {
   GenerateAuthLinkInput as GenerateAuthLinkPayload,
   SaveAccountsInput as SaveAccountsPayload,
   SaveAccountsResponse,
+  TrueLayerAccount,
 } from "@spark/schema";
-import { candidateAccountIds, resolveReconnectTarget } from "./reconnect-target";
+import { knownAccounts, planReconnect, type ReconnectPlan } from "./reconnect-plan";
 import { TruelayerClient } from "./truelayer.client";
 import { DATABASE_CONNECTION } from "../../modules/database";
 import { ConnectorConnectionService } from "../../modules/connectors";
@@ -230,19 +231,22 @@ export class TruelayerService {
 
     // A reconnect comes back through this same path carrying nothing that ties
     // it to the consent it replaces, so the granted accounts are what identify
-    // it. Matching on the full grant rather than the user's selection: a
-    // narrowed selection is still the same bank connection.
-    const reconnectTargetId = await this.findReconnectTarget(
+    // it (see planReconnect).
+    const plan = await this.planReconnect(
       userId,
-      accounts.map((account) => account.accountId),
+      accounts,
+      accountsToSave.map((account) => account.accountId),
     );
 
-    if (reconnectTargetId === null) {
+    if (plan === null) {
       await this.connectorConnectionService.createOAuthConnection(connectionInput);
     } else {
       await this.connectorConnectionService.reconnectOAuthConnection({
         ...connectionInput,
-        connectionId: reconnectTargetId,
+        connectionId: plan.targetConnectionId,
+        accountMoves: plan.accountMoves,
+        retiredConnectionIds: plan.retiredConnectionIds,
+        narrowedConnections: plan.narrowedConnections,
       });
     }
 
@@ -255,27 +259,30 @@ export class TruelayerService {
   }
 
   /**
-   * The connection this grant re-authorises, or null when it is a new one.
-   * Scoped to the user's TrueLayer connections in the current environment;
-   * identity comes from the accounts each one covers.
+   * How this grant lands on the user's existing connections, or null when it
+   * is a new one. Scoped to the user's TrueLayer connections in the current
+   * environment; identity comes from the accounts each one covers.
    */
-  private async findReconnectTarget(
+  private async planReconnect(
     userId: string,
-    grantedAccountIds: string[],
-  ): Promise<string | null> {
+    grantedAccounts: TrueLayerAccount[],
+    selectedAccountIds: string[],
+  ): Promise<ReconnectPlan | null> {
     const connections = await this.connectorConnectionService.listConnectionAccounts(
       userId,
       TRUELAYER_PROVIDER_ID,
       env.TRUELAYER_ENV,
     );
 
-    return resolveReconnectTarget(
+    return planReconnect(
       connections.map((connection) => ({
         connectionId: connection.id,
-        accountIds: candidateAccountIds(connection.metadata, connection.accountExternalIds),
         createdAt: connection.createdAt,
+        metadata: connection.metadata,
+        accounts: knownAccounts(connection.metadata, connection.accounts),
       })),
-      grantedAccountIds,
+      grantedAccounts,
+      selectedAccountIds,
     );
   }
 }

@@ -1,4 +1,5 @@
 export { ConnectorsModule } from "./connectors.module";
+export type { AccountMove } from "./account-relocation";
 export {
   CONSENT_WARNING_WINDOW_DAYS,
   consentExpiryFor,
