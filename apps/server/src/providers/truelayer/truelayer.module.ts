@@ -7,18 +7,10 @@ import type {
 } from "./truelayer.interfaces";
 import { ConnectorsModule } from "../../modules/connectors";
 import { TruelayerClient } from "./truelayer.client";
-import { TruelayerConnectionService } from "./truelayer.connection.service";
 import { TruelayerService } from "./truelayer.service";
-import { TruelayerAccountStatusService } from "./truelayer-account-status.service";
 import { TruelayerConnectorTokenService } from "./truelayer-connector-token.service";
 
-const PROVIDERS = [
-  TruelayerClient,
-  TruelayerConnectionService,
-  TruelayerService,
-  TruelayerAccountStatusService,
-  TruelayerConnectorTokenService,
-];
+const PROVIDERS = [TruelayerClient, TruelayerService, TruelayerConnectorTokenService];
 
 @Module({})
 export class TruelayerModule {

@@ -29,8 +29,7 @@ export interface TrueLayerCredentialRecord {
  * `connector_connections`, refreshes when (nearly) expired and persists the
  * rotated record back.
  *
- * Ports the safety guarantees of the bespoke TruelayerConnectionService
- * verbatim:
+ * Safety guarantees:
  * - single-flight refresh per connection — TrueLayer rotates refresh tokens
  *   on use, so concurrent refreshes with the same token make the second fail
  *   with invalid_grant. In-process dedupe via the in-flight map; across

@@ -9,7 +9,7 @@ import type { MessageQueueService } from "../modules/message-queue";
 
 const BATCH_SIZE = 100;
 const DAY_MS = 24 * 60 * 60 * 1000;
-/** Distinct from 4242001/4242002 (schedulers) and 4242003 (state sweeper). */
+/** Distinct from 4242002 (connector scheduler) and 4242003 (state sweeper). */
 const CONSENT_LOCK_KEY = 4242004;
 
 interface ExpiringConnection {

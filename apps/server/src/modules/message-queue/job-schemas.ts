@@ -1,4 +1,4 @@
-import { AccountTypeSchema, ConsentExpiringEventSchema } from "@spark/schema";
+import { ConsentExpiringEventSchema } from "@spark/schema";
 import { z } from "zod";
 import { Jobs } from "./constants";
 
@@ -14,15 +14,6 @@ import { Jobs } from "./constants";
  * Producers and consumers both derive their payload types from these
  * schemas (see the `*JobData` re-exports in `src/jobs/*.job.ts`).
  */
-
-export const AccountSyncJobDataSchema = z.strictObject({
-  accountId: z.string().min(1),
-  connectionId: z.string().min(1),
-  accountType: AccountTypeSchema.nullish(),
-});
-
-// Same shape today; kept separate so the two can diverge safely.
-export const InitialSyncJobDataSchema = AccountSyncJobDataSchema;
 
 export const ConnectorSyncJobDataSchema = z.strictObject({
   connectionId: z.string().min(1),
@@ -40,13 +31,10 @@ export const EnrichmentReapplyJobDataSchema = z.strictObject({
 export const EmptyJobDataSchema = z.strictObject({});
 
 export const JOB_SCHEMAS = {
-  [Jobs.AccountSync]: AccountSyncJobDataSchema,
-  [Jobs.InitialSync]: InitialSyncJobDataSchema,
   [Jobs.ConnectorSync]: ConnectorSyncJobDataSchema,
   [Jobs.ConsentExpiring]: ConsentExpiringEventSchema,
   [Jobs.EnrichmentReapply]: EnrichmentReapplyJobDataSchema,
   [Jobs.ConsentLifecycleCheck]: EmptyJobDataSchema,
   [Jobs.OauthStateCleanup]: EmptyJobDataSchema,
-  [Jobs.PeriodicSync]: EmptyJobDataSchema,
   [Jobs.ConnectorPeriodicSync]: EmptyJobDataSchema,
 } as const satisfies Record<Jobs, z.ZodType>;
