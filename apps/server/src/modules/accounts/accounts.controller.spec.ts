@@ -19,6 +19,7 @@ function makeAccount(overrides: Partial<Account> = {}): Account {
     id: ACCOUNT_ID,
     accountId: "acc-1",
     accountType: "TRANSACTION",
+    type: "CASH",
     displayName: "Everyday Account",
     currency: "GBP",
     accountNumber: { number: "12345678" },
