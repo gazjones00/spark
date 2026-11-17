@@ -94,6 +94,39 @@ describe("accounts route", () => {
     expect(screen.getByText("Rainy Day Savings")).toBeDefined();
   });
 
+  it("groups accounts by kind and counts card balances as money owed", async () => {
+    listAccounts.mockResolvedValue({
+      accounts: [
+        makeAccount({ currentBalance: "1000.00" }),
+        makeAccount({
+          id: "22222222-3333-4444-8555-666666666666",
+          accountId: "acc-2",
+          displayName: "Rainy Day Savings",
+          accountType: "SAVINGS",
+          currentBalance: "5000.00",
+        }),
+        makeAccount({
+          id: "33333333-4444-4555-8666-777777777777",
+          accountId: "acc-3",
+          displayName: "Travel Card",
+          accountType: "CREDIT_CARD",
+          currentBalance: "250.00",
+          availableBalance: "2750.00",
+        }),
+      ],
+    });
+
+    renderAccounts();
+
+    expect(await screen.findByRole("heading", { name: "Current accounts" })).toBeDefined();
+    expect(screen.getByRole("heading", { name: "Savings" })).toBeDefined();
+    expect(screen.getByRole("heading", { name: "Credit cards" })).toBeDefined();
+    // Have £6,000, owe £250: net worth subtracts the card.
+    expect(screen.getByText("£6,000.00")).toBeDefined();
+    expect(screen.getByText("£5,750.00")).toBeDefined();
+    expect(screen.getByText(/£2,750.00 available/)).toBeDefined();
+  });
+
   it("renders a soft reconnect warning for accounts with consent expiring soon", async () => {
     listAccounts.mockResolvedValue({
       accounts: [
