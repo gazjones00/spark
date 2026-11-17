@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ConsentStatusSchema } from "./consent.schema.ts";
+import { FinancialAccountTypeSchema } from "./financial-account.schema.ts";
 import { SyncStatusSchema } from "./sync-status.schema.ts";
 import {
   AccountNumberSchema,
@@ -13,6 +14,8 @@ export const AccountSchema = z
     id: z.uuid(),
     accountId: z.string(),
     accountType: AccountTypeSchema.nullable(),
+    /** Canonical classification (asset vs card liability etc.); accountType above is the raw provider type. */
+    type: FinancialAccountTypeSchema,
     displayName: z.string().min(1).max(255),
     currency: CurrencySchema,
     accountNumber: AccountNumberSchema,

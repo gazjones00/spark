@@ -1,5 +1,6 @@
 import { truelayerAccountIdFromExternalId } from "@spark/connectors";
 import { balanceSnapshots, financialAccounts } from "@spark/db/schema";
+import { FinancialAccountTypeSchema } from "@spark/schema";
 import type { Account, AccountNumber, AccountProvider, AccountType } from "@spark/schema";
 import type { SyncStatusType } from "@spark/common";
 import { deriveConsentStatus } from "../../connectors";
@@ -34,6 +35,9 @@ export const toAccountDto = (
         ? metadata.truelayerAccountId
         : truelayerAccountIdFromExternalId(account.externalId),
     accountType: (metadata.truelayerAccountType as AccountType | null | undefined) ?? null,
+    // The column is plain text; fold any out-of-enum value to UNKNOWN rather
+    // than failing the whole accounts list.
+    type: FinancialAccountTypeSchema.catch("UNKNOWN").parse(account.type),
     displayName: account.displayName,
     currency: account.currency as Account["currency"],
     accountNumber: (metadata.accountNumber as AccountNumber | undefined) ?? {},
