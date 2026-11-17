@@ -51,8 +51,7 @@ function RootDocument() {
             <Toaster richColors />
           </AuthProvider>
         </ThemeProvider>
-        {/* Bottom-right: the account menu lives in the bottom-left corner. */}
-        <TanStackRouterDevtools position="bottom-right" />
+        <TanStackRouterDevtools position="bottom-left" />
         <Scripts />
       </body>
     </html>

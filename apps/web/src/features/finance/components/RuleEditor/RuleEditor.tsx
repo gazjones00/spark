@@ -237,8 +237,8 @@ export function RuleEditor({
           <DialogTitle>{rule ? "Edit rule" : "New rule"}</DialogTitle>
           <DialogDescription>
             A transaction matches when all conditions in any one group hold. Groups are combined
-            with OR. Transactions you categorised by hand keep their category — reset one to
-            automatic from its details to let rules apply to it.
+            with OR. Transactions you categorized by hand keep their category — reset one to
+            automatic from the transactions table to let rules apply to it.
           </DialogDescription>
         </DialogHeader>
 
@@ -248,7 +248,7 @@ export function RuleEditor({
               {groupIndex > 0 && (
                 <p className="text-muted-foreground text-center text-sm">— or —</p>
               )}
-              <div className="bg-muted/40 space-y-2 rounded-xl border p-3">
+              <div className="space-y-2 border p-3">
                 <p className="text-muted-foreground text-sm font-medium">If all of the following</p>
                 {group.map((condition, conditionIndex) => {
                   const operators =
@@ -295,7 +295,7 @@ export function RuleEditor({
                       </Select>
 
                       <Input
-                        className="h-8 min-w-[120px] flex-1 rounded-md"
+                        className="h-7 min-w-[120px] flex-1 text-xs"
                         inputMode={condition.field === "AMOUNT" ? "decimal" : "text"}
                         placeholder={condition.field === "AMOUNT" ? "0.00" : "value"}
                         aria-label="Condition value"
@@ -309,7 +309,7 @@ export function RuleEditor({
                         <>
                           <span className="text-muted-foreground text-xs">and</span>
                           <Input
-                            className="h-8 w-[100px] rounded-md"
+                            className="h-7 w-[100px] text-xs"
                             inputMode="decimal"
                             placeholder="100.00"
                             aria-label="Condition upper bound"
@@ -325,11 +325,11 @@ export function RuleEditor({
 
                       <Button
                         variant="ghost"
-                        size="icon-sm"
+                        size="icon-xs"
                         aria-label="Remove condition"
                         onClick={() => removeCondition(groupIndex, conditionIndex)}
                       >
-                        <X className="size-3.5" />
+                        <X className="size-3" />
                       </Button>
                     </div>
                   );
@@ -348,7 +348,7 @@ export function RuleEditor({
           </Button>
 
           <div className="space-y-2 pt-2">
-            <p className="text-muted-foreground text-sm font-medium">Then categorise as</p>
+            <p className="text-muted-foreground text-sm font-medium">Then categorize as</p>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Category</Label>

@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useCategories } from "@/features/finance/hooks/useCategories";
 import { queryKeys } from "@/lib/query-keys";
-import { cn } from "@/lib/utils";
 import { orpc } from "@spark/orpc";
 import { CATEGORY_COLORS } from "@spark/orpc/contract";
 import type { CategoryColor, CategoryDescriptor } from "@spark/orpc/contract";
@@ -22,21 +21,17 @@ function ColorSwatchPicker({
   onChange: (color: CategoryColor) => void;
 }) {
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-1.5">
       {CATEGORY_COLORS.map((color) => (
         <button
           key={color}
           type="button"
           aria-label={`Colour ${color}`}
-          aria-pressed={value === color}
-          className={cn(
-            "ring-offset-card focus-visible:ring-ring/50 flex size-6 items-center justify-center rounded-full outline-none focus-visible:ring-[3px]",
-            value === color && "ring-foreground/25 ring-2 ring-offset-2",
-          )}
+          className="flex size-6 items-center justify-center border"
           style={{ backgroundColor: color }}
           onClick={() => onChange(color)}
         >
-          {value === color && <Check className="size-3.5 text-white" strokeWidth={3} />}
+          {value === color && <Check className="size-3 text-background" />}
         </button>
       ))}
     </div>
@@ -186,10 +181,7 @@ export function Categories() {
                 className="flex items-center justify-between border-b py-2 last:border-0"
               >
                 <span className="inline-flex items-center gap-2 text-sm">
-                  <span
-                    className="size-2.5 shrink-0 rounded-full"
-                    style={{ backgroundColor: category.color }}
-                  />
+                  <span className="size-2.5" style={{ backgroundColor: category.color }} />
                   {category.label}
                 </span>
                 <span className="inline-flex items-center gap-1">
@@ -227,10 +219,7 @@ export function Categories() {
           <div className="flex flex-wrap gap-x-6 gap-y-2">
             {builtIn.map((category) => (
               <span key={category.id} className="inline-flex items-center gap-2 text-sm">
-                <span
-                  className="size-2.5 shrink-0 rounded-full"
-                  style={{ backgroundColor: category.color }}
-                />
+                <span className="size-2.5" style={{ backgroundColor: category.color }} />
                 {category.label}
               </span>
             ))}

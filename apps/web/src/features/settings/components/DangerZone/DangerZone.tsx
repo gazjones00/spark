@@ -50,7 +50,7 @@ export function DangerZone() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold">Danger zone</h2>
+        <h2 className="text-lg font-semibold">Danger Zone</h2>
         <p className="text-muted-foreground text-sm">
           Irreversible actions that affect your account
         </p>
@@ -61,7 +61,7 @@ export function DangerZone() {
           <div className="flex items-start gap-3">
             <AlertTriangle className="text-destructive mt-0.5 size-5 shrink-0" />
             <div className="space-y-2">
-              <p className="text-sm font-medium">Delete account</p>
+              <p className="text-sm font-medium">Delete Account</p>
               <p className="text-muted-foreground text-xs">
                 Permanently delete your account and all associated data. This action cannot be
                 undone. All connected bank accounts, transaction history, and preferences will be
@@ -71,7 +71,7 @@ export function DangerZone() {
                 <DialogTrigger
                   render={<Button variant="destructive" size="sm" className="mt-2 mb-0" />}
                 >
-                  Delete account
+                  Delete Account
                 </DialogTrigger>
                 <DialogContent>
                   <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -104,7 +104,7 @@ export function DangerZone() {
                         type="submit"
                         disabled={form.formState.isSubmitting}
                       >
-                        {form.formState.isSubmitting ? "Deleting…" : "Delete account"}
+                        {form.formState.isSubmitting ? "Deleting..." : "Delete Account"}
                       </Button>
                     </DialogFooter>
                   </form>

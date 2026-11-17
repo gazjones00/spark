@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { ChevronRight } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { SpendingByCategory } from "@/features/finance/lib/dashboard-derivations";
@@ -52,7 +53,7 @@ export function SpendingBreakdown({ data, currency }: SpendingBreakdownProps) {
                   <Link
                     to="/transactions"
                     search={{ category: entry.category }}
-                    className="hover:bg-muted flex items-center gap-3 rounded-lg px-2 py-2"
+                    className="hover:bg-muted group flex items-center gap-3 rounded-lg px-2 py-2"
                   >
                     <span
                       className="size-2.5 shrink-0 rounded-full"
@@ -67,6 +68,7 @@ export function SpendingBreakdown({ data, currency }: SpendingBreakdownProps) {
                     <span className="figure text-foreground w-24 text-right text-sm font-semibold">
                       {formatMoney(entry.amount, currency)}
                     </span>
+                    <ChevronRight className="text-muted-foreground size-4 opacity-0 transition-opacity group-hover:opacity-100" />
                   </Link>
                 </li>
               ))}
@@ -82,6 +84,7 @@ export function SpendingBreakdown({ data, currency }: SpendingBreakdownProps) {
                   <span className="figure text-muted-foreground w-24 text-right text-sm font-semibold">
                     {formatMoney(restTotal, currency)}
                   </span>
+                  <span className="size-4" />
                 </li>
               ) : null}
             </ul>

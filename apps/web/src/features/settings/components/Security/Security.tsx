@@ -51,9 +51,9 @@ export function Security() {
 
       <Card>
         <CardContent>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="max-w-md space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="current-password">Current password</Label>
+              <Label htmlFor="current-password">Current Password</Label>
               <Input
                 id="current-password"
                 type="password"
@@ -68,7 +68,7 @@ export function Security() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="new-password">New password</Label>
+              <Label htmlFor="new-password">New Password</Label>
               <Input
                 id="new-password"
                 type="password"
@@ -83,7 +83,7 @@ export function Security() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="confirm-password">Confirm new password</Label>
+              <Label htmlFor="confirm-password">Confirm New Password</Label>
               <Input
                 id="confirm-password"
                 type="password"
@@ -98,7 +98,7 @@ export function Security() {
             </div>
 
             <Button type="submit" disabled={form.formState.isSubmitting}>
-              {form.formState.isSubmitting ? "Changing…" : "Change password"}
+              {form.formState.isSubmitting ? "Changing..." : "Change Password"}
             </Button>
           </form>
         </CardContent>

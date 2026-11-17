@@ -1,5 +1,4 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useTheme } from "next-themes";
 import { toast } from "sonner";
 
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,7 +10,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useHydrated } from "@/lib/use-hydrated";
 import { orpc } from "@spark/orpc";
 
 const currencies = [
@@ -27,14 +25,8 @@ const themes = [
   { value: "dark", label: "Dark" },
 ];
 
-type Theme = "system" | "light" | "dark";
-
 export function Preferences() {
   const queryClient = useQueryClient();
-  // The theme in use lives in the browser, so this control shows and changes
-  // that one (the same as the account menu) as well as saving the choice.
-  const { theme, setTheme } = useTheme();
-  const hydrated = useHydrated();
 
   const { data: preferences } = useQuery({
     queryKey: ["settings", "preferences"],
@@ -42,7 +34,7 @@ export function Preferences() {
   });
 
   const mutation = useMutation({
-    mutationFn: (input: { displayCurrency?: string; theme?: Theme }) =>
+    mutationFn: (input: { displayCurrency?: string; theme?: "system" | "light" | "dark" }) =>
       orpc.settings.updateUserPreferences.call(input),
     onSuccess: (data) => {
       queryClient.setQueryData(["settings", "preferences"], data);
@@ -53,36 +45,31 @@ export function Preferences() {
     },
   });
 
-  const currency = preferences?.displayCurrency ?? "GBP";
-  const activeTheme = (hydrated ? theme : undefined) ?? preferences?.theme ?? "system";
-
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-lg font-semibold">Preferences</h2>
-        <p className="text-muted-foreground text-sm">Customise your experience</p>
+        <p className="text-muted-foreground text-sm">Customize your experience</p>
       </div>
 
       <Card>
         <CardContent className="space-y-6">
           <div className="space-y-2">
-            <Label>Display currency</Label>
+            <Label>Display Currency</Label>
             <Select
-              value={currency}
+              value={preferences?.displayCurrency ?? "GBP"}
               onValueChange={(value) => {
                 if (value) mutation.mutate({ displayCurrency: value });
               }}
               disabled={mutation.isPending}
             >
               <SelectTrigger className="w-48">
-                <SelectValue>
-                  {currencies.find((option) => option.value === currency)?.label ?? currency}
-                </SelectValue>
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {currencies.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
+                {currencies.map((currency) => (
+                  <SelectItem key={currency.value} value={currency.value}>
+                    {currency.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -95,28 +82,24 @@ export function Preferences() {
           <div className="space-y-2">
             <Label>Theme</Label>
             <Select
-              value={activeTheme}
+              value={preferences?.theme ?? "system"}
               onValueChange={(value) => {
-                if (!value) return;
-                setTheme(value);
-                mutation.mutate({ theme: value as Theme });
+                if (value) mutation.mutate({ theme: value as "system" | "light" | "dark" });
               }}
               disabled={mutation.isPending}
             >
               <SelectTrigger className="w-48">
-                <SelectValue>
-                  {themes.find((option) => option.value === activeTheme)?.label ?? activeTheme}
-                </SelectValue>
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {themes.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
+                {themes.map((theme) => (
+                  <SelectItem key={theme.value} value={theme.value}>
+                    {theme.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-muted-foreground text-xs">Choose your preferred colour scheme</p>
+            <p className="text-muted-foreground text-xs">Choose your preferred color scheme</p>
           </div>
         </CardContent>
       </Card>
