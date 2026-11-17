@@ -272,7 +272,7 @@ function Features() {
               className="grid gap-8 border-t border-[#c3c4c8] pt-10 md:grid-cols-[2fr_3fr] md:gap-16"
             >
               <h3 className="headline text-4xl sm:text-5xl">
-                <span className="text-[#8b7bff]">{"// "}</span>
+                <span className="text-[#5a3fe0]">{"// "}</span>
                 {block.name}
               </h3>
               <div>
@@ -284,7 +284,7 @@ function Features() {
                       key={row}
                       className="flex items-baseline gap-3 border-t border-[#dcdee0] py-3 text-sm first:border-t-0"
                     >
-                      <span className="font-mono text-xs font-medium text-[#8b7bff]">→</span>
+                      <span className="font-mono text-xs font-medium text-[#5a3fe0]">→</span>
                       {row}
                     </li>
                   ))}
@@ -378,12 +378,12 @@ function Footer() {
           </p>
           <ul className="mt-3 space-y-2 text-sm">
             <li>
-              <a href="#features" className="transition-colors hover:text-[#8b7bff]">
+              <a href="#features" className="transition-colors hover:text-[#5a3fe0]">
                 Features
               </a>
             </li>
             <li>
-              <a href="#security" className="transition-colors hover:text-[#8b7bff]">
+              <a href="#security" className="transition-colors hover:text-[#5a3fe0]">
                 Security
               </a>
             </li>
@@ -395,12 +395,12 @@ function Footer() {
           </p>
           <ul className="mt-3 space-y-2 text-sm">
             <li>
-              <Link to="/login" className="transition-colors hover:text-[#8b7bff]">
+              <Link to="/login" className="transition-colors hover:text-[#5a3fe0]">
                 Sign in
               </Link>
             </li>
             <li>
-              <Link to="/signup" className="transition-colors hover:text-[#8b7bff]">
+              <Link to="/signup" className="transition-colors hover:text-[#5a3fe0]">
                 Create account
               </Link>
             </li>
