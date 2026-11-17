@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { Landmark, LineChart, Lock, RefreshCw } from "lucide-react";
 
+import { SparkLines } from "@/components/spark-lines";
 import { SparkAppIcon } from "@/components/spark-mark";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -32,7 +33,9 @@ export function OnboardingCard() {
         <CardContent className="space-y-6 p-6 sm:p-8">
           <SparkAppIcon className="size-11" />
           <div>
-            <h2 className="text-foreground text-2xl font-bold">Let's connect your first account</h2>
+            <h2 className="text-foreground text-2xl font-medium">
+              Let's connect your first account
+            </h2>
             <p className="text-muted-foreground mt-2 text-[0.9375rem]">
               Spark brings your current accounts, savings and credit cards together in one calm
               view.
@@ -58,11 +61,11 @@ export function OnboardingCard() {
             Connect an account
           </Link>
         </CardContent>
-        <div className="bg-spark-gradient relative hidden items-end p-8 text-white md:flex">
-          <div className="bg-dotgrid absolute inset-0 opacity-25 [--dotgrid-color:rgb(255_255_255/0.5)]" />
+        <div className="bg-ink relative hidden items-end overflow-hidden p-8 text-white md:flex">
+          <SparkLines className="absolute inset-0 size-full text-[rgb(214_170_105/0.45)]" />
           <div className="relative space-y-3">
             <Lock className="size-6" />
-            <p className="font-display text-xl font-bold">Read-only, by design</p>
+            <p className="font-display text-xl font-medium">Read-only, by design</p>
             <p className="text-sm text-white/85">
               Connections use regulated UK Open Banking. Spark can see balances and transactions —
               it can never move money. You can revoke access at any time from your bank or here.

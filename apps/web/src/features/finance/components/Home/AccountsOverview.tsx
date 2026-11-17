@@ -56,7 +56,7 @@ export function AccountsOverview({
                         <AccountStatus account={account} />
                       </span>
                     </span>
-                    <span className="figure text-foreground text-right text-sm font-semibold">
+                    <span className="figure text-foreground text-right text-sm font-medium">
                       {formatMoney(accountBalance(account), account.currency)}
                       {isCardAccount(account) ? (
                         <span className="text-muted-foreground block text-[11px] font-medium">

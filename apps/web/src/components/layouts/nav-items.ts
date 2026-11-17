@@ -6,7 +6,7 @@ export interface NavItem {
   icon: LucideIcon;
 }
 
-/** Primary destinations, in sidebar and mobile tab-bar order. */
+/** Primary destinations, in top-bar and mobile tab-bar order. */
 export const navItems: readonly NavItem[] = [
   { label: "Home", href: "/dashboard", icon: House },
   { label: "Accounts", href: "/accounts", icon: Landmark },

@@ -78,7 +78,7 @@ export function ConnectAccountFlow({ onDone }: { onDone: () => void }) {
 function StepHeading({ title, description }: { title: string; description: string }) {
   return (
     <div>
-      <h2 className="text-foreground text-xl font-bold">{title}</h2>
+      <h2 className="text-foreground text-xl font-medium">{title}</h2>
       <p className="text-muted-foreground mt-1 text-[0.9375rem]">{description}</p>
     </div>
   );

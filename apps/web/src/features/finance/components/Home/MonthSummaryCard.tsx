@@ -52,7 +52,7 @@ export function MonthSummaryCard({
 
         <div className="flex items-baseline justify-between text-sm">
           <span className="text-muted-foreground">Net so far</span>
-          <span className={cn("figure font-bold", net >= 0 ? "text-success" : "text-foreground")}>
+          <span className={cn("figure font-medium", net >= 0 ? "text-success" : "text-foreground")}>
             {formatSignedMoney(net, currency)}
           </span>
         </div>
@@ -107,7 +107,7 @@ function Flow({
         {icon}
       </span>
       <p className="text-muted-foreground mt-2 text-xs font-medium">{label}</p>
-      <p className="figure text-foreground mt-0.5 text-lg font-bold">{value}</p>
+      <p className="figure text-foreground mt-0.5 text-lg font-medium">{value}</p>
     </div>
   );
 }

@@ -93,7 +93,7 @@ function Details({
         </div>
         <p
           className={cn(
-            "figure text-4xl font-bold",
+            "figure text-4xl font-medium",
             amount > 0 ? "text-success" : "text-foreground",
           )}
         >

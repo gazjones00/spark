@@ -29,28 +29,18 @@ export function AccountsSummary({
   return (
     <div className="grid gap-4 sm:grid-cols-3">
       {tiles.map((tile) => (
-        <Card
-          key={tile.label}
-          className={cn(tile.primary && "bg-spark-gradient border-transparent text-white")}
-        >
+        <Card key={tile.label} className={cn(tile.primary && "border-primary/40")}>
           <CardContent>
+            <p className="text-muted-foreground text-sm font-medium">{tile.label}</p>
             <p
               className={cn(
-                "text-sm font-medium",
-                tile.primary ? "text-white/85" : "text-muted-foreground",
+                "figure mt-1 w-fit text-2xl font-medium",
+                tile.primary && "text-ignition",
               )}
             >
-              {tile.label}
+              {formatMoney(tile.value, currency)}
             </p>
-            <p className="figure mt-1 text-2xl font-bold">{formatMoney(tile.value, currency)}</p>
-            <p
-              className={cn(
-                "mt-1 text-xs",
-                tile.primary ? "text-white/75" : "text-muted-foreground",
-              )}
-            >
-              {tile.note}
-            </p>
+            <p className="text-muted-foreground mt-1 text-xs">{tile.note}</p>
           </CardContent>
         </Card>
       ))}

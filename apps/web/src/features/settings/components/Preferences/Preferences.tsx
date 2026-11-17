@@ -54,12 +54,12 @@ export function Preferences() {
   });
 
   const currency = preferences?.displayCurrency ?? "GBP";
-  const activeTheme = (hydrated ? theme : undefined) ?? preferences?.theme ?? "system";
+  const activeTheme = (hydrated ? theme : undefined) ?? preferences?.theme ?? "dark";
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold">Preferences</h2>
+        <h2 className="text-lg font-medium">Preferences</h2>
         <p className="text-muted-foreground text-sm">Customise your experience</p>
       </div>
 

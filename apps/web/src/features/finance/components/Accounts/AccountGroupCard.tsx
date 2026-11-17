@@ -40,8 +40,8 @@ export function AccountGroupCard({
   return (
     <Card className="gap-2 pb-2">
       <CardHeader className="flex items-baseline justify-between">
-        <h2 className="text-foreground text-base font-semibold">{group.label}</h2>
-        <p className="figure text-foreground text-base font-bold">
+        <h2 className="text-foreground text-base font-medium">{group.label}</h2>
+        <p className="figure text-foreground text-base font-medium">
           {formatMoney(group.total, currency)}
           {group.key === "credit" ? (
             <span className="text-muted-foreground ml-1 font-sans text-sm font-medium">owed</span>
@@ -103,7 +103,7 @@ function AccountRow({
         {/* The figure never shrinks; on phones the name gets the room instead
             of the card's available credit. */}
         <span className="shrink-0 text-right">
-          <span className="figure text-foreground block text-base font-bold sm:text-lg">
+          <span className="figure text-foreground block text-base font-medium sm:text-lg">
             {formatMoney(balance, account.currency)}
           </span>
           {card ? (

@@ -18,7 +18,7 @@ export function RouteError({ error }: ErrorComponentProps) {
         <CardContent className="flex flex-col items-center gap-4 p-8 text-center">
           <AlertTriangle className="text-destructive size-8" aria-hidden />
           <div>
-            <h2 className="text-lg font-semibold">Something went wrong</h2>
+            <h2 className="text-lg font-medium">Something went wrong</h2>
             <p className="text-muted-foreground mt-1 text-sm">
               {error instanceof Error ? error.message : "An unexpected error occurred."}
             </p>

@@ -24,7 +24,7 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
       {
         title: "Spark · Personal finance",
       },
-      { name: "theme-color", content: "#6e56f8" },
+      { name: "theme-color", content: "#111214" },
     ],
     links: [
       {
@@ -45,7 +45,7 @@ function RootDocument() {
         <HeadContent />
       </head>
       <body>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
           <AuthProvider>
             <Outlet />
             <Toaster richColors />

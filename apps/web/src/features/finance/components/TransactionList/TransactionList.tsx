@@ -84,7 +84,7 @@ export function TransactionList({ transactions, accounts, onOpen }: TransactionL
                       </div>
                       <span
                         className={cn(
-                          "figure shrink-0 text-[0.9375rem] font-semibold",
+                          "figure shrink-0 text-[0.9375rem] font-medium",
                           amount > 0 ? "text-success" : "text-foreground",
                         )}
                       >
