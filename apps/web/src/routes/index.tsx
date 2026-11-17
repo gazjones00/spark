@@ -225,13 +225,13 @@ function SampleNetWorth() {
           </span>
         </div>
 
-        <div className="flex justify-between border-t border-white/10 px-5 py-3 text-xs text-white/45 sm:px-8">
+        <div className="flex justify-between border-t border-white/10 px-5 py-3 text-xs text-white/55 sm:px-8">
           <span>Nov 2025</span>
           <span className="hidden sm:inline">Low £19.4k · High £24.7k</span>
           <span>Today</span>
         </div>
       </div>
-      <figcaption className="mt-3 text-right text-xs text-white/40">Sample data</figcaption>
+      <figcaption className="mt-3 text-right text-xs text-white/55">Sample data</figcaption>
     </figure>
   );
 }
