@@ -1,4 +1,5 @@
 export { enumValues } from "./utils/enum-values.ts";
+export { isLiabilityAccountType, signedAccountBalance } from "./finance/account-balance.ts";
 export {
   DEFAULT_HTTP_TIMEOUT_MS,
   HttpTimeoutError,
