@@ -41,11 +41,12 @@
     "prepare": "husky"
   },
   "devDependencies": {
+    "@oxlint/plugins": "1.80.0",
     "@spark/config": "workspace:*",
     "@types/bun": "catalog:",
     "husky": "^9.1.7",
     "oxfmt": "^0.34.0",
-    "oxlint": "^1.49.0",
+    "oxlint": "1.80.0",
     "turbo": "^2.8.10",
     "typescript": "catalog:"
   },
