@@ -37,7 +37,9 @@ import { Route } from "./dashboard";
 
 function makeDashboardData(overrides: Partial<DashboardData> = {}): DashboardData {
   return {
+    accounts: [],
     netWorth: 1234.56,
+    previousMonth: null,
     monthlyIncome: 2000,
     monthlyExpenses: 750,
     currency: "GBP",
@@ -66,20 +68,26 @@ describe("dashboard route", () => {
     dashboardData.current = makeDashboardData();
   });
 
-  it("renders the page header and stats for loaded data", () => {
+  it("greets the user by first name and shows the headline figures", () => {
     renderDashboard();
 
-    expect(screen.getByText("Home")).toBeDefined();
-    expect(screen.getByText(/Welcome back, Test User/)).toBeDefined();
-    expect(screen.getByText(/net worth/i)).toBeDefined();
+    expect(
+      screen.getByRole("heading", { name: /^Good (morning|afternoon|evening), Test$/ }),
+    ).toBeDefined();
+    expect(screen.getByText("Net worth")).toBeDefined();
+    expect(screen.getByText("£1,234.56")).toBeDefined();
+    expect(screen.getByText("Money in")).toBeDefined();
+    expect(screen.getByText("Spending by category")).toBeDefined();
   });
 
-  it("renders the empty state when no accounts are connected", () => {
+  it("welcomes a new user and walks them through connecting an account", () => {
     dashboardData.current = makeDashboardData({ hasAccounts: false });
 
     renderDashboard();
 
-    expect(screen.getByText("No accounts connected yet")).toBeDefined();
+    expect(screen.getByRole("heading", { name: "Welcome to Spark, Test" })).toBeDefined();
+    expect(screen.getByText("Let's connect your first account")).toBeDefined();
+    expect(screen.getByText("Read-only, by design")).toBeDefined();
   });
 
   it("renders the error state with a retry affordance", () => {
@@ -88,7 +96,7 @@ describe("dashboard route", () => {
     renderDashboard();
 
     expect(screen.getByText("Couldn't load your dashboard")).toBeDefined();
-    expect(screen.getByRole("button", { name: /retry/i })).toBeDefined();
+    expect(screen.getByRole("button", { name: /try again/i })).toBeDefined();
   });
 
   it("renders skeletons while loading (no data, no empty state)", () => {
@@ -96,7 +104,7 @@ describe("dashboard route", () => {
 
     renderDashboard();
 
-    expect(screen.queryByText("No accounts connected yet")).toBeNull();
-    expect(screen.queryByText(/net worth/i)).toBeNull();
+    expect(screen.queryByText("Let's connect your first account")).toBeNull();
+    expect(screen.queryByText("Net worth")).toBeNull();
   });
 });

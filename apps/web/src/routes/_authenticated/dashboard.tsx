@@ -1,16 +1,25 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { Plus, RefreshCw, Wallet } from "lucide-react";
+import * as React from "react";
 
+import { createFileRoute } from "@tanstack/react-router";
+import { RefreshCw } from "lucide-react";
+
+import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { PageHeader } from "@/components/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
-import { QuickStats } from "@/features/finance/components/QuickStats";
-import { BalanceHistoryChart } from "@/features/finance/components/BalanceHistoryChart";
-import { SpendingChart } from "@/features/finance/components/SpendingChart";
-import { RecentTransactions } from "@/features/finance/components/RecentTransactions";
-import { ConnectAccountModal } from "@/features/finance/components/ConnectAccountModal";
+import { AccountsAttentionBanner } from "@/features/finance/components/AccountsAttentionBanner";
+import {
+  AccountsOverview,
+  MonthSummaryCard,
+  NetWorthCard,
+  OnboardingCard,
+  RecentActivity,
+  SpendingBreakdown,
+} from "@/features/finance/components/Home";
 import { useDashboardData, type DashboardData } from "@/features/finance/hooks/useDashboardData";
+import type { SeriesRange } from "@/features/finance/lib/series-ranges";
+import { useReauthAccount } from "@/features/finance/hooks/useReauthAccount";
+import { greeting } from "@/features/finance/lib/dates";
 import { useHydrated } from "@/lib/use-hydrated";
 import { orpc } from "@spark/orpc";
 import { useAuth } from "@spark/auth/react";
@@ -31,22 +40,43 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 
 function DashboardPage() {
   const { user: sessionUser } = useAuth();
-  const user = useHydrated() ? sessionUser : null;
-  const data = useDashboardData();
+  const hydrated = useHydrated();
+  const user = hydrated ? sessionUser : null;
+  const [range, setRange] = React.useState<SeriesRange>("3M");
+  const data = useDashboardData({ range });
+
+  const firstName = user?.name?.trim().split(/\s+/)[0];
+  const isNew = !data.isLoading && !data.isError && !data.hasAccounts;
+  // Time-of-day greeting depends on the viewer's clock, so it waits for the
+  // client; the server renders the neutral title.
+  const title = isNew
+    ? `Welcome to Spark${firstName ? `, ${firstName}` : ""}`
+    : hydrated
+      ? `${greeting()}${firstName ? `, ${firstName}` : ""}`
+      : "Home";
+  const today = hydrated
+    ? new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })
+    : undefined;
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Home"
-        description={`Welcome back${user?.name ? `, ${user.name}` : ""}. Here's your financial overview.`}
-      />
-
-      <DashboardContent data={data} />
+      <PageHeader title={title} description={isNew ? "Let's get you set up." : today} />
+      <DashboardContent data={data} range={range} onRangeChange={setRange} />
     </div>
   );
 }
 
-function DashboardContent({ data }: { data: DashboardData }) {
+function DashboardContent({
+  data,
+  range,
+  onRangeChange,
+}: {
+  data: DashboardData;
+  range: SeriesRange;
+  onRangeChange: (range: SeriesRange) => void;
+}) {
+  const reauth = useReauthAccount();
+
   if (data.isLoading) {
     return <DashboardSkeleton />;
   }
@@ -56,90 +86,81 @@ function DashboardContent({ data }: { data: DashboardData }) {
   }
 
   if (!data.hasAccounts) {
-    return <DashboardEmpty />;
+    return <OnboardingCard />;
   }
 
+  const needsAttention = data.accounts.filter((account) => account.syncStatus !== "OK");
+  const expiringSoon = data.accounts.filter(
+    (account) => account.syncStatus === "OK" && account.consentStatus === "EXPIRING_SOON",
+  );
+
   return (
-    <>
-      <QuickStats
-        netWorth={data.netWorth}
-        monthlyIncome={data.monthlyIncome}
-        monthlyExpenses={data.monthlyExpenses}
-        currency={data.currency}
+    <div className="space-y-6">
+      <AccountsAttentionBanner
+        accounts={needsAttention}
+        expiringAccounts={expiringSoon}
+        onReauth={(providerId) => reauth.mutate(providerId)}
       />
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <BalanceHistoryChart data={data.balanceSeries} currency={data.currency} />
-        <SpendingChart data={data.spendingByCategory} currency={data.currency} />
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <NetWorthCard
+            netWorth={data.netWorth}
+            currency={data.currency}
+            series={data.balanceSeries}
+            range={range}
+            onRangeChange={onRangeChange}
+          />
+        </div>
+        <MonthSummaryCard
+          income={data.monthlyIncome}
+          expenses={data.monthlyExpenses}
+          currency={data.currency}
+          previousMonth={data.previousMonth}
+        />
       </div>
 
-      <RecentTransactions transactions={data.recentTransactions} />
-    </>
+      <div className="grid items-start gap-6 lg:grid-cols-3">
+        <div className="space-y-6 lg:col-span-2">
+          <SpendingBreakdown data={data.spendingByCategory} currency={data.currency} />
+          <RecentActivity transactions={data.recentTransactions} accounts={data.accounts} />
+        </div>
+        <AccountsOverview accounts={data.accounts} currency={data.currency} />
+      </div>
+    </div>
   );
 }
 
-const SKELETON_STAT_KEYS = ["net-worth", "income", "expenses"] as const;
-
 function DashboardSkeleton() {
   return (
-    <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-3">
-        {SKELETON_STAT_KEYS.map((key) => (
-          <Card key={key}>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <Skeleton className="size-9" />
-                <div className="space-y-2">
-                  <Skeleton className="h-3 w-24" />
-                  <Skeleton className="h-5 w-28" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+    <div className="space-y-6" aria-busy="true" aria-label="Loading your overview">
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Skeleton className="h-[340px] rounded-2xl lg:col-span-2" />
+        <Skeleton className="h-[340px] rounded-2xl" />
       </div>
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Skeleton className="h-[280px] w-full" />
-        <Skeleton className="h-[280px] w-full" />
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Skeleton className="h-[300px] rounded-2xl lg:col-span-2" />
+        <Skeleton className="h-[300px] rounded-2xl" />
       </div>
-      <Skeleton className="h-[280px] w-full" />
     </div>
   );
 }
 
 function DashboardError({ onRetry }: { onRetry: () => void }) {
   return (
-    <div className="text-muted-foreground flex flex-col items-center gap-3 rounded-none border border-dashed p-8 text-center">
-      <div>
-        <p className="text-foreground text-sm font-medium">Couldn't load your dashboard</p>
-        <p className="text-xs">Something went wrong fetching your accounts and transactions.</p>
-      </div>
-      <Button variant="outline" size="sm" onClick={onRetry} className="gap-2">
-        <RefreshCw className="size-4" />
-        Retry
-      </Button>
-    </div>
-  );
-}
-
-function DashboardEmpty() {
-  return (
-    <div className="text-muted-foreground flex flex-col items-center gap-3 rounded-none border border-dashed p-8 text-center">
-      <Wallet className="size-8" />
-      <div>
-        <p className="text-foreground text-sm font-medium">No accounts connected yet</p>
-        <p className="text-xs">
-          Connect a bank account to see your real balances, spending, and transactions.
-        </p>
-      </div>
-      <ConnectAccountModal
-        trigger={
-          <Button className="gap-2">
-            <Plus className="size-4" />
-            Connect Account
-          </Button>
-        }
-      />
-    </div>
+    <Card>
+      <CardContent className="flex flex-col items-center gap-3 py-8 text-center">
+        <div>
+          <p className="text-foreground text-sm font-semibold">Couldn't load your dashboard</p>
+          <p className="text-muted-foreground text-sm">
+            Something went wrong fetching your accounts and transactions.
+          </p>
+        </div>
+        <Button variant="outline" size="sm" onClick={onRetry}>
+          <RefreshCw />
+          Try again
+        </Button>
+      </CardContent>
+    </Card>
   );
 }

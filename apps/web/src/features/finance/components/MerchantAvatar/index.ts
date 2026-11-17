@@ -1,0 +1,1 @@
+export { MerchantAvatar } from "./MerchantAvatar";

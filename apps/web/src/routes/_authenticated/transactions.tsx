@@ -1,6 +1,7 @@
 import * as React from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useSearch } from "@tanstack/react-router";
+import { z } from "zod";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/page-header";
@@ -15,7 +16,14 @@ import { orpc } from "@spark/orpc";
 
 const PAGE_SIZE = 25;
 
+/** Deep links from elsewhere (a category or an account) open the list pre-filtered. */
+const searchSchema = z.object({
+  category: z.string().optional(),
+  account: z.string().optional(),
+});
+
 export const Route = createFileRoute("/_authenticated/transactions")({
+  validateSearch: searchSchema,
   // Warm the caches for the page's default (unfiltered) state on client-side
   // navigations. SSR is skipped: the oRPC fetch has no user cookie there.
   loader: ({ context }) => {
@@ -33,10 +41,11 @@ export const Route = createFileRoute("/_authenticated/transactions")({
 });
 
 function TransactionsPage() {
+  const linked = useSearch({ from: "/_authenticated/transactions" });
   const [filters, setFilters] = React.useState<TransactionFilters>({
     search: "",
-    category: "all",
-    accountId: "all",
+    category: linked.category ?? "all",
+    accountId: linked.account ?? "all",
     dateRange: "all",
   });
   const [cursor, setCursor] = React.useState<string | undefined>();
