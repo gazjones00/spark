@@ -62,7 +62,7 @@ export function OnboardingCard() {
           </Link>
         </CardContent>
         <div className="bg-ink relative hidden items-end overflow-hidden p-8 text-white md:flex">
-          <SparkLines className="absolute inset-0 size-full text-[rgb(214_170_105/0.45)]" />
+          <SparkLines className="absolute inset-0 size-full text-white/20 [--lines-lit:#ffc24b]" />
           <div className="relative space-y-3">
             <Lock className="size-6" />
             <p className="font-display text-xl font-medium">Read-only, by design</p>

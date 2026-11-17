@@ -121,8 +121,8 @@ export function ProductStory() {
                   {chapter.name}
                   <span
                     className={cn(
-                      "mt-2 block h-2 rounded-[3px] transition-colors duration-500",
-                      index === active ? "bg-ignition" : "bg-white/20 group-hover:bg-white/35",
+                      "mt-3 block h-0.5 transition-colors duration-500",
+                      index === active ? "bg-filament" : "bg-white/20 group-hover:bg-white/40",
                     )}
                   />
                 </a>
@@ -142,13 +142,10 @@ export function ProductStory() {
             }}
             className="flex scroll-mt-16 flex-col justify-center border-b border-[#0b0b0f] px-4 py-14 last:border-b-0 sm:px-6 lg:min-h-[calc(100svh-4rem)] lg:py-20 lg:pr-[max(1.5rem,calc((100vw-80rem)/2+1.5rem))] lg:pl-14"
           >
-            <p className="self-end text-sm text-[#5f5f6e] tabular-nums">
-              {String(index + 1).padStart(2, "0")} – {String(CHAPTERS.length).padStart(2, "0")}
-            </p>
-            <div className="bg-ink mt-6 flex justify-center overflow-hidden rounded-lg px-4 pt-10 pb-8 lg:hidden">
+            <div className="bg-ink flex justify-center overflow-hidden rounded-xl px-4 pt-10 pb-8 lg:hidden">
               <chapter.Illustration />
             </div>
-            <h3 className="headline mt-8 max-w-lg text-4xl sm:text-5xl lg:mt-4">{chapter.title}</h3>
+            <h3 className="headline mt-8 max-w-lg text-4xl sm:text-5xl lg:mt-0">{chapter.title}</h3>
             <p className="mt-5 max-w-lg text-[1.0625rem] leading-relaxed text-[#2c2c35]">
               {chapter.body}
             </p>

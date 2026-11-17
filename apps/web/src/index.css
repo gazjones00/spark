@@ -1,5 +1,5 @@
 @import "@fontsource-variable/inter";
-@import "@fontsource-variable/funnel-display";
+@import "@fontsource-variable/instrument-sans";
 
 @import "tailwindcss";
 @import "tw-animate-css";
@@ -9,10 +9,11 @@
 
 /* ============================================================================
    Spark design tokens
-   Graphite panels layered on a near-black page (dark is the default), crisp
-   10px corners, and the "ignition" gradient (orange → pink) for the one main
-   action on a screen. The spark mark keeps its amber → coral → violet
-   gradient. Green means money in; red is kept for problems.
+   Graphite panels layered on a near-black page (dark is the default), 10px
+   controls and 14px panels, and one "filament" amber for the main action on a
+   screen and the lit line in the line art. Everything else stays neutral.
+   The spark mark keeps its amber → coral → violet gradient. Green means money
+   in; red is kept for problems.
    ============================================================================ */
 
 :root {
@@ -22,7 +23,7 @@
   --card-foreground: #0b0b0f;
   --popover: #ffffff;
   --popover-foreground: #0b0b0f;
-  --primary: #c93a6a;
+  --primary: #9a5d00;
   --primary-foreground: #ffffff;
   --secondary: #ececf3;
   --secondary-foreground: #0b0b0f;
@@ -32,11 +33,11 @@
   --accent-foreground: #0b0b0f;
   --destructive: #c4262c;
   --success: #05704f;
-  --warning: #f59e0b;
-  --warning-foreground: #92400e;
+  --warning: #ea580c;
+  --warning-foreground: #9a3412;
   --border: #e3e3eb;
   --input: #d9d9e3;
-  --ring: #e9618f;
+  --ring: #c98200;
   --chart-1: #6e56f8;
   --chart-2: #f43f5e;
   --chart-3: #f59e0b;
@@ -52,20 +53,19 @@
   --radius: 0.625rem;
   --sidebar: #ffffff;
   --sidebar-foreground: #5f5f6e;
-  --sidebar-primary: #c93a6a;
+  --sidebar-primary: #9a5d00;
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #efeff5;
   --sidebar-accent-foreground: #0b0b0f;
   --sidebar-border: #e3e3eb;
-  --sidebar-ring: #e9618f;
+  --sidebar-ring: #c98200;
   --spark-gradient: linear-gradient(135deg, #ff9a3c 0%, #ff5470 48%, #8a5cff 100%);
-  /* The main call to action. Ink text keeps it above 5.5:1 on both stops. */
-  --ignition: linear-gradient(90deg, #f19670 0%, #e852ad 100%);
-  --ignition-foreground: #111214;
-  /* Deeper stops for gradient figures on light surfaces (large text, ≥3:1). */
-  --ignition-text: linear-gradient(90deg, #d45a2c 0%, #c2307f 100%);
-  /* Signature line art. */
+  /* The main call to action: filament amber with ink text (11.7:1). */
+  --filament: #ffc24b;
+  --filament-foreground: #111214;
+  /* Signature line art, and the one lit line running through it. */
   --lines: rgb(11 11 15 / 0.14);
+  --lines-lit: #c98200;
   --card-shadow: 0 1px 2px 0 rgb(16 16 24 / 0.04);
 }
 
@@ -76,7 +76,7 @@
   --card-foreground: #f3f4f9;
   --popover: #1e1e23;
   --popover-foreground: #f3f4f9;
-  --primary: #ed6e8e;
+  --primary: #ffc24b;
   --primary-foreground: #111214;
   --secondary: #2a2a2f;
   --secondary-foreground: #f3f4f9;
@@ -86,11 +86,11 @@
   --accent-foreground: #f3f4f9;
   --destructive: #ff6369;
   --success: #3dd68c;
-  --warning: #fbbf24;
-  --warning-foreground: #fcd34d;
+  --warning: #fb923c;
+  --warning-foreground: #fdba74;
   --border: #2a2a2f;
   --input: #34343a;
-  --ring: #ed6e8e;
+  --ring: #ffc24b;
   --chart-1: #8b7bff;
   --chart-2: #fb7185;
   --chart-3: #fbbf24;
@@ -105,14 +105,14 @@
   --chart-12: #a8a29e;
   --sidebar: #19191d;
   --sidebar-foreground: #9e9eab;
-  --sidebar-primary: #ed6e8e;
+  --sidebar-primary: #ffc24b;
   --sidebar-primary-foreground: #111214;
   --sidebar-accent: #26262b;
   --sidebar-accent-foreground: #f3f4f9;
   --sidebar-border: #2a2a2f;
-  --sidebar-ring: #ed6e8e;
-  --ignition-text: var(--ignition);
-  --lines: rgb(214 170 105 / 0.32);
+  --sidebar-ring: #ffc24b;
+  --lines: rgb(255 255 255 / 0.13);
+  --lines-lit: #ffc24b;
   --card-shadow: none;
 }
 
@@ -124,7 +124,7 @@
   --foreground: #0b0b0f;
   --card: #ffffff;
   --card-foreground: #0b0b0f;
-  --primary: #c93a6a;
+  --primary: #9a5d00;
   --primary-foreground: #ffffff;
   --muted: #f5f5fa;
   --muted-foreground: #5f5f6e;
@@ -132,14 +132,14 @@
   --accent-foreground: #0b0b0f;
   --border: #e3e3eb;
   --input: #d9d9e3;
-  --ring: #e9618f;
-  --ignition-text: var(--ignition);
-  --lines: rgb(11 11 15 / 0.9);
+  --ring: #c98200;
+  --lines: rgb(11 11 15 / 0.85);
+  --lines-lit: #c98200;
 }
 
 @theme inline {
   --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Funnel Display Variable", "Inter Variable", ui-sans-serif, sans-serif;
+  --font-display: "Instrument Sans Variable", "Inter Variable", ui-sans-serif, sans-serif;
   /* Figures align without a terminal look: Inter with tabular numerals. */
   --font-mono: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
@@ -189,7 +189,7 @@
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 2px);
+  --radius-xl: calc(var(--radius) + 4px);
   --radius-2xl: calc(var(--radius) + 6px);
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
@@ -220,11 +220,11 @@
 }
 
 @layer components {
-  /* Display headline: Funnel Display at regular weight, tight leading. */
+  /* Display headline: Instrument Sans at medium weight, tight leading. */
   .headline {
     font-family: var(--font-display);
-    font-weight: 400;
-    line-height: 1.02;
+    font-weight: 500;
+    line-height: 1;
     letter-spacing: -0.035em;
     text-wrap: balance;
   }
@@ -241,17 +241,9 @@
   }
 
   /* The main call to action's fill. */
-  .bg-ignition {
-    background-image: var(--ignition);
-    color: var(--ignition-foreground);
-  }
-
-  /* Figures in the ignition colours (big numbers in stat tiles). */
-  .text-ignition {
-    background-image: var(--ignition-text);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+  .bg-filament {
+    background-color: var(--filament);
+    color: var(--filament-foreground);
   }
 
   /* Line art drawn in on load; paths set pathLength="1". */
@@ -262,6 +254,11 @@
   }
   .animate-lines-draw path:nth-child(odd) {
     animation-delay: 0.15s;
+  }
+  /* The lit line arrives last: the one orchestrated moment. */
+  .animate-lines-draw path[data-lit] {
+    animation-delay: 0.9s;
+    animation-duration: 1.4s;
   }
   @media (prefers-reduced-motion: reduce) {
     .animate-lines-draw path {

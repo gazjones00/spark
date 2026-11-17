@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
-import { ArrowRight, ArrowUpRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 import { SparkLines } from "@/components/spark-lines";
 import { SparkLogo } from "@/components/spark-mark";
@@ -48,7 +48,7 @@ function LandingPage() {
 const CONTAINER = "mx-auto w-full max-w-7xl px-4 sm:px-6";
 
 const INK_BUTTON =
-  "inline-flex items-center justify-center gap-2 rounded-md bg-[#0b0b0f] font-medium text-white transition-colors hover:bg-[#2a2a2f] focus-visible:ring-[3px] focus-visible:ring-[#e9618f]/50 outline-none";
+  "inline-flex items-center justify-center gap-2 rounded-lg bg-[#0b0b0f] font-medium text-white transition-colors hover:bg-[#2a2a2f] focus-visible:ring-[3px] focus-visible:ring-[#c98200]/50 outline-none";
 
 function Header() {
   return (
@@ -69,45 +69,12 @@ function Header() {
           <Link to="/login" className="text-[0.9375rem] hover:text-[#5f5f6e]">
             Sign in
           </Link>
-          <Link to="/signup" className={cn(INK_BUTTON, "h-11 px-5 text-[0.9375rem]")}>
+          <Link to="/signup" className={cn(INK_BUTTON, "h-10 px-4 text-[0.9375rem]")}>
             Get started
-            <ArrowUpRight className="size-4" />
           </Link>
         </div>
       </div>
     </header>
-  );
-}
-
-/** Tall outlined tile with the arrow on top and the label at the foot. */
-function ArrowTile({
-  to,
-  children,
-  tone = "light",
-  className,
-}: {
-  to: "/signup" | "/login";
-  children: ReactNode;
-  tone?: "light" | "dark";
-  className?: string;
-}) {
-  return (
-    <Link
-      to={to}
-      className={cn(
-        "group flex flex-col justify-between rounded-md border p-4 transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-[#e9618f]/50",
-        tone === "light"
-          ? "border-[#0b0b0f] hover:bg-[#0b0b0f] hover:text-white"
-          : "border-white/40 text-white hover:border-white hover:bg-white hover:text-[#0b0b0f]",
-        className,
-      )}
-    >
-      <ArrowUpRight
-        strokeWidth={1.25}
-        className="size-7 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
-      />
-      <span className="text-[1.0625rem] font-medium">{children}</span>
-    </Link>
   );
 }
 
@@ -139,11 +106,11 @@ function Hero() {
             Spark connects your current accounts, savings and credit cards through Open Banking,
             sorts every transaction, and shows what you're worth and where your money goes.
           </p>
-          <div className="mt-10 flex flex-wrap items-end gap-x-8 gap-y-4">
-            <ArrowTile to="/signup" className="h-28 w-56 bg-white">
-              Get started free
-            </ArrowTile>
-            <p className="pb-1 text-[0.9375rem] text-[#5f5f6e]">
+          <div className="mt-10 flex flex-wrap items-end gap-x-6 gap-y-4">
+            <Link to="/signup" className={cn(INK_BUTTON, "h-12 px-6 text-base")}>
+              Create your free account
+            </Link>
+            <p className="pb-3 text-[0.9375rem] text-[#5f5f6e]">
               Already using Spark?{" "}
               <Link to="/login" className="text-[#0b0b0f] underline underline-offset-4">
                 Sign in
@@ -179,31 +146,32 @@ function Statement() {
   return (
     <section className="bg-ink text-white">
       <div className={cn(CONTAINER, "py-20 sm:py-28")}>
-        <p className="font-display mx-auto max-w-4xl text-center text-[1.75rem] leading-[1.15] tracking-[-0.02em] text-balance sm:text-[2.5rem] lg:text-[2.75rem]">
+        <p className="font-display mx-auto max-w-4xl text-center text-[1.75rem] leading-[1.15] font-medium tracking-[-0.025em] text-balance sm:text-[2.5rem] lg:text-[2.75rem]">
           Spark reads your accounts through regulated Open Banking, files every payment under the
           right category, and keeps one live picture of what you have, what you owe and where it
           goes.
         </p>
-        <div className="mt-16 grid gap-5 sm:mt-20 sm:grid-cols-2">
+        <nav
+          aria-label="What Spark does"
+          className="mt-16 grid border-t border-white/15 sm:mt-20 sm:grid-cols-2 lg:grid-cols-4"
+        >
           {SECTIONS.map((section) => (
             <a
               key={section.href}
               href={section.href}
-              className="group flex min-h-52 flex-col justify-between rounded-md border border-white/25 p-6 transition-colors outline-none hover:border-white/60 hover:bg-white/[0.03] focus-visible:ring-[3px] focus-visible:ring-[#e9618f]/50 sm:min-h-60"
+              className="group border-b border-white/15 py-8 outline-none focus-visible:bg-white/[0.04] sm:px-6 sm:max-lg:odd:pl-0 lg:border-b-0 lg:border-l lg:px-6 lg:first:border-l-0 lg:first:pl-0"
             >
-              <ArrowUpRight
-                strokeWidth={1.25}
-                className="size-8 self-end transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
-              />
-              <span>
-                <span className="font-display block text-3xl tracking-tight sm:text-[2.25rem]">
+              <span className="font-display block text-[1.75rem] font-medium tracking-[-0.02em]">
+                <span className="decoration-[#ffc24b] decoration-2 underline-offset-[6px] group-hover:underline">
                   {section.title}
                 </span>
-                <span className="mt-2 block text-[0.9375rem] text-white/70">{section.body}</span>
+              </span>
+              <span className="mt-2 block max-w-[16rem] text-[0.9375rem] leading-relaxed text-white/70">
+                {section.body}
               </span>
             </a>
           ))}
-        </div>
+        </nav>
       </div>
     </section>
   );
@@ -223,39 +191,48 @@ function Story() {
 }
 
 const FACTS = [
-  { label: "To use Spark", figure: "£0" },
-  { label: "Banking passwords Spark sees", figure: "0" },
-  { label: "To connect a bank", figure: "~1 min" },
-  { label: "Current, savings and cards", figure: "3 kinds" },
+  { figure: "£0", label: "to use Spark" },
+  { figure: "0", label: "banking passwords Spark ever sees" },
+  { figure: "~1 min", label: "to connect a bank" },
+  { figure: "3", label: "kinds of account: current, savings and cards" },
 ] as const;
 
 function Facts() {
   return (
     <section className={CONTAINER}>
-      <div className="pt-24 pb-5 sm:pt-32">
-        <h2 className="headline max-w-3xl text-[2.75rem] sm:text-6xl">
-          Your money, on your terms.
-        </h2>
-        <p className="mt-6 max-w-xl text-lg leading-relaxed">
-          Free to use, and nothing to install. You approve access at your own bank, see everything
-          in one place, and can revoke it whenever you like.
-        </p>
-        <div className="mt-12 grid grid-cols-2 gap-4 sm:gap-5 lg:grid-cols-5">
+      <div className="pt-24 pb-24 sm:pt-32 sm:pb-28">
+        <div className="flex flex-wrap items-end justify-between gap-x-10 gap-y-6">
+          <div>
+            <h2 className="headline max-w-3xl text-[2.75rem] sm:text-6xl">
+              Your money, on your terms.
+            </h2>
+            <p className="mt-6 max-w-xl text-lg leading-relaxed">
+              Free to use, and nothing to install. You approve access at your own bank, see
+              everything in one place, and can revoke it whenever you like.
+            </p>
+          </div>
+          <Link to="/signup" className={cn(INK_BUTTON, "h-12 px-6 text-base")}>
+            Create your free account
+          </Link>
+        </div>
+        <dl className="mt-14 grid grid-cols-2 border-t border-[#0b0b0f] lg:grid-cols-4">
           {FACTS.map((fact) => (
             <div
               key={fact.label}
-              className="bg-ink flex h-36 flex-col justify-between rounded-md p-4 text-white sm:h-40 sm:p-5"
+              className="border-b border-[#e3e3eb] py-7 pr-6 lg:border-b-0 lg:border-l lg:pl-6 lg:first:border-l-0 lg:first:pl-0"
             >
-              <p className="text-sm text-white/85 sm:text-[0.9375rem]">{fact.label}</p>
-              <p className="font-display text-ignition w-fit text-4xl tracking-tight sm:text-5xl">
-                {fact.figure}
-              </p>
+              <dt className="sr-only">{fact.label}</dt>
+              <dd>
+                <span className="font-display block text-5xl font-medium tracking-[-0.035em] sm:text-6xl">
+                  {fact.figure}
+                </span>
+                <span className="mt-3 block max-w-[14rem] text-[0.9375rem] text-[#5f5f6e]">
+                  {fact.label}
+                </span>
+              </dd>
             </div>
           ))}
-          <ArrowTile to="/signup" className="col-span-2 h-36 sm:h-40 lg:col-span-1">
-            Create your account
-          </ArrowTile>
-        </div>
+        </dl>
       </div>
     </section>
   );
@@ -270,14 +247,8 @@ const SECURITY_POINTS = [
 
 function SecurityBand() {
   return (
-    <section id="security" className={cn(CONTAINER, "scroll-mt-16 pt-0 pb-24 sm:pb-32")}>
-      <div
-        className="grid gap-10 overflow-hidden rounded-md px-6 py-14 text-white sm:px-12 sm:py-20 lg:grid-cols-[1fr_1.1fr] lg:gap-16"
-        style={{
-          background:
-            "radial-gradient(70% 130% at 18% 0%, #b25260 0%, #4a2630 48%, #111214 88%), #111214",
-        }}
-      >
+    <section id="security" className={cn(CONTAINER, "scroll-mt-16 pb-24 sm:pb-32")}>
+      <div className="bg-ink grid gap-10 rounded-xl px-6 py-14 text-white sm:px-12 sm:py-20 lg:grid-cols-[1fr_1.1fr] lg:gap-16">
         <div>
           <h2 className="headline text-[2.75rem] sm:text-6xl">Read-only, by design.</h2>
           <p className="mt-6 max-w-md text-[1.0625rem] leading-relaxed text-white/80">
@@ -289,9 +260,9 @@ function SecurityBand() {
           {SECURITY_POINTS.map((point) => (
             <li
               key={point}
-              className="flex items-start gap-3 border-t border-white/20 py-4 text-[0.9375rem] text-white/90"
+              className="flex items-start gap-3 border-t border-white/15 py-4 text-[0.9375rem] text-white/90"
             >
-              <ArrowRight className="mt-0.5 size-4 shrink-0 text-[#f6a58a]" />
+              <ArrowRight className="mt-0.5 size-4 shrink-0 text-[#ffc24b]" />
               {point}
             </li>
           ))}
@@ -310,9 +281,9 @@ function Footer() {
           <p className="font-display mt-6 text-2xl tracking-tight">
             See where your money is today.
           </p>
-          <ArrowTile to="/signup" className="mt-6 h-24 w-56">
-            Create your account
-          </ArrowTile>
+          <Link to="/signup" className={cn(INK_BUTTON, "mt-6 h-12 px-6 text-base")}>
+            Create your free account
+          </Link>
         </div>
         <div className="grid grid-cols-2 gap-8">
           <FooterLinks title="Product">

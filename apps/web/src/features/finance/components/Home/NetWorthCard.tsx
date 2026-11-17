@@ -94,12 +94,12 @@ export function NetWorthCard({
           <AreaChart data={series} margin={{ top: 8, right: 0, bottom: 0, left: 0 }}>
             <defs>
               <linearGradient id="net-worth-line" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="#f19670" />
-                <stop offset="100%" stopColor="#e852ad" />
+                <stop offset="0%" stopColor="var(--primary)" />
+                <stop offset="100%" stopColor="var(--primary)" />
               </linearGradient>
               <linearGradient id="net-worth-fill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#e852ad" stopOpacity={0.22} />
-                <stop offset="100%" stopColor="#e852ad" stopOpacity={0} />
+                <stop offset="0%" stopColor="var(--primary)" stopOpacity={0.2} />
+                <stop offset="100%" stopColor="var(--primary)" stopOpacity={0} />
               </linearGradient>
             </defs>
             <XAxis dataKey="date" hide />
