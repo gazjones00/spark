@@ -44,8 +44,8 @@ function LandingPage() {
   );
 }
 
-/** Content column: backgrounds run full width, content stays at the app's width. */
-const CONTAINER = "mx-auto w-full max-w-6xl px-4 sm:px-6";
+/** Content column: backgrounds (and the product story) run full width. */
+const CONTAINER = "mx-auto w-full max-w-7xl px-4 sm:px-6";
 
 const INK_BUTTON =
   "inline-flex items-center justify-center gap-2 rounded-md bg-[#0b0b0f] font-medium text-white transition-colors hover:bg-[#2a2a2f] focus-visible:ring-[3px] focus-visible:ring-[#e9618f]/50 outline-none";
@@ -130,7 +130,7 @@ function Hero() {
           className="absolute top-0 right-0 hidden aspect-[1440/900] w-[80rem] overflow-visible lg:block"
         />
         <div className="relative pt-72 pb-14 sm:pt-96 lg:pt-[19rem] lg:pb-16">
-          <h1 className="headline text-[clamp(3rem,7.4vw,5.5rem)] leading-[0.98]">
+          <h1 className="headline text-[clamp(3rem,7.4vw,6rem)] leading-[0.98]">
             Every account.
             <br />
             One clear picture.
@@ -217,9 +217,7 @@ function Story() {
           From raw transactions to a clear picture.
         </h2>
       </div>
-      <div className={CONTAINER}>
-        <ProductStory />
-      </div>
+      <ProductStory />
     </section>
   );
 }
@@ -234,7 +232,7 @@ const FACTS = [
 function Facts() {
   return (
     <section className={CONTAINER}>
-      <div className="border-t border-[#0b0b0f] pt-24 pb-5 sm:pt-32">
+      <div className="pt-24 pb-5 sm:pt-32">
         <h2 className="headline max-w-3xl text-[2.75rem] sm:text-6xl">
           Your money, on your terms.
         </h2>
