@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNowStrict } from "date-fns";
 import { ArrowLeftRight, MoreHorizontal, Pencil, RefreshCw, Trash2 } from "lucide-react";
 
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -48,7 +48,7 @@ export function AccountGroupCard({
           ) : null}
         </p>
       </CardHeader>
-      <CardContent className="px-2 sm:px-3">
+      <CardContent className="px-3">
         <ul className="divide-border divide-y">
           {group.accounts.map((account) => (
             <AccountRow
@@ -83,7 +83,7 @@ function AccountRow({
   const needsReconnect = account.syncStatus !== "OK" || account.consentStatus === "EXPIRING_SOON";
 
   return (
-    <li className="flex items-center gap-3 py-1">
+    <li className="flex items-center gap-1 py-1 sm:gap-3">
       <Link
         to="/transactions"
         search={{ account: account.accountId }}
@@ -100,16 +100,20 @@ function AccountRow({
           </span>
           <SyncLine account={account} />
         </span>
-        <span className="text-right">
-          <span className="figure text-foreground block text-lg font-bold">
+        {/* The figure never shrinks; on phones the name gets the room instead
+            of the card's available credit. */}
+        <span className="shrink-0 text-right">
+          <span className="figure text-foreground block text-base font-bold sm:text-lg">
             {formatMoney(balance, account.currency)}
           </span>
           {card ? (
             <span className="text-muted-foreground block text-xs">
               owed
-              {available !== undefined && available !== balance
-                ? ` · ${formatMoney(available, account.currency)} available`
-                : ""}
+              {available !== undefined && available !== balance ? (
+                <span className="hidden sm:inline">
+                  {` · ${formatMoney(available, account.currency)} available`}
+                </span>
+              ) : null}
             </span>
           ) : account.availableBalance && available !== balance ? (
             <span className="text-muted-foreground block text-xs">
@@ -161,7 +165,7 @@ function maskedNumber(account: Account): string | undefined {
   return digits ? `••${digits.slice(-4)}` : undefined;
 }
 
-/** Freshness, or what needs doing, in one short line. */
+/** Freshness, or what needs doing. Wraps on narrow screens so nothing is cut off. */
 function SyncLine({ account }: { account: Account }) {
   let text: string;
   let tone = "text-muted-foreground";
@@ -172,12 +176,12 @@ function SyncLine({ account }: { account: Account }) {
     text = "Last sync failed — retrying automatically";
     tone = "text-warning-foreground";
   } else if (account.consentStatus === "EXPIRING_SOON" && account.consentExpiresAt) {
-    text = `Bank access expires ${formatDistanceToNow(new Date(account.consentExpiresAt), { addSuffix: true })}`;
+    text = `Bank access expires ${formatDistanceToNowStrict(new Date(account.consentExpiresAt), { addSuffix: true })}`;
     tone = "text-warning-foreground";
   } else if (account.lastSyncedAt) {
-    text = `Updated ${formatDistanceToNow(new Date(account.lastSyncedAt), { addSuffix: true })}`;
+    text = `Updated ${formatDistanceToNowStrict(new Date(account.lastSyncedAt), { addSuffix: true })}`;
   } else {
     text = "Waiting for first sync";
   }
-  return <span className={cn("mt-0.5 block truncate text-xs", tone)}>{text}</span>;
+  return <span className={cn("mt-0.5 block text-xs", tone)}>{text}</span>;
 }

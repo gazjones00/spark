@@ -62,11 +62,11 @@ export function Profile() {
       </div>
 
       <Card>
-        <CardContent className="space-y-6 pt-6">
+        <CardContent className="space-y-6">
           <div className="flex items-center gap-4">
             <Avatar className="size-16">
               <AvatarImage src={user?.image ?? undefined} />
-              <AvatarFallback className="text-lg">
+              <AvatarFallback className="bg-accent text-accent-foreground font-display text-lg font-semibold">
                 {(hydrated && initials) || <User className="size-6" />}
               </AvatarFallback>
             </Avatar>
@@ -76,9 +76,9 @@ export function Profile() {
             </div>
           </div>
 
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="max-w-md space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Display Name</Label>
+              <Label htmlFor="name">Display name</Label>
               <Input id="name" placeholder="Your name" {...form.register("name")} />
               {form.formState.errors.name && (
                 <p className="text-destructive text-xs">{form.formState.errors.name.message}</p>
@@ -92,7 +92,7 @@ export function Profile() {
             </div>
 
             <Button type="submit" disabled={form.formState.isSubmitting || !form.formState.isDirty}>
-              {form.formState.isSubmitting ? "Saving..." : "Save Changes"}
+              {form.formState.isSubmitting ? "Saving…" : "Save changes"}
             </Button>
           </form>
         </CardContent>

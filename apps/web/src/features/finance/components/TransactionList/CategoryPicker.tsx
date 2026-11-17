@@ -37,7 +37,7 @@ export function CategoryPicker({ transaction, variant = "pill", className }: Cat
         aria-label={`Category for ${name}`}
         className={cn(
           variant === "pill" &&
-            "hover:bg-muted h-6 gap-1.5 rounded-full border-transparent bg-transparent px-2 text-xs shadow-none data-[size=sm]:h-6 [&>svg:last-child]:size-3",
+            "hover:bg-muted dark:hover:bg-muted h-6 gap-1.5 rounded-full border-transparent bg-transparent px-2 text-xs shadow-none data-[size=sm]:h-6 data-[size=sm]:rounded-full dark:bg-transparent [&>svg:last-child]:size-3",
           variant === "field" && "w-full",
           className,
         )}
