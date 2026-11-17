@@ -116,10 +116,13 @@ function Details({
         <dl className="border-border divide-border divide-y rounded-xl border">
           {account ? (
             <Row label="Account">
-              <span className="flex items-center justify-end gap-2">
-                <BankLogo provider={account.provider} className="size-6 rounded-md" />
-                {account.displayName}
-                <span className="text-muted-foreground">· {bankName(account)}</span>
+              {/* One line: a long account name gives way with an ellipsis. */}
+              <span className="flex min-w-0 items-center justify-end gap-2">
+                <BankLogo provider={account.provider} className="size-5 rounded-[6px]" />
+                <span className="truncate" title={account.displayName}>
+                  {account.displayName}
+                </span>
+                <span className="text-muted-foreground shrink-0">· {bankName(account)}</span>
               </span>
             </Row>
           ) : null}
@@ -129,7 +132,9 @@ function Details({
             <span className="break-words">{transaction.description}</span>
           </Row>
           {transaction.meta?.providerReference ? (
-            <Row label="Reference">{transaction.meta.providerReference}</Row>
+            <Row label="Reference">
+              <span className="break-all">{transaction.meta.providerReference}</span>
+            </Row>
           ) : null}
         </dl>
 
