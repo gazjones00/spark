@@ -12,34 +12,28 @@ export function SocialLoginButtons({
   disabled,
   callbackURL = "/dashboard",
 }: SocialLoginButtonsProps) {
-  const providerEntries = Object.entries(socialProviders);
-  const isOddCount = providerEntries.length % 2 === 1;
-
   const handleSocialLogin = async (providerId: ProviderId) => {
-    const fullCallbackURL = `${window.location.origin}${callbackURL}`;
-
     await authClient.signIn.social({
       provider: providerId,
-      callbackURL: fullCallbackURL,
+      callbackURL: `${window.location.origin}${callbackURL}`,
     });
   };
 
   return (
-    <div className="grid grid-cols-2 gap-2">
-      {providerEntries.map(([id, provider], index) => {
+    <div className="grid gap-2">
+      {Object.entries(socialProviders).map(([id, provider]) => {
         const Icon = provider.icon;
-        const shouldCenter = isOddCount && index === providerEntries.length - 1;
         return (
           <Button
             key={id}
             type="button"
             variant="outline"
+            size="lg"
             disabled={disabled}
             onClick={() => handleSocialLogin(id as ProviderId)}
-            className={shouldCenter ? "col-span-2" : undefined}
           >
-            {Icon && <Icon className="mr-2 size-4" />}
-            {provider.name}
+            {Icon ? <Icon className="size-4" /> : null}
+            Continue with {provider.name}
           </Button>
         );
       })}
