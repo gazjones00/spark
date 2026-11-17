@@ -136,6 +136,8 @@
   --color-border: var(--border);
   --color-destructive: var(--destructive);
   --color-success: var(--success);
+  /* Deep brand ink for art-directed bands; the same in light and dark mode. */
+  --color-ink: #140f2e;
   --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
   --color-accent-foreground: var(--accent-foreground);
@@ -212,11 +214,6 @@
 
   .bg-spark-gradient {
     background-image: var(--spark-gradient);
-  }
-  .text-spark-gradient {
-    background-image: var(--spark-gradient);
-    background-clip: text;
-    color: transparent;
   }
 
   /* Soft glow of the brand colours behind marketing heroes. */

@@ -46,7 +46,7 @@ const BRAND_POINTS = [
 
 function BrandPanel() {
   return (
-    <aside className="relative hidden overflow-hidden bg-[#140f2e] p-10 text-white lg:flex lg:flex-col xl:p-14">
+    <aside className="relative hidden overflow-hidden bg-ink p-10 text-white lg:flex lg:flex-col xl:p-14">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0"
