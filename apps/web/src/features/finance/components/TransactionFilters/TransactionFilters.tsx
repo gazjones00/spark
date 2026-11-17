@@ -1,7 +1,7 @@
 import { Search, X } from "lucide-react";
 
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -12,12 +12,18 @@ import {
 import { useCategories } from "@/features/finance/hooks/useCategories";
 import type { Account } from "@spark/orpc/contract";
 
+export const DATE_RANGES = {
+  "7d": { label: "Last 7 days", days: 7 },
+  "30d": { label: "Last 30 days", days: 30 },
+  "90d": { label: "Last 90 days", days: 90 },
+} as const;
+export type DateRange = keyof typeof DATE_RANGES;
+
 export interface TransactionFilters {
   search: string;
-  /** Category reference (built-in value or custom category id) or "all". */
-  category: string | "all";
-  accountId: string | "all";
-  dateRange: "all" | "7days" | "30days" | "90days";
+  category?: string;
+  account?: string;
+  range?: DateRange;
 }
 
 interface TransactionFiltersProps {
@@ -26,104 +32,124 @@ interface TransactionFiltersProps {
   accounts?: Account[];
 }
 
+const ALL = "all";
+
+/** Search plus labelled account / category / date filters. */
 export function TransactionFiltersBar({
   filters,
   onFiltersChange,
   accounts = [],
 }: TransactionFiltersProps) {
-  const { categories } = useCategories();
-  const hasActiveFilters =
-    filters.search ||
-    filters.category !== "all" ||
-    filters.accountId !== "all" ||
-    filters.dateRange !== "all";
-
-  const clearFilters = () => {
-    onFiltersChange({
-      search: "",
-      category: "all",
-      accountId: "all",
-      dateRange: "all",
-    });
-  };
+  const { categories, resolve } = useCategories();
+  const active = Boolean(filters.search || filters.category || filters.account || filters.range);
+  const accountName = accounts.find(
+    (account) => account.accountId === filters.account,
+  )?.displayName;
 
   return (
-    <div className="flex flex-wrap items-center gap-3">
-      <div className="relative flex-1 min-w-[200px]">
-        <Search className="text-muted-foreground absolute left-3 top-1/2 size-4 -translate-y-1/2" />
+    <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+      <div className="relative flex-1">
+        <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
         <Input
-          placeholder="Search transactions..."
+          type="search"
+          aria-label="Search transactions"
+          placeholder="Search merchants and descriptions"
           value={filters.search}
-          onChange={(e) => onFiltersChange({ ...filters, search: e.target.value })}
+          onChange={(event) => onFiltersChange({ ...filters, search: event.target.value })}
           className="pl-9"
         />
       </div>
 
-      <Select
-        value={filters.category}
-        onValueChange={(value) =>
-          onFiltersChange({
-            ...filters,
-            category: value ?? "all",
-          })
-        }
-      >
-        <SelectTrigger className="w-[150px]">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All Categories</SelectItem>
-          {categories.map((category) => (
-            <SelectItem key={category.id} value={category.id}>
-              {category.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      <Select
-        value={filters.accountId}
-        onValueChange={(value) => onFiltersChange({ ...filters, accountId: value ?? "all" })}
-      >
-        <SelectTrigger className="w-[150px]">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All Accounts</SelectItem>
-          {accounts.map((account) => (
-            <SelectItem key={account.accountId} value={account.accountId}>
-              {account.displayName}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      <Select
-        value={filters.dateRange}
-        onValueChange={(value) =>
-          onFiltersChange({
-            ...filters,
-            dateRange: value as TransactionFilters["dateRange"],
-          })
-        }
-      >
-        <SelectTrigger className="w-[130px]">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All Time</SelectItem>
-          <SelectItem value="7days">Last 7 Days</SelectItem>
-          <SelectItem value="30days">Last 30 Days</SelectItem>
-          <SelectItem value="90days">Last 90 Days</SelectItem>
-        </SelectContent>
-      </Select>
-
-      {hasActiveFilters && (
-        <Button variant="ghost" size="sm" onClick={clearFilters}>
-          <X className="mr-1 size-4" />
-          Clear
-        </Button>
-      )}
+      <div className="-mx-1 flex items-center gap-2 overflow-x-auto px-1 pb-1 lg:pb-0">
+        <FilterSelect
+          label="Category"
+          value={filters.category ?? ALL}
+          display={filters.category ? resolve(filters.category).label : "All"}
+          onChange={(value) =>
+            onFiltersChange({ ...filters, category: value === ALL ? undefined : value })
+          }
+          options={[
+            { value: ALL, label: "All categories" },
+            ...categories.map((category) => ({ value: category.id, label: category.label })),
+          ]}
+        />
+        <FilterSelect
+          label="Account"
+          value={filters.account ?? ALL}
+          display={accountName ?? "All"}
+          onChange={(value) =>
+            onFiltersChange({ ...filters, account: value === ALL ? undefined : value })
+          }
+          options={[
+            { value: ALL, label: "All accounts" },
+            ...accounts.map((account) => ({
+              value: account.accountId,
+              label: account.displayName,
+            })),
+          ]}
+        />
+        <FilterSelect
+          label="Date"
+          value={filters.range ?? ALL}
+          display={filters.range ? DATE_RANGES[filters.range].label : "Any time"}
+          onChange={(value) =>
+            onFiltersChange({ ...filters, range: value === ALL ? undefined : (value as DateRange) })
+          }
+          options={[
+            { value: ALL, label: "Any time" },
+            ...Object.entries(DATE_RANGES).map(([value, range]) => ({ value, label: range.label })),
+          ]}
+        />
+        {active ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onFiltersChange({ search: "" })}
+            className="shrink-0"
+          >
+            <X />
+            Clear
+          </Button>
+        ) : null}
+      </div>
     </div>
+  );
+}
+
+function FilterSelect({
+  label,
+  value,
+  display,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: string;
+  display: string;
+  onChange: (value: string) => void;
+  options: Array<{ value: string; label: string }>;
+}) {
+  const selected = value !== ALL;
+  return (
+    <Select value={value} onValueChange={(next) => onChange(next ?? ALL)}>
+      <SelectTrigger
+        aria-label={`Filter by ${label.toLowerCase()}`}
+        className={
+          selected ? "border-primary/40 bg-accent text-accent-foreground shrink-0" : "shrink-0"
+        }
+      >
+        <span className="text-muted-foreground">{label}:</span>
+        <SelectValue>
+          <span className="max-w-36 truncate font-medium">{display}</span>
+        </SelectValue>
+      </SelectTrigger>
+      <SelectContent>
+        {options.map((option) => (
+          <SelectItem key={option.value} value={option.value}>
+            {option.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }

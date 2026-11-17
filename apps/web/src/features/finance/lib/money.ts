@@ -10,19 +10,26 @@ function formatter(currency: string, options: Intl.NumberFormatOptions = {}) {
   return cached;
 }
 
+/** Intl uses a hyphen for negatives; figures read better with a true minus sign. */
+function withMinus(text: string): string {
+  return text.replace(/^-/, "\u2212");
+}
+
 /** £1,234.56 (or −£1,234.56). */
 export function formatMoney(amount: number, currency = "GBP"): string {
-  return formatter(currency).format(amount);
+  return withMinus(formatter(currency).format(amount));
 }
 
 /** +£1,234.56 for money in, −£1,234.56 for money out: for change and flow figures. */
 export function formatSignedMoney(amount: number, currency = "GBP"): string {
-  return formatter(currency, { signDisplay: "exceptZero" }).format(amount);
+  return withMinus(formatter(currency, { signDisplay: "exceptZero" }).format(amount));
 }
 
 /** £12.4k: for chart axes and tight spaces. */
 export function formatCompactMoney(amount: number, currency = "GBP"): string {
-  return formatter(currency, { notation: "compact", maximumFractionDigits: 1 }).format(amount);
+  return withMinus(
+    formatter(currency, { notation: "compact", maximumFractionDigits: 1 }).format(amount),
+  );
 }
 
 /** 12% / −3.4%, relative to a base; undefined when the base is zero. */
