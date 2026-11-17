@@ -10,6 +10,11 @@ export interface SeriesAccount {
   anchorBalance: string;
   /** UTC day (YYYY-MM-DD) the anchor balance was observed. */
   anchorDay: string;
+  /**
+   * Net amount of the anchor day's transactions that happened after the
+   * balance was observed, so aren't in it yet. Defaults to none.
+   */
+  movedLaterOnAnchorDay?: string;
 }
 
 /** Net provider-signed transaction amount for one account on one UTC day. */
@@ -34,9 +39,10 @@ export interface SeriesPoint {
  * synced transactions works for every account. Transaction amounts share the
  * balance's sign convention (for a card both are "amount owed"), so
  *
- *   balance(day) = anchor + moved(up to day) − moved(up to anchor day)
+ *   balance(day) = anchor + moved(up to day) − moved(up to the anchor's moment)
  *
- * holds on either side of the anchor. Liabilities are then negated, and only
+ * holds on either side of the anchor, where moved(up to the anchor's moment)
+ * is everything up to its day minus that day's transactions after it. Liabilities are then negated, and only
  * accounts in the dominant currency are summed (there is no FX conversion).
  * `movements` must cover every day from the earlier of the window start and
  * each account's anchor day.
@@ -60,7 +66,9 @@ export function reconstructBalanceSeries(
     const movedUpTo = (day: string) =>
       own.reduce((sum, movement) => (movement.day <= day ? sum + movement.cents : sum), 0);
 
-    const anchor = toCents(account.anchorBalance) - movedUpTo(account.anchorDay);
+    const movedUpToAnchor =
+      movedUpTo(account.anchorDay) - toCents(account.movedLaterOnAnchorDay ?? "0");
+    const anchor = toCents(account.anchorBalance) - movedUpToAnchor;
     const sign = isLiability(account.type) ? -1 : 1;
     days.forEach((day, index) => {
       totals[index] = (totals[index] ?? 0) + sign * (anchor + movedUpTo(day));

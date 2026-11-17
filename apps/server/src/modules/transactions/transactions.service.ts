@@ -1,6 +1,6 @@
 import { BadRequestException, Inject, Injectable } from "@nestjs/common";
 import { TRUELAYER_PROVIDER_ID, truelayerAccountExternalId } from "@spark/connectors";
-import { type Database, alias, and, desc, eq, gte, lt, lte, or, sql } from "@spark/db";
+import { type Database, alias, and, desc, eq, gt, gte, lt, lte, or, sql } from "@spark/db";
 import type {
   BalanceSeriesInput,
   BalanceSeriesResponse,
@@ -248,12 +248,6 @@ export class TransactionsService {
   }
 
   /**
-   * Daily balance series over the requested window: at most one point per
-   * day regardless of transaction count. Mirrors the original client
-   * derivation — per day the most recent end-of-day balance across accounts,
-   * carried forward across days that have transactions but no balance.
-   */
-  /**
    * Net worth per UTC day over the window, every account included: each one
    * is rebuilt from its latest balance snapshot and its transactions (see
    * reconstructBalanceSeries), so accounts whose provider sends no running
@@ -274,6 +268,7 @@ export class TransactionsService {
         connectionId: balanceSnapshots.connectionId,
         accountExternalId: balanceSnapshots.accountExternalId,
         balance: balanceSnapshots.cash,
+        observedAt: balanceSnapshots.observedAt,
         observedDay: sql<string>`((${balanceSnapshots.observedAt} AT TIME ZONE 'UTC')::date)::text`,
         type: financialAccounts.type,
         currency: financialAccounts.currency,
@@ -298,6 +293,9 @@ export class TransactionsService {
         desc(balanceSnapshots.observedAt),
       );
 
+    if (anchors.length === 0) {
+      return { points: [] };
+    }
     const accounts: SeriesAccount[] = anchors.map((row) => ({
       key: seriesKey(row.connectionId, row.accountExternalId),
       type: row.type,
@@ -305,9 +303,6 @@ export class TransactionsService {
       anchorBalance: row.balance,
       anchorDay: row.observedDay,
     }));
-    if (accounts.length === 0) {
-      return { points: [] };
-    }
 
     const transactionDay = sql<string>`((${financialTransactions.occurredAt} AT TIME ZONE 'UTC')::date)::text`;
     const movementRows = await this.db
@@ -337,6 +332,37 @@ export class TransactionsService {
         financialTransactions.accountExternalId,
         transactionDay,
       );
+
+    // A snapshot taken mid-day doesn't include that day's later transactions.
+    const laterOnAnchorDay = await this.db
+      .select({
+        connectionId: financialTransactions.connectionId,
+        accountExternalId: financialTransactions.accountExternalId,
+        amount: sql<string>`sum(${financialTransactions.amount})::text`,
+      })
+      .from(financialTransactions)
+      .where(
+        or(
+          ...anchors.map((anchor) =>
+            and(
+              eq(financialTransactions.connectionId, anchor.connectionId),
+              eq(financialTransactions.accountExternalId, anchor.accountExternalId),
+              gt(financialTransactions.occurredAt, anchor.observedAt),
+              sql`(${financialTransactions.occurredAt} AT TIME ZONE 'UTC')::date = ${anchor.observedDay}::date`,
+            ),
+          ),
+        ),
+      )
+      .groupBy(financialTransactions.connectionId, financialTransactions.accountExternalId);
+    const laterByKey = new Map(
+      laterOnAnchorDay.map((row) => [
+        seriesKey(row.connectionId, row.accountExternalId),
+        row.amount,
+      ]),
+    );
+    for (const account of accounts) {
+      account.movedLaterOnAnchorDay = laterByKey.get(account.key);
+    }
 
     const points = reconstructBalanceSeries(
       accounts,
@@ -488,6 +514,7 @@ function isInternalTransfer() {
       where ${counterpartAccount.userId} = ${financialAccounts.userId}
         and not (${counterpart.connectionId} = ${financialTransactions.connectionId}
           and ${counterpart.accountExternalId} = ${financialTransactions.accountExternalId})
+        and ${counterpart.currency} = ${financialTransactions.currency}
         and abs(${counterpart.amount}) = abs(${financialTransactions.amount})
         and ${direction(counterpart)} <> ${direction(financialTransactions)}
         and ${counterpart.occurredAt} between ${financialTransactions.occurredAt} - interval '3 days'

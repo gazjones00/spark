@@ -38,6 +38,18 @@ describe("reconstructBalanceSeries", () => {
     expect(balances(points)).toEqual(["110.00", "110.00", "90.00", "90.00", "100.00"]);
   });
 
+  it("keeps the anchor day's transactions after the snapshot out of the anchor", () => {
+    // Snapshot of 100 taken before a -20 later that day: the day ends on 80
+    // and the day before stays at 100.
+    const points = reconstructBalanceSeries(
+      [account({ movedLaterOnAnchorDay: "-20.00" })],
+      [{ key: "current", day: "2026-06-05", amount: "-20.00" }],
+      WINDOW,
+    );
+
+    expect(balances(points).slice(-2)).toEqual(["100.00", "80.00"]);
+  });
+
   it("counts a card's balance, the amount owed, as debt", () => {
     // TrueLayer card convention: purchases raise the (positive) balance owed.
     const points = reconstructBalanceSeries(

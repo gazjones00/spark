@@ -68,6 +68,15 @@ describe("calculateNetWorth", () => {
     ];
     expect(calculateNetWorth(accounts)).toBe(1050);
   });
+
+  it("counts only accounts in the dominant currency, which labels the figure", () => {
+    const accounts = [
+      makeAccount({ currentBalance: "1000.00" }),
+      makeAccount({ currentBalance: "500.00" }),
+      makeAccount({ type: "CARD", currency: "USD", currentBalance: "300.00" }),
+    ];
+    expect(calculateNetWorth(accounts)).toBe(1500);
+  });
 });
 
 describe("dominantCurrency", () => {
@@ -78,6 +87,11 @@ describe("dominantCurrency", () => {
       makeAccount({ currency: "USD" }),
     ];
     expect(dominantCurrency(accounts)).toBe("GBP");
+  });
+
+  it("breaks a tie alphabetically, as the server does", () => {
+    const accounts = [makeAccount({ currency: "USD" }), makeAccount({ currency: "EUR" })];
+    expect(dominantCurrency(accounts)).toBe("EUR");
   });
 
   it("returns undefined for no accounts", () => {

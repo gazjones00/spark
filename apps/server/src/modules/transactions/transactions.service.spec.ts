@@ -92,6 +92,7 @@ describe("TransactionsService.balanceSeries", () => {
   function createSeriesService(
     anchors: Array<Record<string, string>>,
     movements: Array<Record<string, string>>,
+    laterOnAnchorDay: Array<Record<string, string>> = [],
   ) {
     const anchorChain = {
       from: vi.fn().mockReturnThis(),
@@ -105,9 +106,14 @@ describe("TransactionsService.balanceSeries", () => {
       where: vi.fn().mockReturnThis(),
       groupBy: vi.fn().mockResolvedValue(movements),
     };
+    const laterChain = {
+      from: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      groupBy: vi.fn().mockResolvedValue(laterOnAnchorDay),
+    };
     const db = {
       selectDistinctOn: vi.fn(() => anchorChain),
-      select: vi.fn(() => movementChain),
+      select: vi.fn().mockReturnValueOnce(movementChain).mockReturnValueOnce(laterChain),
     };
     return { service: new TransactionsService(db as never), db };
   }
@@ -142,6 +148,30 @@ describe("TransactionsService.balanceSeries", () => {
     expect(result.points.at(-1)).toEqual({ date: today, balance: "380.00", currency: "GBP" });
     // Before today's card purchase the card owed 100.
     expect(result.points.at(-2)?.balance).toBe("400.00");
+  });
+
+  it("applies transactions made after a mid-day balance snapshot", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const { service } = createSeriesService(
+      [
+        {
+          connectionId: "conn-1",
+          accountExternalId: "current",
+          balance: "100.0000",
+          observedAt: `${today}T09:00:00.000Z`,
+          observedDay: today,
+          type: "CASH",
+          currency: "GBP",
+        },
+      ],
+      [{ connectionId: "conn-1", accountExternalId: "current", day: today, amount: "-20.0000" }],
+      // The -20 happened at noon, after the 09:00 snapshot of 100.
+      [{ connectionId: "conn-1", accountExternalId: "current", amount: "-20.0000" }],
+    );
+
+    const result = await service.balanceSeries("user-1", { days: 2 });
+
+    expect(result.points.map((point) => point.balance)).toEqual(["100.00", "80.00"]);
   });
 
   it("returns an empty series without querying transactions when no balance was observed", async () => {
