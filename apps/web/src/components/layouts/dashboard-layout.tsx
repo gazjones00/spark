@@ -47,7 +47,7 @@ function MobileTabBar() {
       aria-label="Main"
       className="bg-card/95 border-border fixed inset-x-0 bottom-0 z-30 border-t pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
     >
-      <ul className="grid grid-cols-5">
+      <ul className="grid grid-cols-4">
         {navItems.map((item) => {
           const active = isActivePath(location.pathname, item.href);
           return (

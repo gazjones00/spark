@@ -1,4 +1,5 @@
-import { Search } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
+import { Search, Wand2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -71,6 +72,7 @@ function Details({
   const amount = signedAmount(transaction);
   const when = new Date(transaction.timestamp);
   const manual = transaction.categorySource === "USER_OVERRIDE";
+  const navigate = useNavigate();
 
   return (
     <div className="flex h-full flex-col overflow-y-auto">
@@ -134,6 +136,19 @@ function Details({
         <Button variant="outline" className="w-full" onClick={() => onShowMerchant(name)}>
           <Search />
           Show all from {name}
+        </Button>
+        <Button
+          variant="ghost"
+          className="w-full"
+          onClick={() =>
+            navigate({
+              to: "/settings/rules",
+              search: { merchant: name, category: transaction.category },
+            })
+          }
+        >
+          <Wand2 />
+          Create a rule for {name}
         </Button>
       </div>
     </div>

@@ -36,7 +36,7 @@ export function SignupForm() {
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
       {rootError && (
-        <div className="bg-destructive/10 text-destructive rounded-none p-3 text-sm">
+        <div className="bg-destructive/10 text-destructive rounded-lg p-3 text-sm">
           {rootError.message}
         </div>
       )}
