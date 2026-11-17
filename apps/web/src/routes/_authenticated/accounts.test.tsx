@@ -142,4 +142,16 @@ describe("accounts route", () => {
     expect(screen.getByText("1 account to reconnect soon")).toBeDefined();
     expect(screen.getByText(/Bank access for Everyday Account expires soon/)).toBeDefined();
   });
+
+  it("flags accounts that stopped syncing with a reconnect action", async () => {
+    listAccounts.mockResolvedValue({
+      accounts: [makeAccount({ syncStatus: "NEEDS_REAUTH" })],
+    });
+
+    renderAccounts();
+
+    expect(await screen.findByText("1 account needs attention")).toBeDefined();
+    expect(screen.getByText(/Everyday Account stopped syncing/)).toBeDefined();
+    expect(screen.getByRole("button", { name: "Reconnect" })).toBeDefined();
+  });
 });

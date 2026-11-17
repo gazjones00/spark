@@ -38,7 +38,7 @@ export function AccountGroupCard({
   onReconnect,
 }: AccountGroupCardProps) {
   return (
-    <Card className="gap-2">
+    <Card className="gap-2 pb-2">
       <CardHeader className="flex items-baseline justify-between">
         <h2 className="text-foreground text-base font-semibold">{group.label}</h2>
         <p className="figure text-foreground text-base font-bold">
