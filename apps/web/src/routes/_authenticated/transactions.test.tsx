@@ -91,7 +91,46 @@ describe("transactions route", () => {
 
     renderTransactions();
 
-    expect(await screen.findByText("Manual")).toBeDefined();
+    expect(await screen.findByText(/set by you/)).toBeDefined();
+  });
+
+  it("groups transactions under day headings with each day's net total", async () => {
+    listAccounts.mockResolvedValue({ accounts: [] });
+    listCategories.mockResolvedValue({ categories: [] });
+    listTransactions.mockResolvedValue({
+      transactions: [
+        makeTransaction({
+          id: "a1",
+          description: "Coffee Shop",
+          amount: "-3.50",
+          timestamp: "2026-06-29T10:00:00.000Z",
+        }),
+        makeTransaction({
+          id: "a2",
+          description: "Bakery",
+          amount: "-6.50",
+          timestamp: "2026-06-29T09:00:00.000Z",
+        }),
+        makeTransaction({
+          id: "a3",
+          description: "Salary",
+          amount: "2000.00",
+          transactionType: "CREDIT",
+          timestamp: "2026-06-28T09:00:00.000Z",
+        }),
+      ],
+      nextCursor: null,
+      hasMore: false,
+    });
+
+    renderTransactions();
+
+    expect(await screen.findByText("Coffee Shop")).toBeDefined();
+    expect(screen.getAllByRole("heading", { level: 2 })).toHaveLength(2);
+    expect(screen.getByText("−£10.00")).toBeDefined();
+    // A one-transaction day: its total and the row show the same figure.
+    expect(screen.getAllByText("+£2,000.00")).toHaveLength(2);
+    expect(screen.getByText("That's everything.")).toBeDefined();
   });
 
   it("requests the first page with the route's page size", async () => {
