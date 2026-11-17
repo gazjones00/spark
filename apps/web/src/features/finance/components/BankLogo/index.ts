@@ -1,0 +1,1 @@
+export { BankLogo } from "./BankLogo";

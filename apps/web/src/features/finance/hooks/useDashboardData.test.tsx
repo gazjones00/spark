@@ -83,7 +83,7 @@ describe("useDashboardData", () => {
     });
   });
 
-  it("derives dashboard figures from the four queries", async () => {
+  it("derives dashboard figures from the account, transaction and aggregate queries", async () => {
     const { result } = renderDashboardData();
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -99,7 +99,14 @@ describe("useDashboardData", () => {
       { date: "2026-06-01", balance: 1900 },
       { date: "2026-06-02", balance: 2000.75 },
     ]);
-    expect(calls.transactionsList).toHaveBeenCalledWith({ limit: 5 });
+    expect(calls.transactionsList).toHaveBeenCalledWith({ limit: 8 });
+    // The chart defaults to three months; last month's totals come alongside.
+    expect(calls.balanceSeries).toHaveBeenCalledWith({ days: 90 });
+    expect(calls.monthlySummary).toHaveBeenCalledWith({});
+    expect(calls.monthlySummary).toHaveBeenCalledWith({
+      month: expect.stringMatching(/^\d{4}-\d{2}$/),
+    });
+    expect(result.current.accounts).toHaveLength(2);
   });
 
   it("picks the summary matching the dominant currency and resolves category references for display", async () => {
@@ -179,7 +186,7 @@ describe("useDashboardData", () => {
     expect(result.current.balanceSeries).toEqual([]);
   });
 
-  it("refetches all four queries via refetch", async () => {
+  it("refetches every query via refetch", async () => {
     const { result } = renderDashboardData();
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -189,7 +196,8 @@ describe("useDashboardData", () => {
     await waitFor(() => {
       expect(calls.accountsList).toHaveBeenCalledTimes(2);
       expect(calls.transactionsList).toHaveBeenCalledTimes(2);
-      expect(calls.monthlySummary).toHaveBeenCalledTimes(2);
+      // This month and last month, each fetched twice.
+      expect(calls.monthlySummary).toHaveBeenCalledTimes(4);
       expect(calls.balanceSeries).toHaveBeenCalledTimes(2);
     });
   });
