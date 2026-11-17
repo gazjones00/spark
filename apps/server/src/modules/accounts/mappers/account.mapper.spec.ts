@@ -60,6 +60,7 @@ describe("account mapper (canonical tables)", () => {
       id: "account-row-id",
       accountId: "account-id",
       accountType: "TRANSACTION",
+      type: "CASH",
       displayName: "Everyday Account",
       currency: "GBP",
       accountNumber: {
@@ -108,6 +109,13 @@ describe("account mapper (canonical tables)", () => {
     expect(mapped.consentExpiresAt).toBe(soon.toISOString());
     // The soft prompt never touches sync state.
     expect(mapped.syncStatus).toBe("OK");
+  });
+
+  it("passes the canonical type through, folding out-of-enum values to UNKNOWN", () => {
+    expect(toAccountDto(createAccount({ type: "CARD" }), CONNECTION_STATE, null).type).toBe("CARD");
+    expect(toAccountDto(createAccount({ type: "bogus" }), CONNECTION_STATE, null).type).toBe(
+      "UNKNOWN",
+    );
   });
 
   it("derives the TrueLayer account id from externalId when metadata lacks it", () => {
