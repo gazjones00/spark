@@ -67,13 +67,16 @@ describe("TrueLayer mappers", () => {
     });
   });
 
-  it("folds account types: savings → SAVINGS, cards → CASH with raw type kept", () => {
+  it("folds account types: savings → SAVINGS, cards → CARD with raw type kept", () => {
     expect(mapTrueLayerAccount({ ...ACCOUNT, accountType: "SAVINGS" }).type).toBe(
       FinancialAccountType.Savings,
     );
     const card = mapTrueLayerAccount({ ...ACCOUNT, accountType: "CREDIT_CARD" });
-    expect(card.type).toBe(FinancialAccountType.Cash);
+    expect(card.type).toBe(FinancialAccountType.Card);
     expect(card.metadata.truelayerAccountType).toBe("CREDIT_CARD");
+    expect(mapTrueLayerAccount({ ...ACCOUNT, accountType: "CHARGE_CARD" }).type).toBe(
+      FinancialAccountType.Card,
+    );
     expect(mapTrueLayerAccount({ ...ACCOUNT, accountType: undefined }).type).toBe(
       FinancialAccountType.Unknown,
     );

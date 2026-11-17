@@ -1,5 +1,11 @@
+import { FinancialAccountTypeSchema } from "@spark/schema";
 import { DecimalSchema } from "@spark/schema/money";
 import { z } from "zod";
+
+// The canonical account type lives in @spark/schema so packages that can't
+// depend on connectors (the web app, the API contract) share one definition;
+// re-exported here because connector code reads it from core.
+export { FinancialAccountType, FinancialAccountTypeSchema } from "@spark/schema";
 
 export const FinancialProviderType = {
   Broker: "BROKER",
@@ -7,16 +13,6 @@ export const FinancialProviderType = {
   Pension: "PENSION",
   Crypto: "CRYPTO",
   Manual: "MANUAL",
-} as const;
-
-export const FinancialAccountType = {
-  Invest: "INVEST",
-  StocksIsa: "STOCKS_ISA",
-  Cash: "CASH",
-  Savings: "SAVINGS",
-  Pension: "PENSION",
-  Crypto: "CRYPTO",
-  Unknown: "UNKNOWN",
 } as const;
 
 export const FinancialTransactionType = {
@@ -68,16 +64,6 @@ export const FinancialProviderTypeSchema = z.enum([
   FinancialProviderType.Pension,
   FinancialProviderType.Crypto,
   FinancialProviderType.Manual,
-]);
-
-export const FinancialAccountTypeSchema = z.enum([
-  FinancialAccountType.Invest,
-  FinancialAccountType.StocksIsa,
-  FinancialAccountType.Cash,
-  FinancialAccountType.Savings,
-  FinancialAccountType.Pension,
-  FinancialAccountType.Crypto,
-  FinancialAccountType.Unknown,
 ]);
 
 export const FinancialTransactionTypeSchema = z.enum([
@@ -201,7 +187,6 @@ export const PortfolioSnapshotSchema = z.object({
 });
 
 export type FinancialProviderType = z.infer<typeof FinancialProviderTypeSchema>;
-export type FinancialAccountType = z.infer<typeof FinancialAccountTypeSchema>;
 export type FinancialTransactionType = z.infer<typeof FinancialTransactionTypeSchema>;
 export type FinancialTransactionStatus = z.infer<typeof FinancialTransactionStatusSchema>;
 export type InstrumentType = z.infer<typeof InstrumentTypeSchema>;

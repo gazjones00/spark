@@ -38,8 +38,8 @@ export const transactionsRouter = oc.router({
     })
     .input(ClearTransactionCategoryInputSchema)
     .output(ClearTransactionCategoryResponseSchema),
-  // Aggregates read the daily rollup tables, never the raw transaction rows,
-  // so responses stay bounded and correct over full history.
+  // Aggregates: monthly totals exclude transfers between the user's own
+  // accounts; the series is net worth per day (cards count as debt).
   monthlySummary: oc
     .route({
       method: "GET",

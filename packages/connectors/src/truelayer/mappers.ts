@@ -27,17 +27,19 @@ export function truelayerAccountIdFromExternalId(externalId: string): string {
 }
 
 /**
- * TrueLayer banking account types folded into the canonical domain. There is
- * no dedicated card type yet, so CREDIT_CARD/CHARGE_CARD map to CASH — the
- * raw type is always preserved in metadata.truelayerAccountType.
+ * TrueLayer banking account types folded into the canonical domain. Cards are
+ * their own canonical type because they are liabilities — their balance is an
+ * amount owed, not an asset. The raw type is always preserved in
+ * metadata.truelayerAccountType.
  */
 function mapAccountType(accountType: Account["accountType"]): FinancialAccountType {
   switch (accountType) {
     case "TRANSACTION":
     case "BUSINESS_TRANSACTION":
+      return FinancialAccountType.Cash;
     case "CREDIT_CARD":
     case "CHARGE_CARD":
-      return FinancialAccountType.Cash;
+      return FinancialAccountType.Card;
     case "SAVINGS":
     case "BUSINESS_SAVINGS":
       return FinancialAccountType.Savings;

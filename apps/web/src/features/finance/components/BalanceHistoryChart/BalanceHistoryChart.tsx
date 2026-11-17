@@ -33,14 +33,14 @@ export function BalanceHistoryChart({ data, currency }: BalanceHistoryChartProps
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-[0.9375rem]">Balance over time</CardTitle>
+        <CardTitle className="text-[0.9375rem]">Net worth over time</CardTitle>
       </CardHeader>
       <CardContent>
         {data.length === 0 ? (
           <div className="text-muted-foreground flex h-[200px] flex-col items-center justify-center rounded-none border border-dashed text-center">
             <p className="text-sm">No balance history available.</p>
             <p className="text-xs">
-              Balance over time appears once your transactions include running balances.
+              Net worth over time appears once your accounts have synced a balance.
             </p>
           </div>
         ) : (
