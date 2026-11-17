@@ -1,9 +1,10 @@
 import type { ReactNode } from "react";
 
 import { Link } from "@tanstack/react-router";
-import { Check, ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 
-import { SparkLogo, SparkMark } from "@/components/spark-mark";
+import { SparkLines } from "@/components/spark-lines";
+import { SparkLogo } from "@/components/spark-mark";
 
 interface AuthLayoutProps {
   children: ReactNode;
@@ -16,21 +17,14 @@ export function AuthLayout({ children, title, description }: AuthLayoutProps) {
   return (
     <div className="bg-background grid min-h-svh lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
       <BrandPanel />
-      <div className="relative flex flex-col px-4 py-6 sm:px-8">
-        <div
-          aria-hidden="true"
-          className="bg-spark-glow pointer-events-none absolute inset-x-0 top-0 h-80 opacity-70 lg:hidden"
-        />
-        <Link
-          to="/"
-          aria-label="Back to the Spark homepage"
-          className="relative self-start lg:hidden"
-        >
+      <div className="relative isolate flex flex-col overflow-hidden px-4 py-6 sm:px-8">
+        <SparkLines className="absolute inset-x-0 top-0 -z-10 h-64 w-full [mask-image:linear-gradient(black,transparent)] lg:hidden" />
+        <Link to="/" aria-label="Back to the Spark homepage" className="self-start lg:hidden">
           <SparkLogo />
         </Link>
-        <main className="relative mx-auto flex w-full max-w-sm flex-1 flex-col justify-center py-10">
-          <h1 className="headline text-3xl">{title}</h1>
-          <p className="text-muted-foreground mt-2 text-[0.9375rem]">{description}</p>
+        <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center py-10">
+          <h1 className="headline text-[2.5rem]">{title}</h1>
+          <p className="text-muted-foreground mt-3 text-[0.9375rem]">{description}</p>
           <div className="mt-8">{children}</div>
         </main>
       </div>
@@ -46,43 +40,35 @@ const BRAND_POINTS = [
 
 function BrandPanel() {
   return (
-    <aside className="relative hidden overflow-hidden bg-ink p-10 text-white lg:flex lg:flex-col xl:p-14">
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(60% 50% at 0% 0%, rgb(255 154 60 / 0.35), transparent 70%), radial-gradient(55% 55% at 100% 100%, rgb(138 92 255 / 0.55), transparent 70%), radial-gradient(40% 40% at 70% 30%, rgb(255 84 112 / 0.25), transparent 70%)",
-        }}
-      />
-      <SparkMark
-        mono
-        className="pointer-events-none absolute -right-24 -bottom-24 size-[26rem] text-white/[0.06]"
+    <aside className="bg-ink relative hidden overflow-hidden p-10 text-white lg:flex lg:flex-col xl:p-14">
+      <SparkLines
+        animate
+        className="absolute inset-x-0 top-0 h-[62%] w-full text-[rgb(214_170_105/0.55)] [mask-image:linear-gradient(black_55%,transparent)] [&_path]:stroke-[2]"
       />
 
       <Link to="/" aria-label="Back to the Spark homepage" className="relative self-start">
         <SparkLogo className="[&>span:last-child]:text-white" />
       </Link>
 
-      <div className="relative mt-auto max-w-md">
-        <h2 className="headline text-4xl text-white xl:text-5xl">
-          Your money,
+      <div className="relative mt-auto max-w-xl">
+        <h2 className="headline text-5xl text-white xl:text-6xl">
+          Every account.
           <br />
-          all in one place.
+          One clear picture.
         </h2>
-        <ul className="mt-8 space-y-3">
+        <ul className="mt-10">
           {BRAND_POINTS.map((point) => (
-            <li key={point} className="flex items-start gap-3 text-[0.9375rem] text-white/85">
-              <span className="mt-0.5 inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-white/15">
-                <Check className="size-3" />
-              </span>
+            <li
+              key={point}
+              className="border-t border-white/15 py-3.5 text-[0.9375rem] text-white/85 last:border-b"
+            >
               {point}
             </li>
           ))}
         </ul>
       </div>
 
-      <p className="relative mt-auto flex items-center gap-2 pt-10 text-sm text-white/70">
+      <p className="relative flex items-center gap-2 pt-10 text-sm text-white/70">
         <ShieldCheck className="size-4" />
         Read-only Open Banking. Spark can never move your money.
       </p>
