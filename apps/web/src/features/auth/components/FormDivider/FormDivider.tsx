@@ -2,15 +2,12 @@ interface FormDividerProps {
   text?: string;
 }
 
-export function FormDivider({ text = "Or continue with" }: FormDividerProps) {
+export function FormDivider({ text = "or" }: FormDividerProps) {
   return (
-    <div className="relative my-2">
-      <div className="absolute inset-0 flex items-center">
-        <span className="w-full border-t" />
-      </div>
-      <div className="relative flex justify-center text-xs">
-        <span className="bg-card text-muted-foreground px-2">{text}</span>
-      </div>
+    <div className="text-muted-foreground flex items-center gap-3 text-xs">
+      <span className="bg-border h-px flex-1" />
+      {text}
+      <span className="bg-border h-px flex-1" />
     </div>
   );
 }

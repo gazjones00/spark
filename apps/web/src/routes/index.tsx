@@ -1,43 +1,47 @@
-import type * as React from "react";
-
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
-import { ArrowRight, ArrowUpRight } from "lucide-react";
+import {
+  ArrowRight,
+  Check,
+  KeyRound,
+  Landmark,
+  Lock,
+  PieChart,
+  RefreshCw,
+  ShieldCheck,
+  Tags,
+  Unplug,
+} from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
-import { SparkMark } from "@/components/spark-mark";
+import { SparkLogo, SparkMark } from "@/components/spark-mark";
+import { ProductPreview } from "@/features/marketing/components/ProductPreview";
 import { cn } from "@/lib/utils";
+import { getCurrentUser } from "@/server/auth";
 
 export const Route = createFileRoute("/")({
-  beforeLoad: () => {
-    // Redirect to dashboard if already authenticated
-    // Only check on client side
-    if (typeof window !== "undefined") {
-      const user = localStorage.getItem("spark-user");
-      if (user) {
-        throw redirect({ to: "/dashboard" });
-      }
+  beforeLoad: async () => {
+    // Signed-in visitors go straight to their Home. The landing page must
+    // still render if the session check itself fails.
+    const user = await getCurrentUser().catch(() => null);
+    if (user) {
+      throw redirect({ to: "/dashboard" });
     }
   },
   component: LandingPage,
 });
 
-/*
- * The landing page is art-directed with fixed colors (dark hero / light
- * middle) rather than theme tokens, so it reads identically in light and
- * dark mode — like a printed spec sheet. Only the app respects the theme.
- */
-
-const INK = "#18191b";
-const PAPER = "#eff0f1";
-
 function LandingPage() {
   return (
-    <div className="flex min-h-svh flex-col overflow-x-clip bg-[#0c0c0c] text-[#eff0f1]">
+    <div className="bg-background text-foreground relative flex min-h-svh flex-col overflow-x-clip">
+      <div
+        aria-hidden="true"
+        className="bg-spark-glow pointer-events-none absolute inset-x-0 top-0 h-[52rem]"
+      />
       <Header />
-      <main className="flex-1">
+      <main className="relative flex-1">
         <Hero />
-        <PrinciplesBand />
         <Features />
+        <HowItWorks />
         <Security />
         <ClosingCta />
       </main>
@@ -48,37 +52,27 @@ function LandingPage() {
 
 function Header() {
   return (
-    <header className="sticky top-0 z-50 border-b border-[#2f3032] bg-[#0c0c0c]/85 backdrop-blur-md">
+    <header className="bg-background/70 border-border/60 sticky top-0 z-50 border-b backdrop-blur-md">
       <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
-        <Link to="/" className="flex items-center gap-2.5">
-          <SparkMark className="size-6" />
-          <span className="font-display text-lg font-semibold tracking-[0.12em]">SPARK</span>
+        <Link to="/" aria-label="Spark home">
+          <SparkLogo />
         </Link>
-        <nav className="hidden items-center gap-8 md:flex">
-          <a
-            href="#features"
-            className="font-mono text-[11px] font-medium tracking-[0.14em] text-[#a3a3a4] transition-colors hover:text-[#eff0f1]"
-          >
-            FEATURES
+        <nav aria-label="Sections" className="hidden items-center gap-8 text-sm md:flex">
+          <a href="#features" className="text-muted-foreground hover:text-foreground">
+            Features
           </a>
-          <a
-            href="#security"
-            className="font-mono text-[11px] font-medium tracking-[0.14em] text-[#a3a3a4] transition-colors hover:text-[#eff0f1]"
-          >
-            SECURITY
+          <a href="#how-it-works" className="text-muted-foreground hover:text-foreground">
+            How it works
+          </a>
+          <a href="#security" className="text-muted-foreground hover:text-foreground">
+            Security
           </a>
         </nav>
         <div className="flex items-center gap-2">
-          <Link
-            to="/login"
-            className={cn(
-              buttonVariants({ variant: "ghost", size: "sm" }),
-              "text-[#c3c4c8] hover:bg-[#222326] hover:text-[#eff0f1]",
-            )}
-          >
+          <Link to="/login" className={buttonVariants({ variant: "ghost" })}>
             Sign in
           </Link>
-          <Link to="/signup" className={cn(buttonVariants({ size: "sm" }), "px-4")}>
+          <Link to="/signup" className={buttonVariants()}>
             Get started
           </Link>
         </div>
@@ -87,135 +81,105 @@ function Header() {
   );
 }
 
+const HERO_POINTS = ["Free to use", "Read-only access", "Disconnect anytime"] as const;
+
 function Hero() {
   return (
-    <section className="relative overflow-hidden">
-      <div className="mx-auto w-full max-w-6xl px-4 pt-20 pb-14 sm:px-6 sm:pt-28">
-        <p className="eyebrow text-[#a3a3a4]">Personal finance, instrumented</p>
-        <h1 className="headline mt-6 text-4xl sm:text-7xl lg:text-[5.5rem]">
-          Every account.
+    <section className="mx-auto w-full max-w-6xl px-4 pt-14 sm:px-6 sm:pt-20">
+      <div className="mx-auto max-w-3xl text-center">
+        <span className="bg-card/80 border-border shadow-card inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium">
+          <ShieldCheck className="text-success size-3.5" />
+          Open Banking for UK banks and cards
+        </span>
+        <h1 className="headline mt-6 text-[2.75rem] sm:text-6xl lg:text-7xl">
+          Your money,
           <br />
-          One ledger.
+          <span className="text-spark-gradient">all in one place.</span>
         </h1>
-        <p className="mt-7 max-w-xl text-base leading-relaxed text-[#a3a3a4] sm:text-lg">
-          Spark connects to your banks through Open Banking and turns balances, income, and spending
-          into a single live view. No spreadsheets. No screen-scraping. No noise.
+        <p className="text-muted-foreground mx-auto mt-6 max-w-2xl text-base leading-relaxed sm:text-lg">
+          Spark brings your current accounts, savings and credit cards together, sorts every
+          transaction for you, and shows you exactly where your money goes.
         </p>
-        <div className="mt-10 flex flex-wrap items-center gap-3">
+        <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
           <Link
             to="/signup"
-            className={cn(buttonVariants({ size: "lg" }), "h-11 gap-2 px-6 text-sm")}
+            className={cn(buttonVariants({ size: "lg" }), "h-11 px-6 text-[0.9375rem]")}
           >
-            Start tracking free
-            <ArrowRight className="size-4" />
+            Get started free
+            <ArrowRight />
           </Link>
           <Link
             to="/login"
             className={cn(
-              buttonVariants({ variant: "outline", size: "lg" }),
-              "h-11 border-[#464749] bg-transparent px-6 text-sm text-[#eff0f1] hover:bg-[#eff0f1]/10 hover:text-[#eff0f1] dark:border-[#464749] dark:bg-transparent dark:hover:bg-[#eff0f1]/10",
+              buttonVariants({ size: "lg", variant: "outline" }),
+              "h-11 px-6 text-[0.9375rem]",
             )}
           >
             Sign in
           </Link>
         </div>
+        <ul className="text-muted-foreground mt-6 flex flex-wrap justify-center gap-x-5 gap-y-2 text-sm">
+          {HERO_POINTS.map((point) => (
+            <li key={point} className="inline-flex items-center gap-1.5">
+              <Check className="text-success size-4" />
+              {point}
+            </li>
+          ))}
+        </ul>
       </div>
 
-      <HeroSparkline />
+      <div className="relative mx-auto mt-14 max-w-5xl sm:mt-16">
+        <ProductPreview />
+        <p className="text-muted-foreground mt-3 text-center text-xs">Sample data</p>
+      </div>
     </section>
   );
 }
 
-/** The signature: a live-reading balance sparkline drawn on page load. */
-function HeroSparkline() {
-  const line =
-    "M0 232 L60 232 L80 238 L130 224 L160 228 L210 204 L240 210 L290 196 L330 168 L360 178 L420 172 L450 148 L500 156 L540 128 L580 136 L640 118 L680 124 L730 96 L770 104 L830 88 L870 72 L920 80 L970 58 L1020 66 L1080 44 L1130 50 L1160 38";
-  return (
-    <div className="mx-auto w-full max-w-6xl px-4 pb-20 sm:px-6">
-      <div
-        className="bg-dotgrid relative rounded-sm border border-[#2f3032] bg-[#111112]"
-        style={{ "--dotgrid-color": "#222326" } as React.CSSProperties}
-      >
-        <div className="absolute top-4 left-4 sm:top-6 sm:left-6">
-          <p className="font-mono text-[10px] font-medium tracking-[0.14em] text-[#747576]">
-            NET WORTH
-          </p>
-          <p className="font-display mt-1 text-3xl font-semibold tabular-nums sm:text-4xl">
-            £24,318
-          </p>
-          <p className="mt-1 font-mono text-[11px] font-medium tracking-wide text-[#3dd68c]">
-            ▲ +£412 THIS MONTH
-          </p>
-        </div>
-        <p className="absolute bottom-3 left-4 font-mono text-[10px] tracking-[0.14em] text-[#464749] sm:left-6">
-          — SAMPLE DATA
-        </p>
-        <svg
-          viewBox="0 0 1200 300"
-          preserveAspectRatio="none"
-          className="h-56 w-full sm:h-72"
-          aria-hidden="true"
-        >
-          <defs>
-            <linearGradient id="spark-fill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#8b7bff" stopOpacity="0.22" />
-              <stop offset="100%" stopColor="#8b7bff" stopOpacity="0" />
-            </linearGradient>
-          </defs>
-          <path
-            d={`${line} L1160 300 L0 300 Z`}
-            fill="url(#spark-fill)"
-            className="animate-spark-fade"
-          />
-          <path
-            d={line}
-            fill="none"
-            stroke="#8b7bff"
-            strokeWidth="2.5"
-            strokeLinejoin="round"
-            strokeLinecap="round"
-            vectorEffect="non-scaling-stroke"
-            className="animate-spark-draw"
-          />
-          <circle cx="1160" cy="38" r="5" fill="#8b7bff" className="animate-spark-fade" />
-          <circle
-            cx="1160"
-            cy="38"
-            r="10"
-            fill="none"
-            stroke="#8b7bff"
-            strokeWidth="1.5"
-            className="animate-spark-pulse"
-          />
-        </svg>
-      </div>
-    </div>
-  );
-}
-
-const PRINCIPLES = [
+const FEATURES = [
   {
-    title: "Read-only",
-    body: "Connections go through your bank's own login. Spark can look — it can never move money.",
+    icon: Landmark,
+    title: "Every account together",
+    body: "Current accounts, savings and credit cards side by side, with a net worth that counts what you owe on cards.",
   },
   {
-    title: "Automatic",
-    body: "Balances and transactions keep themselves current. Reconnect flows catch expired consents.",
+    icon: Tags,
+    title: "Transactions sorted for you",
+    body: "Every payment gets a category and a clean merchant name. Teach Spark once with a rule and it remembers.",
   },
   {
-    title: "To the penny",
-    body: "Signed amounts, running balances, every transaction accounted for and categorised.",
+    icon: PieChart,
+    title: "See where it goes",
+    body: "Spending by category, this month against last, and how your net worth is trending over time.",
+  },
+  {
+    icon: RefreshCw,
+    title: "Always up to date",
+    body: "Spark syncs in the background and lets you know before your bank access needs renewing.",
   },
 ] as const;
 
-function PrinciplesBand() {
+function Features() {
   return (
-    <section className="border-t border-[#2f3032] bg-[#141415]">
-      <div className="mx-auto grid w-full max-w-6xl grid-cols-1 divide-y divide-[#2f3032] px-4 sm:px-6 md:grid-cols-3 md:divide-x md:divide-y-0">
-        {PRINCIPLES.map((p) => (
-          <div key={p.title} className="py-10 pr-8 md:px-8 md:first:pl-0 md:last:pr-0">
-            <h3 className="headline text-2xl sm:text-3xl">{p.title}</h3>
-            <p className="mt-3 text-sm leading-relaxed text-[#a3a3a4]">{p.body}</p>
+    <section id="features" className="mx-auto w-full max-w-6xl scroll-mt-20 px-4 py-24 sm:px-6">
+      <SectionHeading
+        eyebrow="Why Spark"
+        title="Everything you need to understand your money."
+        body="No spreadsheets and no copying numbers between apps. Connect once and Spark keeps the picture current."
+      />
+      <div className="mt-12 grid gap-4 sm:grid-cols-2">
+        {FEATURES.map((feature) => (
+          <div
+            key={feature.title}
+            className="bg-card border-border shadow-card rounded-2xl border p-6 sm:p-7"
+          >
+            <span className="bg-accent text-accent-foreground inline-flex size-10 items-center justify-center rounded-xl">
+              <feature.icon className="size-5" />
+            </span>
+            <h3 className="mt-5 text-lg font-bold">{feature.title}</h3>
+            <p className="text-muted-foreground mt-2 text-[0.9375rem] leading-relaxed">
+              {feature.body}
+            </p>
           </div>
         ))}
       </div>
@@ -223,116 +187,92 @@ function PrinciplesBand() {
   );
 }
 
-const FEATURE_BLOCKS = [
+const STEPS = [
   {
-    name: "Connect",
-    lede: "Link your banks in minutes.",
-    body: "Authentication happens at your bank through TrueLayer's Open Banking rails — your credentials never touch Spark.",
-    rows: [
-      "Read-only Open Banking connection",
-      "Current, savings & credit card accounts",
-      "Guided reconnect when a consent expires",
-    ],
+    title: "Connect your bank",
+    body: "Choose your bank and approve read-only access in its own app. It takes about a minute.",
   },
   {
-    name: "Track",
-    lede: "Every transaction, categorised.",
-    body: "Purchases, transfers, direct debits, fees — each one lands in your ledger with a category, a merchant, and an exact signed amount.",
-    rows: [
-      "Automatic categorisation",
-      "Search & filter by account, category, or date",
-      "Amounts signed and exact — to the penny",
-    ],
+    title: "Pick your accounts",
+    body: "Add the accounts you want. Balances appear straight away and your history follows.",
   },
   {
-    name: "Measure",
-    lede: "Watch the trend, not the noise.",
-    body: "Net worth over time, income against spending, and category breakdowns turn raw statements into readings you can act on.",
-    rows: [
-      "Balance history across all accounts",
-      "Income vs spending, month by month",
-      "Category breakdowns that show where it goes",
-    ],
+    title: "See the full picture",
+    body: "Home shows your net worth, this month so far and where your money goes.",
   },
 ] as const;
 
-function Features() {
+function HowItWorks() {
   return (
-    <section id="features" className="scroll-mt-16" style={{ backgroundColor: PAPER, color: INK }}>
-      <div className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6 sm:py-28">
-        <p className="eyebrow text-[#6b6c6e]">What Spark does</p>
-        <h2 className="headline mt-5 max-w-3xl text-4xl sm:text-5xl">
-          From raw transactions to a clear picture.
-        </h2>
-
-        <div className="mt-16 space-y-16 sm:mt-20 sm:space-y-20">
-          {FEATURE_BLOCKS.map((block) => (
-            <div
-              key={block.name}
-              className="grid gap-8 border-t border-[#c3c4c8] pt-10 md:grid-cols-[2fr_3fr] md:gap-16"
-            >
-              <h3 className="headline text-4xl sm:text-5xl">
-                <span className="text-[#8b7bff]">{"// "}</span>
-                {block.name}
-              </h3>
-              <div>
-                <p className="text-lg font-semibold">{block.lede}</p>
-                <p className="mt-2 max-w-lg text-sm leading-relaxed text-[#6b6c6e]">{block.body}</p>
-                <ul className="mt-6">
-                  {block.rows.map((row) => (
-                    <li
-                      key={row}
-                      className="flex items-baseline gap-3 border-t border-[#dcdee0] py-3 text-sm first:border-t-0"
-                    >
-                      <span className="font-mono text-xs font-medium text-[#8b7bff]">→</span>
-                      {row}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
+    <section id="how-it-works" className="bg-card border-border scroll-mt-16 border-y">
+      <div className="mx-auto w-full max-w-6xl px-4 py-24 sm:px-6">
+        <SectionHeading eyebrow="How it works" title="Up and running in three steps." />
+        <ol className="mt-12 grid gap-8 md:grid-cols-3 md:gap-10">
+          {STEPS.map((step, index) => (
+            <li key={step.title}>
+              <span className="bg-spark-gradient inline-flex size-9 items-center justify-center rounded-full text-sm font-bold text-white">
+                {index + 1}
+              </span>
+              <h3 className="mt-4 text-lg font-bold">{step.title}</h3>
+              <p className="text-muted-foreground mt-2 text-[0.9375rem] leading-relaxed">
+                {step.body}
+              </p>
+            </li>
           ))}
-        </div>
+        </ol>
       </div>
     </section>
   );
 }
 
 const SECURITY_POINTS = [
-  "Sign-in happens on your bank's own pages — Spark never sees your banking credentials",
-  "Access is scoped to reading balances and transactions, nothing more",
-  "Revoke Spark's access at any time, straight from your bank",
+  {
+    icon: KeyRound,
+    title: "You log in at your bank",
+    body: "Spark never sees or stores your banking password.",
+  },
+  {
+    icon: Lock,
+    title: "It can't move money",
+    body: "Access is limited to reading balances and transactions.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "A regulated connection",
+    body: "Connections run through TrueLayer, a regulated Open Banking provider.",
+  },
+  {
+    icon: Unplug,
+    title: "You stay in control",
+    body: "Remove an account in Spark, or revoke access from your bank, at any time.",
+  },
 ] as const;
 
 function Security() {
   return (
-    <section id="security" className="scroll-mt-16 border-t border-[#2f3032] bg-[#141415]">
-      <div className="mx-auto grid w-full max-w-6xl gap-10 px-4 py-20 sm:px-6 sm:py-28 md:grid-cols-[2fr_3fr] md:gap-16">
-        <div>
-          <p className="eyebrow text-[#a3a3a4]">Security</p>
-          <h2 className="headline mt-5 text-4xl sm:text-5xl">
-            Read-only
-            <br />
-            by design.
-          </h2>
-        </div>
-        <div>
-          <p className="max-w-lg text-sm leading-relaxed text-[#a3a3a4]">
-            Spark is built on Open Banking — the regulated framework UK banks use to share data with
-            your consent. The connection is structurally incapable of touching your money.
-          </p>
-          <ul className="mt-8">
-            {SECURITY_POINTS.map((point) => (
-              <li
-                key={point}
-                className="flex items-baseline gap-3 border-t border-[#2f3032] py-4 text-sm text-[#eff0f1]"
-              >
-                <span className="font-mono text-xs font-medium text-[#8b7bff]">→</span>
-                {point}
-              </li>
-            ))}
-          </ul>
-        </div>
+    <section id="security" className="mx-auto w-full max-w-6xl scroll-mt-20 px-4 py-24 sm:px-6">
+      <div className="grid gap-12 md:grid-cols-[2fr_3fr] md:gap-16">
+        <SectionHeading
+          align="left"
+          eyebrow="Security"
+          title="Read-only, by design."
+          body="Spark is built on Open Banking, the regulated way UK banks share your data with your consent."
+        />
+        <ul className="grid gap-x-8 gap-y-8 sm:grid-cols-2">
+          {SECURITY_POINTS.map((point) => (
+            <li key={point.title} className="flex gap-4">
+              <span className="bg-success/12 text-success inline-flex size-10 shrink-0 items-center justify-center rounded-xl">
+                <point.icon className="size-5" />
+              </span>
+              <span>
+                <span className="text-foreground block font-semibold">{point.title}</span>
+                <span className="text-muted-foreground mt-1 block text-[0.9375rem] leading-relaxed">
+                  {point.body}
+                </span>
+              </span>
+            </li>
+          ))}
+        </ul>
       </div>
     </section>
   );
@@ -340,80 +280,88 @@ function Security() {
 
 function ClosingCta() {
   return (
-    <section
-      className="bg-dotgrid border-t border-[#2f3032]"
-      style={{ "--dotgrid-color": "#222326" } as React.CSSProperties}
-    >
-      <div className="mx-auto flex w-full max-w-6xl flex-col items-start gap-8 px-4 py-24 sm:px-6 sm:py-32">
-        <p className="eyebrow text-[#a3a3a4]">Get started</p>
-        <h2 className="headline max-w-3xl text-4xl sm:text-6xl">Run the numbers on your money.</h2>
+    <section className="mx-auto w-full max-w-6xl px-4 pb-24 sm:px-6">
+      <div className="bg-spark-gradient relative overflow-hidden rounded-3xl px-6 py-16 text-center text-white sm:px-12 sm:py-20">
+        <SparkMark
+          mono
+          className="pointer-events-none absolute -top-10 -right-10 size-64 text-white/10 sm:size-80"
+        />
+        <SparkMark
+          mono
+          className="pointer-events-none absolute -bottom-16 -left-12 size-48 text-white/10"
+        />
+        <h2 className="headline relative mx-auto max-w-2xl text-3xl text-white sm:text-5xl">
+          Get a clearer picture of your money.
+        </h2>
+        <p className="relative mx-auto mt-4 max-w-md text-base text-white/85">
+          Free to start. Connect your first account in about a minute.
+        </p>
         <Link
           to="/signup"
-          className={cn(buttonVariants({ size: "lg" }), "h-11 gap-2 px-6 text-sm")}
+          className={cn(
+            buttonVariants({ size: "lg" }),
+            "relative mt-8 h-11 bg-white px-6 text-[0.9375rem] text-[#2a1b5c] shadow-lg hover:bg-white/90",
+          )}
         >
           Create your account
-          <ArrowUpRight className="size-4" />
+          <ArrowRight />
         </Link>
       </div>
     </section>
   );
 }
 
+function SectionHeading({
+  eyebrow,
+  title,
+  body,
+  align = "center",
+}: {
+  eyebrow: string;
+  title: string;
+  body?: string;
+  align?: "center" | "left";
+}) {
+  return (
+    <div className={cn("max-w-2xl", align === "center" && "mx-auto text-center")}>
+      <p className="text-primary text-sm font-semibold">{eyebrow}</p>
+      <h2 className="headline mt-3 text-3xl sm:text-[2.75rem]">{title}</h2>
+      {body ? (
+        <p className="text-muted-foreground mt-4 text-base leading-relaxed sm:text-lg">{body}</p>
+      ) : null}
+    </div>
+  );
+}
+
 function Footer() {
   return (
-    <footer style={{ backgroundColor: PAPER, color: INK }}>
-      <div className="mx-auto grid w-full max-w-6xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-3">
+    <footer className="border-border border-t">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-10 sm:px-6 md:flex-row md:items-start md:justify-between">
         <div>
-          <div className="flex items-center gap-2.5">
-            <SparkMark className="size-5" />
-            <span className="font-display text-base font-semibold tracking-[0.12em]">SPARK</span>
-          </div>
-          <p className="mt-3 max-w-xs text-xs leading-relaxed text-[#6b6c6e]">
-            Personal finance, instrumented. Every account, one ledger.
+          <SparkLogo />
+          <p className="text-muted-foreground mt-3 max-w-xs text-sm">
+            All your money, in one place. Built on Open Banking.
           </p>
         </div>
-        <div>
-          <p className="font-mono text-[10px] font-medium tracking-[0.14em] text-[#6b6c6e]">
-            PAGES
-          </p>
-          <ul className="mt-3 space-y-2 text-sm">
-            <li>
-              <a href="#features" className="transition-colors hover:text-[#8b7bff]">
-                Features
-              </a>
-            </li>
-            <li>
-              <a href="#security" className="transition-colors hover:text-[#8b7bff]">
-                Security
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div>
-          <p className="font-mono text-[10px] font-medium tracking-[0.14em] text-[#6b6c6e]">
-            ACCOUNT
-          </p>
-          <ul className="mt-3 space-y-2 text-sm">
-            <li>
-              <Link to="/login" className="transition-colors hover:text-[#8b7bff]">
-                Sign in
-              </Link>
-            </li>
-            <li>
-              <Link to="/signup" className="transition-colors hover:text-[#8b7bff]">
-                Create account
-              </Link>
-            </li>
-          </ul>
-        </div>
+        <nav aria-label="Footer" className="grid grid-cols-2 gap-x-16 gap-y-2 text-sm">
+          <a href="#features" className="text-muted-foreground hover:text-foreground">
+            Features
+          </a>
+          <Link to="/login" className="text-muted-foreground hover:text-foreground">
+            Sign in
+          </Link>
+          <a href="#security" className="text-muted-foreground hover:text-foreground">
+            Security
+          </a>
+          <Link to="/signup" className="text-muted-foreground hover:text-foreground">
+            Create account
+          </Link>
+        </nav>
       </div>
-      <div className="border-t border-[#dcdee0]">
-        <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-5 sm:px-6">
-          <p className="font-mono text-[10px] tracking-[0.14em] text-[#6b6c6e]">© 2026 SPARK</p>
-          <p className="font-mono text-[10px] tracking-[0.14em] text-[#6b6c6e]">
-            BUILT ON OPEN BANKING
-          </p>
-        </div>
+      <div className="border-border border-t">
+        <p className="text-muted-foreground mx-auto w-full max-w-6xl px-4 py-5 text-xs sm:px-6">
+          © 2026 Spark
+        </p>
       </div>
     </footer>
   );
