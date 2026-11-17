@@ -95,7 +95,8 @@ export function ProductStory() {
   return (
     <div className="grid border-t border-[#0b0b0f] lg:grid-cols-2">
       <div className="hidden lg:block">
-        <div className="bg-ink sticky top-16 flex h-[calc(100svh-4rem)] max-h-[56rem] flex-col">
+        {/* Exactly the viewport below the 4rem header while it is stuck. */}
+        <div className="bg-ink sticky top-16 flex h-[calc(100svh-4rem)] flex-col">
           <div className="relative flex-1">
             {CHAPTERS.map((chapter, index) => (
               <div
@@ -139,7 +140,7 @@ export function ProductStory() {
             ref={(element) => {
               chapterRefs.current[index] = element;
             }}
-            className="flex scroll-mt-16 flex-col justify-center border-b border-[#0b0b0f] px-4 py-14 last:border-b-0 sm:px-8 lg:min-h-[min(calc(100svh-4rem),56rem)] lg:px-14 lg:py-20"
+            className="flex scroll-mt-16 flex-col justify-center border-b border-[#0b0b0f] py-14 last:border-b-0 lg:min-h-[calc(100svh-4rem)] lg:pl-14 lg:py-20"
           >
             <p className="self-end text-sm text-[#5f5f6e] tabular-nums">
               {String(index + 1).padStart(2, "0")} – {String(CHAPTERS.length).padStart(2, "0")}

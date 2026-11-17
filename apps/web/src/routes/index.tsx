@@ -44,13 +44,16 @@ function LandingPage() {
   );
 }
 
+/** Content column: backgrounds run full width, content stays at the app's width. */
+const CONTAINER = "mx-auto w-full max-w-6xl px-4 sm:px-6";
+
 const INK_BUTTON =
   "inline-flex items-center justify-center gap-2 rounded-md bg-[#0b0b0f] font-medium text-white transition-colors hover:bg-[#2a2a2f] focus-visible:ring-[3px] focus-visible:ring-[#e9618f]/50 outline-none";
 
 function Header() {
   return (
-    <header className="sticky top-0 z-50 border-b border-[#e3e3eb] bg-white/85 backdrop-blur-md">
-      <div className="flex h-16 items-center gap-10 px-4 sm:px-5">
+    <header className="sticky top-0 z-50 h-16 border-b border-[#e3e3eb] bg-white/85 backdrop-blur-md">
+      <div className={cn(CONTAINER, "flex h-full items-center gap-10")}>
         <Link to="/" aria-label="Spark home">
           <SparkLogo />
         </Link>
@@ -110,31 +113,43 @@ function ArrowTile({
 
 function Hero() {
   return (
-    <section className="relative flex flex-col justify-end lg:min-h-[min(calc(100svh-4rem),56rem)]">
+    <section className="relative overflow-hidden">
       <SparkLines
         animate
-        className="absolute inset-x-0 top-0 h-80 w-full [mask-image:linear-gradient(black_55%,transparent)] sm:h-[26rem] lg:inset-y-0 lg:h-full lg:[mask-image:none] [&_path]:stroke-[3.25] sm:[&_path]:stroke-[2.5] lg:[&_path]:stroke-[1.25]"
+        className="absolute inset-x-0 top-0 h-80 w-full [mask-image:linear-gradient(black_55%,transparent)] sm:h-[26rem] lg:hidden [&_path]:stroke-[3.25] sm:[&_path]:stroke-[2.5]"
       />
-      <div className="relative px-4 pt-72 pb-14 sm:px-5 sm:pt-96 lg:pt-40 lg:pb-16">
-        <h1 className="headline text-[clamp(3rem,7.4vw,7.25rem)] leading-[0.98]">
-          Every account.
-          <br />
-          One clear picture.
-        </h1>
-        <p className="mt-7 max-w-xl text-lg leading-relaxed sm:text-xl">
-          Spark connects your current accounts, savings and credit cards through Open Banking, sorts
-          every transaction, and shows what you're worth and where your money goes.
-        </p>
-        <div className="mt-10 flex flex-wrap items-end gap-x-8 gap-y-4">
-          <ArrowTile to="/signup" className="h-28 w-56 bg-white">
-            Get started free
-          </ArrowTile>
-          <p className="pb-1 text-[0.9375rem] text-[#5f5f6e]">
-            Already using Spark?{" "}
-            <Link to="/login" className="text-[#0b0b0f] underline underline-offset-4">
-              Sign in
-            </Link>
+      <div
+        className={cn(CONTAINER, "relative flex flex-col justify-end lg:min-h-[calc(100svh-4rem)]")}
+      >
+        {/* A fixed size anchored to the column's right edge, so the bundle keeps
+            clear of the headline at any width or height; the outer lines and
+            the bundle run on to the edges of the hero. */}
+        <SparkLines
+          animate
+          preserveAspectRatio="xMaxYMin meet"
+          className="absolute top-0 right-0 hidden aspect-[1440/900] w-[80rem] overflow-visible lg:block"
+        />
+        <div className="relative pt-72 pb-14 sm:pt-96 lg:pt-[19rem] lg:pb-16">
+          <h1 className="headline text-[clamp(3rem,7.4vw,5.5rem)] leading-[0.98]">
+            Every account.
+            <br />
+            One clear picture.
+          </h1>
+          <p className="mt-7 max-w-xl text-lg leading-relaxed sm:text-xl">
+            Spark connects your current accounts, savings and credit cards through Open Banking,
+            sorts every transaction, and shows what you're worth and where your money goes.
           </p>
+          <div className="mt-10 flex flex-wrap items-end gap-x-8 gap-y-4">
+            <ArrowTile to="/signup" className="h-28 w-56 bg-white">
+              Get started free
+            </ArrowTile>
+            <p className="pb-1 text-[0.9375rem] text-[#5f5f6e]">
+              Already using Spark?{" "}
+              <Link to="/login" className="text-[#0b0b0f] underline underline-offset-4">
+                Sign in
+              </Link>
+            </p>
+          </div>
         </div>
       </div>
     </section>
@@ -163,8 +178,8 @@ const SECTIONS = [
 function Statement() {
   return (
     <section className="bg-ink text-white">
-      <div className="px-4 py-20 sm:px-5 sm:py-28">
-        <p className="font-display mx-auto max-w-5xl text-center text-[1.75rem] leading-[1.15] tracking-[-0.02em] text-balance sm:text-[2.5rem] lg:text-[3rem]">
+      <div className={cn(CONTAINER, "py-20 sm:py-28")}>
+        <p className="font-display mx-auto max-w-4xl text-center text-[1.75rem] leading-[1.15] tracking-[-0.02em] text-balance sm:text-[2.5rem] lg:text-[2.75rem]">
           Spark reads your accounts through regulated Open Banking, files every payment under the
           right category, and keeps one live picture of what you have, what you owe and where it
           goes.
@@ -197,12 +212,14 @@ function Statement() {
 function Story() {
   return (
     <section id="features" className="scroll-mt-16">
-      <div className="px-4 pt-24 pb-14 sm:px-5 sm:pt-32 sm:pb-20">
-        <h2 className="headline max-w-4xl text-[2.75rem] sm:text-6xl">
+      <div className={cn(CONTAINER, "pt-24 pb-14 sm:pt-32 sm:pb-20")}>
+        <h2 className="headline max-w-3xl text-[2.75rem] sm:text-6xl">
           From raw transactions to a clear picture.
         </h2>
       </div>
-      <ProductStory />
+      <div className={CONTAINER}>
+        <ProductStory />
+      </div>
     </section>
   );
 }
@@ -216,8 +233,8 @@ const FACTS = [
 
 function Facts() {
   return (
-    <section className="border-t border-[#0b0b0f]">
-      <div className="px-4 pt-24 pb-5 sm:px-5 sm:pt-32">
+    <section className={CONTAINER}>
+      <div className="border-t border-[#0b0b0f] pt-24 pb-5 sm:pt-32">
         <h2 className="headline max-w-3xl text-[2.75rem] sm:text-6xl">
           Your money, on your terms.
         </h2>
@@ -255,7 +272,7 @@ const SECURITY_POINTS = [
 
 function SecurityBand() {
   return (
-    <section id="security" className="scroll-mt-16 px-4 pt-0 pb-24 sm:px-5 sm:pb-32">
+    <section id="security" className={cn(CONTAINER, "scroll-mt-16 pt-0 pb-24 sm:pb-32")}>
       <div
         className="grid gap-10 overflow-hidden rounded-md px-6 py-14 text-white sm:px-12 sm:py-20 lg:grid-cols-[1fr_1.1fr] lg:gap-16"
         style={{
@@ -289,7 +306,7 @@ function SecurityBand() {
 function Footer() {
   return (
     <footer className="border-t border-[#0b0b0f] bg-[#f5f5fa]">
-      <div className="grid gap-12 px-4 pt-16 pb-10 sm:px-5 sm:pt-20 lg:grid-cols-[1.4fr_1fr]">
+      <div className={cn(CONTAINER, "grid gap-12 pt-16 pb-10 sm:pt-20 lg:grid-cols-[1.4fr_1fr]")}>
         <div>
           <SparkLogo className="[&>span:last-child]:text-[2rem]" markClassName="size-9" />
           <p className="font-display mt-6 text-2xl tracking-tight">
@@ -310,7 +327,12 @@ function Footer() {
           </FooterLinks>
         </div>
       </div>
-      <div className="flex flex-wrap justify-between gap-2 px-4 pb-8 text-sm text-[#5f5f6e] sm:px-5">
+      <div
+        className={cn(
+          CONTAINER,
+          "flex flex-wrap justify-between gap-2 pb-8 text-sm text-[#5f5f6e]",
+        )}
+      >
         <p>© 2026 Spark</p>
         <p>Personal finance for UK bank accounts and cards. Built on Open Banking.</p>
       </div>
