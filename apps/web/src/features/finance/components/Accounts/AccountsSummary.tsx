@@ -35,7 +35,7 @@ export function AccountsSummary({
             <p
               className={cn(
                 "figure mt-1 w-fit text-2xl font-medium",
-                tile.primary && "text-ignition",
+                tile.primary && "text-primary",
               )}
             >
               {formatMoney(tile.value, currency)}

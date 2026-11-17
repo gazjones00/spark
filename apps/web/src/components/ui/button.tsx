@@ -11,7 +11,7 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-ignition bg-clip-border bg-origin-border font-semibold hover:brightness-105 active:brightness-95 disabled:bg-none disabled:bg-secondary disabled:text-muted-foreground disabled:opacity-100",
+          "bg-filament font-semibold hover:brightness-105 active:brightness-95 disabled:bg-none disabled:bg-secondary disabled:text-muted-foreground disabled:opacity-100",
         solid: "bg-foreground text-background hover:bg-foreground/90",
         outline:
           "border-border bg-card hover:bg-accent hover:text-foreground dark:bg-transparent dark:border-input dark:hover:bg-accent aria-expanded:bg-accent aria-expanded:text-foreground",

@@ -74,7 +74,9 @@ function AttentionCard({
       role={problem ? "alert" : "status"}
       className={cn(
         "flex flex-col gap-3 rounded-xl border p-4 sm:flex-row sm:items-center sm:gap-4",
-        problem ? "border-destructive/30 bg-destructive/5" : "border-warning/45 bg-warning/8",
+        problem
+          ? "border-destructive/30 bg-[color-mix(in_oklab,var(--destructive)_5%,var(--card))]"
+          : "border-warning/45 bg-[color-mix(in_oklab,var(--warning)_8%,var(--card))]",
       )}
     >
       <div className="flex min-w-0 flex-1 gap-3">

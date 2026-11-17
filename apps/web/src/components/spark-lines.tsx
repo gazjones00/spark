@@ -27,7 +27,13 @@ interface SparkLinesProps {
   preserveAspectRatio?: string;
 }
 
-/** Decorative; stroke colour comes from `currentColor` (default `--lines`). */
+// The straight line through the middle of the bundle: the one lit filament.
+const LIT_INDEX = 5;
+
+/**
+ * Decorative; strokes use `currentColor` (default `--lines`) and the lit line
+ * uses `--lines-lit`.
+ */
 export function SparkLines({
   className,
   animate = false,
@@ -45,9 +51,21 @@ export function SparkLines({
         className,
       )}
     >
-      {PATHS.map((d) => (
-        <path key={d} d={d} pathLength={1} fill="none" stroke="currentColor" strokeWidth="1.25" />
-      ))}
+      {PATHS.map((d, index) =>
+        index === LIT_INDEX ? (
+          <path
+            key={d}
+            d={d}
+            data-lit=""
+            pathLength={1}
+            fill="none"
+            stroke="var(--lines-lit, currentColor)"
+            strokeWidth="2"
+          />
+        ) : (
+          <path key={d} d={d} pathLength={1} fill="none" stroke="currentColor" strokeWidth="1.25" />
+        ),
+      )}
     </svg>
   );
 }

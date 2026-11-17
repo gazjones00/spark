@@ -18,7 +18,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
     <div className="relative isolate flex min-h-svh flex-col">
       {/* Signature lines, faint, behind the top-right of every page. */}
-      <SparkLines className="absolute top-0 right-0 -z-10 hidden h-[560px] w-[min(1100px,80vw)] [mask-image:radial-gradient(75%_80%_at_85%_10%,black,transparent)] md:block" />
+      <SparkLines className="absolute top-0 right-0 -z-10 hidden h-[560px] [--lines-lit:color-mix(in_oklab,var(--primary)_55%,transparent)] w-[min(1100px,80vw)] [mask-image:radial-gradient(75%_80%_at_85%_10%,black,transparent)] md:block" />
       <MobileTopBar />
       <DesktopTopBar />
       <main className="flex-1">
@@ -86,7 +86,7 @@ function TopNavLink({ item, active }: { item: NavItem; active: boolean }) {
       className={cn(
         "focus-visible:ring-ring/50 flex h-[2.125rem] items-center gap-2 rounded-md border px-3 text-sm font-medium transition-colors outline-none focus-visible:ring-[3px]",
         active
-          ? "border-primary/70 bg-accent text-foreground"
+          ? "bg-secondary text-foreground border-transparent"
           : "text-muted-foreground hover:bg-accent hover:text-foreground border-transparent",
       )}
     >

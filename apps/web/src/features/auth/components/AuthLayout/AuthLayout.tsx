@@ -43,7 +43,7 @@ function BrandPanel() {
     <aside className="bg-ink relative hidden overflow-hidden p-10 text-white lg:flex lg:flex-col xl:p-14">
       <SparkLines
         animate
-        className="absolute inset-x-0 top-0 h-[62%] w-full text-[rgb(214_170_105/0.55)] [mask-image:linear-gradient(black_55%,transparent)] [&_path]:stroke-[2]"
+        className="absolute inset-x-0 top-0 h-[62%] w-full text-white/20 [--lines-lit:#ffc24b] [mask-image:linear-gradient(black_55%,transparent)] [&_path]:stroke-[2]"
       />
 
       <Link to="/" aria-label="Back to the Spark homepage" className="relative self-start">

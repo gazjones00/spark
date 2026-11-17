@@ -9,7 +9,7 @@ const COMPANION_PATH =
   "M19 1.75c.25 1.6 1.15 2.5 2.75 2.75-1.6.25-2.5 1.15-2.75 2.75-.25-1.6-1.15-2.5-2.75-2.75 1.6-.25 2.5-1.15 2.75-2.75Z";
 
 /**
- * Spark logo mark. Filled with the ignition gradient by default; `mono`
+ * Spark logo mark. Filled with the spark gradient by default; `mono`
  * renders it in `currentColor` (e.g. white on the gradient app icon).
  */
 export function SparkMark({ className, mono = false }: { className?: string; mono?: boolean }) {

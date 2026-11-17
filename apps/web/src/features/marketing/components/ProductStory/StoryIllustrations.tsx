@@ -113,7 +113,7 @@ export function TrackIllustration() {
       <div className={cn(PANEL, "absolute -right-4 bottom-0 w-60 p-4 sm:-right-8")}>
         <div className="flex items-center justify-between">
           <p className="text-xs text-white/60">Rule</p>
-          <span className="bg-ignition relative inline-flex h-4 w-7 items-center rounded-full">
+          <span className="bg-filament relative inline-flex h-4 w-7 items-center rounded-full">
             <span className="absolute right-0.5 size-3 rounded-full bg-[#111214]" />
           </span>
         </div>
@@ -153,12 +153,12 @@ export function UnderstandIllustration() {
         <svg viewBox="0 0 1200 300" preserveAspectRatio="none" className="mt-2 h-24 w-full">
           <defs>
             <linearGradient id={`${id}-line`} x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0" stopColor="#f19670" />
-              <stop offset="1" stopColor="#e852ad" />
+              <stop offset="0" stopColor="#ffc24b" />
+              <stop offset="1" stopColor="#ffc24b" />
             </linearGradient>
             <linearGradient id={`${id}-fill`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stopColor="#e852ad" stopOpacity="0.25" />
-              <stop offset="1" stopColor="#e852ad" stopOpacity="0" />
+              <stop offset="0" stopColor="#ffc24b" stopOpacity="0.22" />
+              <stop offset="1" stopColor="#ffc24b" stopOpacity="0" />
             </linearGradient>
           </defs>
           <path d={`${NET_WORTH_LINE} L1200 300 L0 300 Z`} fill={`url(#${id}-fill)`} />
