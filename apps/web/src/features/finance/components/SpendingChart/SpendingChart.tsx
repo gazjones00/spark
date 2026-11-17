@@ -30,9 +30,7 @@ export function SpendingChart({ data, currency }: SpendingChartProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-          Spending by category
-        </CardTitle>
+        <CardTitle className="text-[0.9375rem]">Spending by category</CardTitle>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig} className="mx-auto h-[200px] w-full">
@@ -67,9 +65,7 @@ export function SpendingChart({ data, currency }: SpendingChartProps) {
           {data.slice(0, 5).map((item) => (
             <div key={item.category} className="flex items-center gap-2">
               <div className="size-2.5" style={{ backgroundColor: item.fill }} />
-              <span className="text-muted-foreground font-mono text-[10px] font-medium uppercase tracking-[0.1em]">
-                {item.label}
-              </span>
+              <span className="text-muted-foreground text-xs font-medium">{item.label}</span>
             </div>
           ))}
         </div>

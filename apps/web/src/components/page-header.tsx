@@ -3,8 +3,6 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 interface PageHeaderProps {
-  /** Bracketed mono label above the title, e.g. "Overview". */
-  eyebrow: string;
   title: string;
   description?: React.ReactNode;
   /** Right-aligned slot for page-level actions. */
@@ -12,15 +10,18 @@ interface PageHeaderProps {
   className?: string;
 }
 
-export function PageHeader({ eyebrow, title, description, action, className }: PageHeaderProps) {
+export function PageHeader({ title, description, action, className }: PageHeaderProps) {
   return (
-    <div className={cn("flex flex-wrap items-end justify-between gap-4", className)}>
-      <div>
-        <p className="eyebrow text-muted-foreground">{eyebrow}</p>
-        <h1 className="headline mt-2 text-3xl sm:text-4xl">{title}</h1>
-        {description ? <p className="text-muted-foreground mt-2 text-sm">{description}</p> : null}
+    <div className={cn("flex flex-wrap items-end justify-between gap-x-6 gap-y-3", className)}>
+      <div className="min-w-0">
+        <h1 className="text-foreground text-2xl font-bold tracking-tight sm:text-[1.75rem]">
+          {title}
+        </h1>
+        {description ? (
+          <p className="text-muted-foreground mt-1 text-sm sm:text-[0.9375rem]">{description}</p>
+        ) : null}
       </div>
-      {action ? <div className="shrink-0">{action}</div> : null}
+      {action ? <div className="flex shrink-0 items-center gap-2">{action}</div> : null}
     </div>
   );
 }

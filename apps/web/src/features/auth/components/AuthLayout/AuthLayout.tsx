@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { SparkMark } from "@/components/spark-mark";
+import { SparkLogo } from "@/components/spark-mark";
 
 interface AuthLayoutProps {
   children: ReactNode;
@@ -13,17 +13,16 @@ interface AuthLayoutProps {
 
 export function AuthLayout({ children, title, description }: AuthLayoutProps) {
   return (
-    <div className="bg-dotgrid flex min-h-svh items-center justify-center bg-background p-4">
+    <div className="flex min-h-svh items-center justify-center bg-background p-4">
       <div className="w-full max-w-md">
-        <div className="mb-8 flex flex-col items-center gap-2 text-center">
+        <div className="mb-8 flex justify-center">
           <Link to="/" aria-label="Back to the Spark homepage">
-            <SparkMark className="size-8" />
+            <SparkLogo markClassName="size-7" className="[&>span:last-child]:text-2xl" />
           </Link>
-          <span className="font-display text-lg font-semibold tracking-[0.12em]">SPARK</span>
         </div>
         <Card>
           <CardHeader className="gap-2 text-center">
-            <CardTitle className="headline text-2xl">{title}</CardTitle>
+            <CardTitle className="text-2xl font-bold">{title}</CardTitle>
             <CardDescription>{description}</CardDescription>
           </CardHeader>
           <CardContent>{children}</CardContent>

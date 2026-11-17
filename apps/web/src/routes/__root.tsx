@@ -22,14 +22,16 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
         content: "width=device-width, initial-scale=1",
       },
       {
-        title: "Spark - Personal Finance",
+        title: "Spark · Personal finance",
       },
+      { name: "theme-color", content: "#6e56f8" },
     ],
     links: [
       {
         rel: "stylesheet",
         href: appCss,
       },
+      { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
     ],
   }),
 

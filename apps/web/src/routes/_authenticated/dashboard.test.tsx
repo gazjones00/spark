@@ -69,7 +69,7 @@ describe("dashboard route", () => {
   it("renders the page header and stats for loaded data", () => {
     renderDashboard();
 
-    expect(screen.getByText("Dashboard")).toBeDefined();
+    expect(screen.getByText("Home")).toBeDefined();
     expect(screen.getByText(/Welcome back, Test User/)).toBeDefined();
     expect(screen.getByText("Net worth")).toBeDefined();
   });

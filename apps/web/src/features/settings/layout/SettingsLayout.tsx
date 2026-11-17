@@ -18,11 +18,7 @@ export function SettingsLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        eyebrow="Configuration"
-        title="Settings"
-        description="Manage your account and preferences"
-      />
+      <PageHeader title="Settings" description="Manage your account and preferences" />
 
       <div className="flex flex-col gap-6 md:flex-row">
         <nav className="flex w-full flex-row gap-1 overflow-x-auto md:w-52 md:flex-col">
@@ -34,9 +30,9 @@ export function SettingsLayout({ children }: { children: React.ReactNode }) {
                 key={tab.href}
                 to={tab.href}
                 className={cn(
-                  "flex items-center gap-2 px-3 py-2 font-mono text-[11px] font-medium uppercase tracking-[0.1em] whitespace-nowrap transition-colors",
+                  "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors",
                   isActive
-                    ? "bg-foreground text-background"
+                    ? "bg-accent text-accent-foreground"
                     : cn(
                         "text-muted-foreground hover:bg-muted hover:text-foreground",
                         isDanger && "hover:text-destructive",
