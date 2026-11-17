@@ -9,8 +9,6 @@ interface AggregateFixture {
     total: string;
     transactionCount: number;
   }>;
-  balances?: Array<{ day: string; balance: string; currency: string }>;
-  transactionDays?: Array<{ day: string }>;
 }
 
 function createService(fixture: AggregateFixture = {}) {
@@ -32,22 +30,8 @@ function createService(fixture: AggregateFixture = {}) {
       return Promise.resolve(result);
     }),
   };
-  const distinctOnChain = {
-    from: vi.fn().mockReturnThis(),
-    innerJoin: vi.fn().mockReturnThis(),
-    where: vi.fn().mockReturnThis(),
-    orderBy: vi.fn().mockResolvedValue(fixture.balances ?? []),
-  };
-  const distinctChain = {
-    from: vi.fn().mockReturnThis(),
-    innerJoin: vi.fn().mockReturnThis(),
-    where: vi.fn().mockReturnThis(),
-    orderBy: vi.fn().mockResolvedValue(fixture.transactionDays ?? []),
-  };
   const db = {
     select: vi.fn(() => selectChain),
-    selectDistinctOn: vi.fn(() => distinctOnChain),
-    selectDistinct: vi.fn(() => distinctChain),
   };
 
   const service = new TransactionsService(db as never);
@@ -105,43 +89,95 @@ describe("TransactionsService.monthlySummary", () => {
 });
 
 describe("TransactionsService.balanceSeries", () => {
-  it("carries the last observed balance forward across days without one", async () => {
-    const { service } = createService({
-      balances: [
-        { day: "2026-06-01", balance: "150.0000", currency: "GBP" },
-        { day: "2026-06-03", balance: "200.0000", currency: "GBP" },
+  function createSeriesService(
+    anchors: Array<Record<string, string>>,
+    movements: Array<Record<string, string>>,
+    laterOnAnchorDay: Array<Record<string, string>> = [],
+  ) {
+    const anchorChain = {
+      from: vi.fn().mockReturnThis(),
+      innerJoin: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      orderBy: vi.fn().mockResolvedValue(anchors),
+    };
+    const movementChain = {
+      from: vi.fn().mockReturnThis(),
+      innerJoin: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      groupBy: vi.fn().mockResolvedValue(movements),
+    };
+    const laterChain = {
+      from: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      groupBy: vi.fn().mockResolvedValue(laterOnAnchorDay),
+    };
+    const db = {
+      selectDistinctOn: vi.fn(() => anchorChain),
+      select: vi.fn().mockReturnValueOnce(movementChain).mockReturnValueOnce(laterChain),
+    };
+    return { service: new TransactionsService(db as never), db };
+  }
+
+  it("rebuilds net worth for every day of the window from balances and transactions", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const { service } = createSeriesService(
+      [
+        {
+          connectionId: "conn-1",
+          accountExternalId: "current",
+          balance: "500.0000",
+          observedDay: today,
+          type: "CASH",
+          currency: "GBP",
+        },
+        {
+          connectionId: "conn-2",
+          accountExternalId: "card",
+          balance: "120.0000",
+          observedDay: today,
+          type: "CARD",
+          currency: "GBP",
+        },
       ],
-      // 2026-06-02 had transactions but none carried a running balance.
-      transactionDays: [{ day: "2026-06-01" }, { day: "2026-06-02" }, { day: "2026-06-03" }],
-    });
+      [{ connectionId: "conn-2", accountExternalId: "card", day: today, amount: "20.0000" }],
+    );
 
-    const result = await service.balanceSeries("user-1", { days: 90 });
+    const result = await service.balanceSeries("user-1", { days: 7 });
 
-    expect(result.points).toEqual([
-      { date: "2026-06-01", balance: "150.0000", currency: "GBP" },
-      { date: "2026-06-02", balance: "150.0000", currency: "GBP" },
-      { date: "2026-06-03", balance: "200.0000", currency: "GBP" },
-    ]);
+    expect(result.points).toHaveLength(7);
+    expect(result.points.at(-1)).toEqual({ date: today, balance: "380.00", currency: "GBP" });
+    // Before today's card purchase the card owed 100.
+    expect(result.points.at(-2)?.balance).toBe("400.00");
   });
 
-  it("emits nothing for days before the first observed balance", async () => {
-    const { service } = createService({
-      balances: [{ day: "2026-06-05", balance: "80.0000", currency: "GBP" }],
-      transactionDays: [{ day: "2026-06-02" }, { day: "2026-06-05" }],
-    });
+  it("applies transactions made after a mid-day balance snapshot", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const { service } = createSeriesService(
+      [
+        {
+          connectionId: "conn-1",
+          accountExternalId: "current",
+          balance: "100.0000",
+          observedAt: `${today}T09:00:00.000Z`,
+          observedDay: today,
+          type: "CASH",
+          currency: "GBP",
+        },
+      ],
+      [{ connectionId: "conn-1", accountExternalId: "current", day: today, amount: "-20.0000" }],
+      // The -20 happened at noon, after the 09:00 snapshot of 100.
+      [{ connectionId: "conn-1", accountExternalId: "current", amount: "-20.0000" }],
+    );
 
-    const result = await service.balanceSeries("user-1");
+    const result = await service.balanceSeries("user-1", { days: 2 });
 
-    expect(result.points).toEqual([{ date: "2026-06-05", balance: "80.0000", currency: "GBP" }]);
+    expect(result.points.map((point) => point.balance)).toEqual(["100.00", "80.00"]);
   });
 
-  it("returns an empty series when no balances were ever observed", async () => {
-    const { service } = createService({
-      transactionDays: [{ day: "2026-06-02" }],
-    });
+  it("returns an empty series without querying transactions when no balance was observed", async () => {
+    const { service, db } = createSeriesService([], []);
 
-    const result = await service.balanceSeries("user-1");
-
-    expect(result.points).toEqual([]);
+    await expect(service.balanceSeries("user-1")).resolves.toEqual({ points: [] });
+    expect(db.select).not.toHaveBeenCalled();
   });
 });

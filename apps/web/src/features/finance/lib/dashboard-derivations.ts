@@ -1,6 +1,7 @@
+import { signedAccountBalance } from "@spark/common";
 import type { Account } from "@spark/orpc/contract";
 
-/** A single point on the "Balance Over Time" chart. */
+/** A single point on the "Net worth over time" chart. */
 export interface BalanceHistory {
   date: string;
   balance: number;
@@ -16,26 +17,23 @@ export interface SpendingByCategory {
 }
 
 /**
- * Net worth = sum of every account's `currentBalance`.
+ * Net worth = assets minus liabilities: every account's net-worth-signed
+ * `currentBalance` (card balances are amounts owed, so they subtract).
  *
- * `currentBalance` is a nullable Drizzle-numeric string; `null` is treated as 0.
- *
- * NOTE: values are summed in their raw numeric form regardless of currency.
- * True multi-currency net worth needs FX conversion, which is out of scope for
- * v1. When accounts span currencies the figure is only
- * meaningful if one currency dominates — surface it labelled with
- * {@link dominantCurrency}.
+ * Only accounts in the {@link dominantCurrency} count, the currency the figure
+ * is labelled with and the one the net worth series uses: without FX
+ * conversion, adding another currency's balance at face value would be wrong.
  */
 export function calculateNetWorth(accounts: Account[]): number {
-  return accounts.reduce((sum, account) => {
-    const value = account.currentBalance ? Number(account.currentBalance) : 0;
-    // Guard against malformed numeric strings so one bad row can't poison the sum.
-    return sum + (Number.isNaN(value) ? 0 : value);
-  }, 0);
+  const currency = dominantCurrency(accounts);
+  return accounts
+    .filter((account) => account.currency === currency)
+    .reduce((sum, account) => sum + signedAccountBalance(account.type, account.currentBalance), 0);
 }
 
 /**
- * The most common account currency, used to label aggregate figures.
+ * The most common account currency, used to label aggregate figures; ties go
+ * to the alphabetically first, as on the server's net worth series.
  * Returns `undefined` when there are no accounts (the caller renders an empty
  * state in that case, so no currency is needed).
  */
@@ -48,7 +46,7 @@ export function dominantCurrency(accounts: Account[]): string | undefined {
   let dominant: string | undefined;
   let max = 0;
   for (const [currency, count] of counts) {
-    if (count > max) {
+    if (count > max || (count === max && dominant !== undefined && currency < dominant)) {
       max = count;
       dominant = currency;
     }
