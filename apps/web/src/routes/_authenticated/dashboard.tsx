@@ -137,12 +137,12 @@ function DashboardSkeleton() {
   return (
     <div className="space-y-6" aria-busy="true" aria-label="Loading your overview">
       <div className="grid gap-6 lg:grid-cols-3">
-        <Skeleton className="h-[340px] rounded-2xl lg:col-span-2" />
-        <Skeleton className="h-[340px] rounded-2xl" />
+        <Skeleton className="h-[340px] rounded-xl lg:col-span-2" />
+        <Skeleton className="h-[340px] rounded-xl" />
       </div>
       <div className="grid gap-6 lg:grid-cols-3">
-        <Skeleton className="h-[300px] rounded-2xl lg:col-span-2" />
-        <Skeleton className="h-[300px] rounded-2xl" />
+        <Skeleton className="h-[300px] rounded-xl lg:col-span-2" />
+        <Skeleton className="h-[300px] rounded-xl" />
       </div>
     </div>
   );

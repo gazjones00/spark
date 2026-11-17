@@ -22,7 +22,7 @@ const RANGE_LABELS: Record<SeriesRange, string> = {
 };
 
 const chartConfig = {
-  balance: { label: "Net worth", color: "var(--chart-1)" },
+  balance: { label: "Net worth", color: "var(--primary)" },
 } satisfies ChartConfig;
 
 interface NetWorthCardProps {
@@ -58,7 +58,7 @@ export function NetWorthCard({
       <CardContent className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-muted-foreground text-sm font-medium">Net worth</p>
-          <p className="figure text-foreground mt-1 text-4xl font-bold sm:text-[2.75rem]">
+          <p className="figure text-foreground mt-1 text-4xl font-medium sm:text-[2.75rem]">
             {formatMoney(netWorth, currency)}
           </p>
           {change !== undefined ? (
@@ -93,9 +93,13 @@ export function NetWorthCard({
         <ChartContainer config={chartConfig} className="mt-4 aspect-auto h-44 w-full sm:h-56">
           <AreaChart data={series} margin={{ top: 8, right: 0, bottom: 0, left: 0 }}>
             <defs>
+              <linearGradient id="net-worth-line" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stopColor="#f19670" />
+                <stop offset="100%" stopColor="#e852ad" />
+              </linearGradient>
               <linearGradient id="net-worth-fill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="var(--chart-1)" stopOpacity={0.28} />
-                <stop offset="100%" stopColor="var(--chart-1)" stopOpacity={0} />
+                <stop offset="0%" stopColor="#e852ad" stopOpacity={0.22} />
+                <stop offset="100%" stopColor="#e852ad" stopOpacity={0} />
               </linearGradient>
             </defs>
             <XAxis dataKey="date" hide />
@@ -115,7 +119,7 @@ export function NetWorthCard({
                         year: "numeric",
                       })}
                     </p>
-                    <p className="figure mt-0.5 text-sm font-bold">
+                    <p className="figure mt-0.5 text-sm font-medium">
                       {formatMoney(point.balance, currency)}
                     </p>
                   </div>
@@ -125,7 +129,7 @@ export function NetWorthCard({
             <Area
               type="monotone"
               dataKey="balance"
-              stroke="var(--chart-1)"
+              stroke="url(#net-worth-line)"
               strokeWidth={2.25}
               fill="url(#net-worth-fill)"
               activeDot={{ r: 4, strokeWidth: 2, stroke: "var(--card)" }}

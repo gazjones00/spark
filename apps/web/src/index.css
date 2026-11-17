@@ -1,5 +1,5 @@
 @import "@fontsource-variable/inter";
-@import "@fontsource-variable/plus-jakarta-sans";
+@import "@fontsource-variable/funnel-display";
 
 @import "tailwindcss";
 @import "tw-animate-css";
@@ -9,33 +9,34 @@
 
 /* ============================================================================
    Spark design tokens
-   Calm neutrals, an electric-violet primary for anything interactive, and the
-   "ignition" gradient (amber → coral → violet) reserved for the brand mark and
-   hero moments. Green means money in; red is kept for problems.
+   Graphite panels layered on a near-black page (dark is the default), crisp
+   10px corners, and the "ignition" gradient (orange → pink) for the one main
+   action on a screen. The spark mark keeps its amber → coral → violet
+   gradient. Green means money in; red is kept for problems.
    ============================================================================ */
 
 :root {
-  --background: #f7f7fa;
-  --foreground: #0e1020;
+  --background: #f5f5fa;
+  --foreground: #0b0b0f;
   --card: #ffffff;
-  --card-foreground: #0e1020;
+  --card-foreground: #0b0b0f;
   --popover: #ffffff;
-  --popover-foreground: #0e1020;
-  --primary: #6e56f8;
+  --popover-foreground: #0b0b0f;
+  --primary: #c93a6a;
   --primary-foreground: #ffffff;
-  --secondary: #f0f0f6;
-  --secondary-foreground: #0e1020;
-  --muted: #f0f1f5;
-  --muted-foreground: #5e6278;
-  --accent: #f1effe;
-  --accent-foreground: #3d2bc2;
+  --secondary: #ececf3;
+  --secondary-foreground: #0b0b0f;
+  --muted: #f1f1f6;
+  --muted-foreground: #5f5f6e;
+  --accent: #efeff5;
+  --accent-foreground: #0b0b0f;
   --destructive: #c4262c;
   --success: #05704f;
   --warning: #f59e0b;
   --warning-foreground: #92400e;
-  --border: #e6e7ee;
-  --input: #dcdee7;
-  --ring: #6e56f8;
+  --border: #e3e3eb;
+  --input: #d9d9e3;
+  --ring: #e9618f;
   --chart-1: #6e56f8;
   --chart-2: #f43f5e;
   --chart-3: #f59e0b;
@@ -48,41 +49,48 @@
   --chart-10: #94a3b8;
   --chart-11: #84cc16;
   --chart-12: #78716c;
-  --radius: 0.75rem;
+  --radius: 0.625rem;
   --sidebar: #ffffff;
-  --sidebar-foreground: #5e6278;
-  --sidebar-primary: #6e56f8;
+  --sidebar-foreground: #5f5f6e;
+  --sidebar-primary: #c93a6a;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f1effe;
-  --sidebar-accent-foreground: #3d2bc2;
-  --sidebar-border: #e6e7ee;
-  --sidebar-ring: #6e56f8;
+  --sidebar-accent: #efeff5;
+  --sidebar-accent-foreground: #0b0b0f;
+  --sidebar-border: #e3e3eb;
+  --sidebar-ring: #e9618f;
   --spark-gradient: linear-gradient(135deg, #ff9a3c 0%, #ff5470 48%, #8a5cff 100%);
-  --card-shadow: 0 1px 2px 0 rgb(16 24 40 / 0.04), 0 1px 3px 0 rgb(16 24 40 / 0.03);
+  /* The main call to action. Ink text keeps it above 5.5:1 on both stops. */
+  --ignition: linear-gradient(90deg, #f19670 0%, #e852ad 100%);
+  --ignition-foreground: #111214;
+  /* Deeper stops for gradient figures on light surfaces (large text, ≥3:1). */
+  --ignition-text: linear-gradient(90deg, #d45a2c 0%, #c2307f 100%);
+  /* Signature line art. */
+  --lines: rgb(11 11 15 / 0.14);
+  --card-shadow: 0 1px 2px 0 rgb(16 16 24 / 0.04);
 }
 
 .dark {
-  --background: #0b0c12;
-  --foreground: #eeeff5;
-  --card: #13141c;
-  --card-foreground: #eeeff5;
-  --popover: #171822;
-  --popover-foreground: #eeeff5;
-  --primary: #8b7bff;
-  --primary-foreground: #0b0c12;
-  --secondary: #1d1f2b;
-  --secondary-foreground: #eeeff5;
-  --muted: #1a1c26;
-  --muted-foreground: #9a9db2;
-  --accent: #231f3d;
-  --accent-foreground: #c9c1ff;
+  --background: #111214;
+  --foreground: #f3f4f9;
+  --card: #19191d;
+  --card-foreground: #f3f4f9;
+  --popover: #1e1e23;
+  --popover-foreground: #f3f4f9;
+  --primary: #ed6e8e;
+  --primary-foreground: #111214;
+  --secondary: #2a2a2f;
+  --secondary-foreground: #f3f4f9;
+  --muted: #202025;
+  --muted-foreground: #9e9eab;
+  --accent: #26262b;
+  --accent-foreground: #f3f4f9;
   --destructive: #ff6369;
   --success: #3dd68c;
   --warning: #fbbf24;
   --warning-foreground: #fcd34d;
-  --border: #262838;
-  --input: #2f3244;
-  --ring: #8b7bff;
+  --border: #2a2a2f;
+  --input: #34343a;
+  --ring: #ed6e8e;
   --chart-1: #8b7bff;
   --chart-2: #fb7185;
   --chart-3: #fbbf24;
@@ -95,20 +103,22 @@
   --chart-10: #94a3b8;
   --chart-11: #a3e635;
   --chart-12: #a8a29e;
-  --sidebar: #0f1017;
-  --sidebar-foreground: #9a9db2;
-  --sidebar-primary: #8b7bff;
-  --sidebar-primary-foreground: #0b0c12;
-  --sidebar-accent: #1c1a30;
-  --sidebar-accent-foreground: #d8d2ff;
-  --sidebar-border: #232534;
-  --sidebar-ring: #8b7bff;
-  --card-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+  --sidebar: #19191d;
+  --sidebar-foreground: #9e9eab;
+  --sidebar-primary: #ed6e8e;
+  --sidebar-primary-foreground: #111214;
+  --sidebar-accent: #26262b;
+  --sidebar-accent-foreground: #f3f4f9;
+  --sidebar-border: #2a2a2f;
+  --sidebar-ring: #ed6e8e;
+  --ignition-text: var(--ignition);
+  --lines: rgb(214 170 105 / 0.32);
+  --card-shadow: none;
 }
 
 @theme inline {
   --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Plus Jakarta Sans Variable", "Inter Variable", ui-sans-serif, sans-serif;
+  --font-display: "Funnel Display Variable", "Inter Variable", ui-sans-serif, sans-serif;
   /* Figures align without a terminal look: Inter with tabular numerals. */
   --font-mono: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
@@ -136,8 +146,8 @@
   --color-border: var(--border);
   --color-destructive: var(--destructive);
   --color-success: var(--success);
-  /* Deep brand ink for art-directed bands; the same in light and dark mode. */
-  --color-ink: #140f2e;
+  /* Near-black ink for art-directed bands; the same in light and dark mode. */
+  --color-ink: #111214;
   --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
   --color-accent-foreground: var(--accent-foreground);
@@ -158,7 +168,7 @@
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --radius-xl: calc(var(--radius) + 2px);
   --radius-2xl: calc(var(--radius) + 6px);
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
@@ -178,7 +188,7 @@
   h1,
   h2,
   h3 {
-    @apply font-display tracking-tight;
+    @apply font-display font-medium tracking-tight;
   }
   .font-mono {
     font-variant-numeric: tabular-nums;
@@ -196,12 +206,12 @@
     color: var(--muted-foreground);
   }
 
-  /* Display headline: Plus Jakarta Sans, tight leading. */
+  /* Display headline: Funnel Display at regular weight, tight leading. */
   .headline {
     font-family: var(--font-display);
-    font-weight: 700;
-    line-height: 1.05;
-    letter-spacing: -0.025em;
+    font-weight: 400;
+    line-height: 1.02;
+    letter-spacing: -0.035em;
     text-wrap: balance;
   }
 
@@ -214,6 +224,20 @@
 
   .bg-spark-gradient {
     background-image: var(--spark-gradient);
+  }
+
+  /* The main call to action's fill. */
+  .bg-ignition {
+    background-image: var(--ignition);
+    color: var(--ignition-foreground);
+  }
+
+  /* Figures in the ignition colours (big numbers on dark bands). */
+  .text-ignition {
+    background-image: var(--ignition-text);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
   }
 
   /* Soft glow of the brand colours behind marketing heroes. */
@@ -236,6 +260,15 @@
     stroke-dashoffset: 1700;
     animation: spark-draw 1.8s cubic-bezier(0.65, 0, 0.25, 1) 0.2s forwards;
   }
+  /* Line art drawn in on load; paths set pathLength="1". */
+  .animate-lines-draw path {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: spark-draw 2.2s cubic-bezier(0.65, 0, 0.25, 1) forwards;
+  }
+  .animate-lines-draw path:nth-child(odd) {
+    animation-delay: 0.15s;
+  }
   .animate-spark-fade {
     opacity: 0;
     animation: spark-fade 0.9s ease-out 1.4s forwards;
@@ -244,6 +277,11 @@
     animation: spark-pulse 2.4s ease-in-out infinite;
   }
   @media (prefers-reduced-motion: reduce) {
+    .animate-lines-draw path {
+      stroke-dasharray: none;
+      stroke-dashoffset: 0;
+      animation: none;
+    }
     .animate-spark-draw {
       stroke-dasharray: none;
       stroke-dashoffset: 0;

@@ -74,7 +74,7 @@ export function RecentActivity({ transactions, accounts }: RecentActivityProps) 
                         </span>
                         <span
                           className={cn(
-                            "figure text-sm font-semibold",
+                            "figure text-sm font-medium",
                             isIn ? "text-success" : "text-foreground",
                           )}
                         >

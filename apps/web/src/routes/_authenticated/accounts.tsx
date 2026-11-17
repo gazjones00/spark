@@ -62,7 +62,7 @@ function AccountsPage() {
         description="Everything you've connected, in one place."
         action={
           accounts.length > 0 ? (
-            <Link to="/accounts/connect" className={cn(buttonVariants())}>
+            <Link to="/accounts/connect" className={cn(buttonVariants(), "md:hidden")}>
               <Plus />
               Connect account
             </Link>
@@ -117,12 +117,12 @@ function AccountsSkeleton() {
   return (
     <div className="space-y-6" aria-busy="true" aria-label="Loading accounts">
       <div className="grid gap-4 sm:grid-cols-3">
-        <Skeleton className="h-28 rounded-2xl" />
-        <Skeleton className="h-28 rounded-2xl" />
-        <Skeleton className="h-28 rounded-2xl" />
+        <Skeleton className="h-28 rounded-xl" />
+        <Skeleton className="h-28 rounded-xl" />
+        <Skeleton className="h-28 rounded-xl" />
       </div>
-      <Skeleton className="h-56 rounded-2xl" />
-      <Skeleton className="h-40 rounded-2xl" />
+      <Skeleton className="h-56 rounded-xl" />
+      <Skeleton className="h-40 rounded-xl" />
     </div>
   );
 }

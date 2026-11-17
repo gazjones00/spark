@@ -73,7 +73,7 @@ function AttentionCard({
     <div
       role={problem ? "alert" : "status"}
       className={cn(
-        "flex flex-col gap-3 rounded-2xl border p-4 sm:flex-row sm:items-center sm:gap-4",
+        "flex flex-col gap-3 rounded-xl border p-4 sm:flex-row sm:items-center sm:gap-4",
         problem ? "border-destructive/30 bg-destructive/5" : "border-warning/45 bg-warning/8",
       )}
     >

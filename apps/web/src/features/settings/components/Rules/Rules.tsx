@@ -108,7 +108,7 @@ export function Rules() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="max-w-xl">
-          <h2 className="text-lg font-semibold">Rules</h2>
+          <h2 className="text-lg font-medium">Rules</h2>
           <p className="text-muted-foreground text-sm">
             Categorise transactions automatically. Rules apply to new syncs and to your history
             whenever they change; categories you chose yourself are never overwritten.

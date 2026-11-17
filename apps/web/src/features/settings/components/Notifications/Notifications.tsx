@@ -56,7 +56,7 @@ export function Notifications() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold">Notifications</h2>
+        <h2 className="text-lg font-medium">Notifications</h2>
         <p className="text-muted-foreground text-sm">
           Choose which notifications you want to receive
         </p>

@@ -50,7 +50,7 @@ export function DangerZone() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold">Danger zone</h2>
+        <h2 className="text-lg font-medium">Danger zone</h2>
         <p className="text-muted-foreground text-sm">
           Irreversible actions that affect your account
         </p>

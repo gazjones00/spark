@@ -45,7 +45,7 @@ export function Security() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold">Security</h2>
+        <h2 className="text-lg font-medium">Security</h2>
         <p className="text-muted-foreground text-sm">Manage your password and security settings</p>
       </div>
 

@@ -27,7 +27,9 @@ export function SpendingBreakdown({ data, currency }: SpendingBreakdownProps) {
           <p className="text-muted-foreground text-sm">This month</p>
         </div>
         {total > 0 ? (
-          <p className="figure text-foreground text-lg font-bold">{formatMoney(total, currency)}</p>
+          <p className="figure text-foreground text-lg font-medium">
+            {formatMoney(total, currency)}
+          </p>
         ) : null}
       </CardHeader>
       <CardContent>
@@ -64,7 +66,7 @@ export function SpendingBreakdown({ data, currency }: SpendingBreakdownProps) {
                     <span className="text-muted-foreground w-12 text-right text-xs tabular-nums">
                       {Math.round((entry.amount / total) * 100)}%
                     </span>
-                    <span className="figure text-foreground w-24 text-right text-sm font-semibold">
+                    <span className="figure text-foreground w-24 text-right text-sm font-medium">
                       {formatMoney(entry.amount, currency)}
                     </span>
                   </Link>
@@ -79,7 +81,7 @@ export function SpendingBreakdown({ data, currency }: SpendingBreakdownProps) {
                   <span className="text-muted-foreground w-12 text-right text-xs tabular-nums">
                     {Math.round((restTotal / total) * 100)}%
                   </span>
-                  <span className="figure text-muted-foreground w-24 text-right text-sm font-semibold">
+                  <span className="figure text-muted-foreground w-24 text-right text-sm font-medium">
                     {formatMoney(restTotal, currency)}
                   </span>
                 </li>

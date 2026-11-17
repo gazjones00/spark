@@ -215,7 +215,7 @@ function ListSkeleton() {
       {[0, 1].map((group) => (
         <div key={group} className="space-y-2">
           <Skeleton className="h-4 w-28" />
-          <Skeleton className="h-48 rounded-2xl" />
+          <Skeleton className="h-48 rounded-xl" />
         </div>
       ))}
     </div>

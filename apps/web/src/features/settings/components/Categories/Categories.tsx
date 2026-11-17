@@ -112,7 +112,7 @@ export function Categories() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold">Categories</h2>
+        <h2 className="text-lg font-medium">Categories</h2>
         <p className="text-muted-foreground text-sm">
           Add your own spending categories alongside the built-in ones. Custom categories can be
           used in transaction edits and rules.
