@@ -51,7 +51,7 @@ export function RulesList({ rules, onEdit, onDelete }: RulesListProps) {
 
   if (rules.length === 0) {
     return (
-      <div className="text-muted-foreground rounded-none border border-dashed p-8 text-center">
+      <div className="text-muted-foreground bg-card rounded-2xl border border-dashed p-8 text-center">
         <p className="text-sm">No rules yet.</p>
         <p className="text-xs">Create one to categorize matching transactions automatically.</p>
       </div>
@@ -59,7 +59,7 @@ export function RulesList({ rules, onEdit, onDelete }: RulesListProps) {
   }
 
   return (
-    <div className="rounded-none border">
+    <div className="bg-card shadow-card overflow-hidden rounded-2xl border">
       <Table>
         <TableHeader>
           <TableRow>

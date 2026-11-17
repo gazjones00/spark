@@ -1,8 +1,8 @@
-import { ArrowLeftRight, House, Landmark, Settings, Wand2, type LucideIcon } from "lucide-react";
+import { ArrowLeftRight, House, Landmark, Settings, type LucideIcon } from "lucide-react";
 
 export interface NavItem {
   label: string;
-  href: "/dashboard" | "/accounts" | "/transactions" | "/rules" | "/settings";
+  href: "/dashboard" | "/accounts" | "/transactions" | "/settings";
   icon: LucideIcon;
 }
 
@@ -11,7 +11,6 @@ export const navItems: readonly NavItem[] = [
   { label: "Home", href: "/dashboard", icon: House },
   { label: "Accounts", href: "/accounts", icon: Landmark },
   { label: "Transactions", href: "/transactions", icon: ArrowLeftRight },
-  { label: "Rules", href: "/rules", icon: Wand2 },
   { label: "Settings", href: "/settings", icon: Settings },
 ];
 

@@ -60,9 +60,15 @@ function toForm(condition: RuleCondition): ConditionForm {
   };
 }
 
-function initialGroups(rule?: CategoryRule): ConditionForm[][] {
+/** Starting point for a new rule, e.g. "merchant contains <name>" from a transaction. */
+export interface RuleDraft {
+  merchant?: string;
+  category?: string;
+}
+
+function initialGroups(rule?: CategoryRule, draft?: RuleDraft): ConditionForm[][] {
   if (!rule) {
-    return [[emptyCondition()]];
+    return [[draft?.merchant ? { ...emptyCondition(), value: draft.merchant } : emptyCondition()]];
   }
   return rule.matchers.groups.map((group) => group.map((condition) => toForm(condition)));
 }
@@ -79,6 +85,8 @@ interface RuleEditorProps {
   onOpenChange: (open: boolean) => void;
   /** Existing rule to edit; omit to create a new one. */
   rule?: CategoryRule;
+  /** Prefill for a new rule (ignored when editing). */
+  draft?: RuleDraft;
   onSubmit: (values: RuleEditorValues) => void;
   isPending?: boolean;
 }
@@ -90,22 +98,31 @@ interface RuleEditorProps {
  * "(merchant contains amazon AND description contains aws) OR
  * (merchant contains aws)" is one rule with two groups.
  */
-export function RuleEditor({ open, onOpenChange, rule, onSubmit, isPending }: RuleEditorProps) {
+export function RuleEditor({
+  open,
+  onOpenChange,
+  rule,
+  draft,
+  onSubmit,
+  isPending,
+}: RuleEditorProps) {
   const { categories, resolve } = useCategories();
-  const [groups, setGroups] = React.useState<ConditionForm[][]>(() => initialGroups(rule));
-  const [category, setCategory] = React.useState<string>(rule?.category ?? "OTHER");
+  const [groups, setGroups] = React.useState<ConditionForm[][]>(() => initialGroups(rule, draft));
+  const [category, setCategory] = React.useState<string>(
+    rule?.category ?? draft?.category ?? "OTHER",
+  );
   const [priority, setPriority] = React.useState(rule?.priority.toString() ?? "0");
   const [error, setError] = React.useState<string | null>(null);
 
   // Re-seed the form each time the dialog opens for a (possibly different) rule.
   React.useEffect(() => {
     if (open) {
-      setGroups(initialGroups(rule));
-      setCategory(rule?.category ?? "OTHER");
+      setGroups(initialGroups(rule, draft));
+      setCategory(rule?.category ?? draft?.category ?? "OTHER");
       setPriority(rule?.priority.toString() ?? "0");
       setError(null);
     }
-  }, [open, rule]);
+  }, [open, rule, draft]);
 
   const updateCondition = (
     groupIndex: number,
