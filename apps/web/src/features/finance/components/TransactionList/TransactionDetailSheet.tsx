@@ -116,13 +116,19 @@ function Details({
         <dl className="border-border divide-border divide-y rounded-xl border">
           {account ? (
             <Row label="Account">
-              {/* One line: a long account name gives way with an ellipsis. */}
-              <span className="flex min-w-0 items-center justify-end gap-2">
-                <BankLogo provider={account.provider} className="size-5 rounded-[6px]" />
-                <span className="truncate" title={account.displayName}>
-                  {account.displayName}
+              {/* Name over bank, like account rows elsewhere: the full name is
+                  always readable, on any device, and nothing is cut off. */}
+              <span className="flex min-w-0 items-start justify-end gap-2.5">
+                <BankLogo
+                  provider={account.provider}
+                  className="mt-0.5 size-5 shrink-0 rounded-[6px]"
+                />
+                <span className="min-w-0">
+                  <span className="block break-words">{account.displayName}</span>
+                  <span className="text-muted-foreground block text-xs break-words">
+                    {bankName(account)}
+                  </span>
                 </span>
-                <span className="text-muted-foreground shrink-0">· {bankName(account)}</span>
               </span>
             </Row>
           ) : null}
