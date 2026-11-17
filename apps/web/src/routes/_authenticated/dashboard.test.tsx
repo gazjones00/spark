@@ -71,7 +71,7 @@ describe("dashboard route", () => {
 
     expect(screen.getByText("Dashboard")).toBeDefined();
     expect(screen.getByText(/Welcome back, Test User/)).toBeDefined();
-    expect(screen.getByText(/net worth/i)).toBeDefined();
+    expect(screen.getByText("Net worth")).toBeDefined();
   });
 
   it("renders the empty state when no accounts are connected", () => {

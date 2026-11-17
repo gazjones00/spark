@@ -12,6 +12,7 @@ function makeAccount(overrides: Partial<Account> = {}): Account {
     id: "00000000-0000-0000-0000-000000000000",
     accountId: "acc-1",
     accountType: "TRANSACTION",
+    type: "CASH",
     displayName: "Main Checking",
     currency: "GBP",
     accountNumber: { number: "****0001" },
@@ -49,6 +50,23 @@ describe("calculateNetWorth", () => {
 
   it("returns 0 for no accounts", () => {
     expect(calculateNetWorth([])).toBe(0);
+  });
+
+  it("subtracts card balances as liabilities", () => {
+    const accounts = [
+      makeAccount({ currentBalance: "1000.00" }),
+      makeAccount({ type: "CARD", accountType: "CREDIT_CARD", currentBalance: "250.00" }),
+      makeAccount({ type: "CARD", accountType: "CHARGE_CARD", currentBalance: "100.00" }),
+    ];
+    expect(calculateNetWorth(accounts)).toBe(650);
+  });
+
+  it("adds an overpaid card (negative balance) back to net worth", () => {
+    const accounts = [
+      makeAccount({ currentBalance: "1000.00" }),
+      makeAccount({ type: "CARD", accountType: "CREDIT_CARD", currentBalance: "-50.00" }),
+    ];
+    expect(calculateNetWorth(accounts)).toBe(1050);
   });
 });
 

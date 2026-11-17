@@ -1,6 +1,6 @@
 import { BadRequestException, Inject, Injectable } from "@nestjs/common";
 import { TRUELAYER_PROVIDER_ID, truelayerAccountExternalId } from "@spark/connectors";
-import { type Database, and, desc, eq, gte, lt, lte, or, sql } from "@spark/db";
+import { type Database, alias, and, desc, eq, gte, lt, lte, or, sql } from "@spark/db";
 import type {
   BalanceSeriesInput,
   BalanceSeriesResponse,
@@ -11,14 +11,20 @@ import type {
   SavedTransaction,
 } from "@spark/schema";
 import {
-  accountDailyBalances,
+  balanceSnapshots,
   financialAccounts,
   financialTransactions,
   merchants,
   transactionEnrichments,
 } from "@spark/db/schema";
-import { CategorySource, CategorySourceSchema, SpendingCategory } from "@spark/schema";
+import {
+  CategorySource,
+  CategorySourceSchema,
+  FinancialAccountType,
+  SpendingCategory,
+} from "@spark/schema";
 import { DATABASE_CONNECTION } from "../database";
+import { movementsFrom, reconstructBalanceSeries, type SeriesAccount } from "./balance-series";
 
 const DEFAULT_LIMIT = 25;
 const MAX_LIMIT = 100;
@@ -166,12 +172,14 @@ export class TransactionsService {
       eq(financialTransactions.connectionId, financialAccounts.connectionId),
       eq(financialTransactions.accountExternalId, financialAccounts.externalId),
     );
-    // UTC calendar-day bucketing, matching the daily balance series.
+    // UTC calendar-day bucketing, matching the daily balance series. Money
+    // moved between the user's own accounts is neither income nor spending.
     const monthScope = and(
       eq(financialAccounts.userId, userId),
       eq(financialTransactions.providerId, TRUELAYER_PROVIDER_ID),
       sql`(${financialTransactions.occurredAt} AT TIME ZONE 'UTC')::date >= ${monthStart}::date`,
       sql`(${financialTransactions.occurredAt} AT TIME ZONE 'UTC')::date < ${monthEnd}::date`,
+      sql`not ${isInternalTransfer()}`,
     );
     // Amounts are stored unsigned with direction in the transaction type;
     // abs() keeps totals correct for any provider that signs them. A missing
@@ -245,43 +253,70 @@ export class TransactionsService {
    * derivation — per day the most recent end-of-day balance across accounts,
    * carried forward across days that have transactions but no balance.
    */
+  /**
+   * Net worth per UTC day over the window, every account included: each one
+   * is rebuilt from its latest balance snapshot and its transactions (see
+   * reconstructBalanceSeries), so accounts whose provider sends no running
+   * balance still count, and cards count as debt.
+   */
   async balanceSeries(
     userId: string,
     input: BalanceSeriesInput = {},
   ): Promise<BalanceSeriesResponse> {
     const days = input.days ?? 90;
-    const since = new Date(Date.now() - (days - 1) * 24 * 60 * 60 * 1000)
+    const to = new Date().toISOString().slice(0, 10);
+    const from = new Date(Date.parse(`${to}T00:00:00Z`) - (days - 1) * 86_400_000)
       .toISOString()
       .slice(0, 10);
 
-    const balances = await this.db
-      .selectDistinctOn([accountDailyBalances.day], {
-        day: accountDailyBalances.day,
-        balance: accountDailyBalances.endOfDayBalance,
-        currency: accountDailyBalances.currency,
+    const anchors = await this.db
+      .selectDistinctOn([balanceSnapshots.connectionId, balanceSnapshots.accountExternalId], {
+        connectionId: balanceSnapshots.connectionId,
+        accountExternalId: balanceSnapshots.accountExternalId,
+        balance: balanceSnapshots.cash,
+        observedDay: sql<string>`((${balanceSnapshots.observedAt} AT TIME ZONE 'UTC')::date)::text`,
+        type: financialAccounts.type,
+        currency: financialAccounts.currency,
       })
-      .from(accountDailyBalances)
+      .from(balanceSnapshots)
       .innerJoin(
         financialAccounts,
         and(
-          eq(accountDailyBalances.connectionId, financialAccounts.connectionId),
-          eq(accountDailyBalances.accountExternalId, financialAccounts.externalId),
+          eq(balanceSnapshots.connectionId, financialAccounts.connectionId),
+          eq(balanceSnapshots.accountExternalId, financialAccounts.externalId),
         ),
       )
       .where(
         and(
           eq(financialAccounts.userId, userId),
-          eq(accountDailyBalances.providerId, TRUELAYER_PROVIDER_ID),
-          gte(accountDailyBalances.day, since),
+          eq(financialAccounts.providerId, TRUELAYER_PROVIDER_ID),
         ),
       )
-      .orderBy(accountDailyBalances.day, desc(accountDailyBalances.observedAt));
+      .orderBy(
+        balanceSnapshots.connectionId,
+        balanceSnapshots.accountExternalId,
+        desc(balanceSnapshots.observedAt),
+      );
 
-    // Days that had transactions but no observed balance still get a point
-    // (carried forward). UTC bucketing matches the balance rows'.
+    const accounts: SeriesAccount[] = anchors.map((row) => ({
+      key: seriesKey(row.connectionId, row.accountExternalId),
+      type: row.type,
+      currency: row.currency,
+      anchorBalance: row.balance,
+      anchorDay: row.observedDay,
+    }));
+    if (accounts.length === 0) {
+      return { points: [] };
+    }
+
     const transactionDay = sql<string>`((${financialTransactions.occurredAt} AT TIME ZONE 'UTC')::date)::text`;
-    const transactionDays = await this.db
-      .selectDistinct({ day: transactionDay })
+    const movementRows = await this.db
+      .select({
+        connectionId: financialTransactions.connectionId,
+        accountExternalId: financialTransactions.accountExternalId,
+        day: transactionDay,
+        amount: sql<string>`sum(${financialTransactions.amount})::text`,
+      })
       .from(financialTransactions)
       .innerJoin(
         financialAccounts,
@@ -294,33 +329,25 @@ export class TransactionsService {
         and(
           eq(financialAccounts.userId, userId),
           eq(financialTransactions.providerId, TRUELAYER_PROVIDER_ID),
-          sql`(${financialTransactions.occurredAt} AT TIME ZONE 'UTC')::date >= ${since}::date`,
+          sql`(${financialTransactions.occurredAt} AT TIME ZONE 'UTC')::date >= ${movementsFrom(accounts, from)}::date`,
         ),
       )
-      .orderBy(transactionDay);
+      .groupBy(
+        financialTransactions.connectionId,
+        financialTransactions.accountExternalId,
+        transactionDay,
+      );
 
-    const balanceByDay = new Map(balances.map((row) => [row.day, row]));
-    const allDays = [
-      ...new Set([...balanceByDay.keys(), ...transactionDays.map((r) => r.day)]),
-    ].sort();
-
-    const points: BalanceSeriesResponse["points"] = [];
-    let lastKnown: { balance: string; currency: string } | undefined;
-    for (const day of allDays) {
-      const observed = balanceByDay.get(day);
-      if (observed) {
-        lastKnown = { balance: observed.balance, currency: observed.currency };
-      }
-      if (lastKnown) {
-        points.push({
-          date: day,
-          balance: lastKnown.balance,
-          currency: lastKnown.currency as BalanceSeriesResponse["points"][number]["currency"],
-        });
-      }
-    }
-
-    return { points };
+    const points = reconstructBalanceSeries(
+      accounts,
+      movementRows.map((row) => ({
+        key: seriesKey(row.connectionId, row.accountExternalId),
+        day: row.day,
+        amount: row.amount,
+      })),
+      { from, to },
+    );
+    return { points: points as BalanceSeriesResponse["points"] };
   }
 
   /**
@@ -432,6 +459,47 @@ export class TransactionsService {
 
     return { timestamp, id: payload.id };
   }
+}
+
+/**
+ * Whether the outer financial_transactions row is one leg of a transfer
+ * between two of the same user's accounts: another account of theirs has the
+ * same amount moving the other way within three days. Card payments (a debit
+ * from the current account, a credit on the card) and savings moves would
+ * otherwise count twice, as spending on one side and income on the other.
+ *
+ * Equal opposite amounts happen by coincidence too, so one leg must be on a
+ * card or carry the provider's TRANSFER category; a £20 bought and a £20 paid
+ * back by a friend on another account stay counted.
+ */
+function isInternalTransfer() {
+  const counterpartName = "transfer_counterpart";
+  const counterpartAccountName = "transfer_counterpart_account";
+  const counterpart = alias(financialTransactions, counterpartName);
+  const counterpartAccount = alias(financialAccounts, counterpartAccountName);
+  const direction = (table: typeof financialTransactions | typeof counterpart) =>
+    sql`coalesce(${table.metadata}->>'truelayerTransactionType', 'DEBIT')`;
+  // An alias interpolated into raw SQL renders as its bare name, so the FROM
+  // clause names each table and its alias explicitly.
+  return sql`exists (select 1 from ${financialTransactions} ${sql.identifier(counterpartName)}
+      inner join ${financialAccounts} ${sql.identifier(counterpartAccountName)}
+        on ${counterpartAccount.connectionId} = ${counterpart.connectionId}
+        and ${counterpartAccount.externalId} = ${counterpart.accountExternalId}
+      where ${counterpartAccount.userId} = ${financialAccounts.userId}
+        and not (${counterpart.connectionId} = ${financialTransactions.connectionId}
+          and ${counterpart.accountExternalId} = ${financialTransactions.accountExternalId})
+        and abs(${counterpart.amount}) = abs(${financialTransactions.amount})
+        and ${direction(counterpart)} <> ${direction(financialTransactions)}
+        and ${counterpart.occurredAt} between ${financialTransactions.occurredAt} - interval '3 days'
+          and ${financialTransactions.occurredAt} + interval '3 days'
+        and (${financialAccounts.type} = ${FinancialAccountType.Card}
+          or ${counterpartAccount.type} = ${FinancialAccountType.Card}
+          or ${financialTransactions.metadata}->>'transactionCategory' = 'TRANSFER'
+          or ${counterpart.metadata}->>'transactionCategory' = 'TRANSFER'))`;
+}
+
+function seriesKey(connectionId: string, accountExternalId: string): string {
+  return `${connectionId}:${accountExternalId}`;
 }
 
 /** First day of the month after a YYYY-MM month, as YYYY-MM-DD. */

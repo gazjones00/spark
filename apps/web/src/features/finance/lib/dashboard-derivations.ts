@@ -1,6 +1,7 @@
+import { signedAccountBalance } from "@spark/common";
 import type { Account } from "@spark/orpc/contract";
 
-/** A single point on the "Balance Over Time" chart. */
+/** A single point on the "Net worth over time" chart. */
 export interface BalanceHistory {
   date: string;
   balance: number;
@@ -16,9 +17,8 @@ export interface SpendingByCategory {
 }
 
 /**
- * Net worth = sum of every account's `currentBalance`.
- *
- * `currentBalance` is a nullable Drizzle-numeric string; `null` is treated as 0.
+ * Net worth = assets minus liabilities: every account's net-worth-signed
+ * `currentBalance` (card balances are amounts owed, so they subtract).
  *
  * NOTE: values are summed in their raw numeric form regardless of currency.
  * True multi-currency net worth needs FX conversion, which is out of scope for
@@ -27,11 +27,10 @@ export interface SpendingByCategory {
  * {@link dominantCurrency}.
  */
 export function calculateNetWorth(accounts: Account[]): number {
-  return accounts.reduce((sum, account) => {
-    const value = account.currentBalance ? Number(account.currentBalance) : 0;
-    // Guard against malformed numeric strings so one bad row can't poison the sum.
-    return sum + (Number.isNaN(value) ? 0 : value);
-  }, 0);
+  return accounts.reduce(
+    (sum, account) => sum + signedAccountBalance(account.type, account.currentBalance),
+    0,
+  );
 }
 
 /**
