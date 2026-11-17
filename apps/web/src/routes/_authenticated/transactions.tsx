@@ -118,18 +118,14 @@ function TransactionsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        eyebrow="Ledger"
-        title="Transactions"
-        description="View and search your transaction history"
-      />
+      <PageHeader title="Transactions" description="View and search your transaction history" />
 
       <TransactionFiltersBar filters={filters} onFiltersChange={setFilters} accounts={accounts} />
 
       <TransactionsTable transactions={transactionsData?.transactions ?? []} accounts={accounts} />
 
       <div className="flex items-center justify-between">
-        <p className="text-muted-foreground font-mono text-[11px] font-medium uppercase tracking-[0.1em]">
+        <p className="text-muted-foreground text-sm">
           Showing {transactionsData?.transactions.length ?? 0} transactions
         </p>
         <div className="flex items-center gap-2">

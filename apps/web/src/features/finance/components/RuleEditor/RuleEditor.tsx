@@ -229,10 +229,10 @@ export function RuleEditor({ open, onOpenChange, rule, onSubmit, isPending }: Ru
           {groups.map((group, groupIndex) => (
             <React.Fragment key={groupIndex}>
               {groupIndex > 0 && (
-                <p className="eyebrow text-muted-foreground text-center text-[10px]">— or —</p>
+                <p className="text-muted-foreground text-center text-sm">— or —</p>
               )}
               <div className="space-y-2 border p-3">
-                <p className="eyebrow text-muted-foreground text-[10px]">If all of the following</p>
+                <p className="text-muted-foreground text-sm font-medium">If all of the following</p>
                 {group.map((condition, conditionIndex) => {
                   const operators =
                     condition.field === "AMOUNT" ? amountOperatorOptions : textOperatorOptions;
@@ -331,7 +331,7 @@ export function RuleEditor({ open, onOpenChange, rule, onSubmit, isPending }: Ru
           </Button>
 
           <div className="space-y-2 pt-2">
-            <p className="eyebrow text-muted-foreground text-[10px]">Then categorize as</p>
+            <p className="text-muted-foreground text-sm font-medium">Then categorize as</p>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Category</Label>

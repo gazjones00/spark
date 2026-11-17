@@ -19,9 +19,7 @@ export function RecentTransactions({ transactions }: RecentTransactionsProps) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-          Recent transactions
-        </CardTitle>
+        <CardTitle className="text-[0.9375rem]">Recent transactions</CardTitle>
         <Link
           to="/transactions"
           className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "gap-1")}

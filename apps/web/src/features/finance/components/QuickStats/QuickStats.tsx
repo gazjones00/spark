@@ -40,29 +40,19 @@ function StatCard({
 }: {
   label: string;
   value: string;
-  /** The lead instrument — rendered as a dark panel in both themes. */
+  /** The lead figure, set on the brand gradient. */
   primary?: boolean;
   valueClassName?: string;
 }) {
   return (
-    <Card className={cn(primary && "bg-[#141415] text-[#eff0f1] ring-[#2f3032] dark:bg-[#141415]")}>
+    <Card className={cn(primary && "bg-spark-gradient border-transparent text-white")}>
       <CardContent className="py-1">
         <p
-          className={cn(
-            "font-mono text-[10px] font-medium uppercase tracking-[0.14em]",
-            primary ? "text-[#a3a3a4]" : "text-muted-foreground",
-          )}
+          className={cn("text-sm font-medium", primary ? "text-white/85" : "text-muted-foreground")}
         >
           {label}
         </p>
-        <p
-          className={cn(
-            "font-display mt-2 text-2xl font-semibold tabular-nums sm:text-3xl",
-            valueClassName,
-          )}
-        >
-          {value}
-        </p>
+        <p className={cn("figure mt-2 text-2xl font-bold sm:text-3xl", valueClassName)}>{value}</p>
       </CardContent>
     </Card>
   );

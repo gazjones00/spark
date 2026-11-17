@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useHydrated } from "@/lib/use-hydrated";
 import { useAuth } from "@spark/auth/react";
 import { updateUser } from "@spark/auth/client";
 
@@ -22,7 +23,9 @@ const profileSchema = z.object({
 type ProfileForm = z.infer<typeof profileSchema>;
 
 export function Profile() {
-  const { user, refetch } = useAuth();
+  const { user: sessionUser, refetch } = useAuth();
+  const hydrated = useHydrated();
+  const user = sessionUser;
 
   const form = useForm<ProfileForm>({
     resolver: zodResolver(profileSchema),
@@ -64,12 +67,12 @@ export function Profile() {
             <Avatar className="size-16">
               <AvatarImage src={user?.image ?? undefined} />
               <AvatarFallback className="text-lg">
-                {initials || <User className="size-6" />}
+                {(hydrated && initials) || <User className="size-6" />}
               </AvatarFallback>
             </Avatar>
             <div>
-              <p className="font-medium">{user?.name}</p>
-              <p className="text-muted-foreground text-sm">{user?.email}</p>
+              <p className="font-medium">{hydrated ? user?.name : null}</p>
+              <p className="text-muted-foreground text-sm">{hydrated ? user?.email : null}</p>
             </div>
           </div>
 

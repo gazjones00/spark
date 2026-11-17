@@ -33,9 +33,7 @@ export function BalanceHistoryChart({ data, currency }: BalanceHistoryChartProps
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-          Balance over time
-        </CardTitle>
+        <CardTitle className="text-[0.9375rem]">Balance over time</CardTitle>
       </CardHeader>
       <CardContent>
         {data.length === 0 ? (

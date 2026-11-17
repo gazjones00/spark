@@ -1,7 +1,5 @@
 @import "@fontsource-variable/inter";
-@import "@fontsource-variable/space-grotesk";
-@import "@fontsource/ibm-plex-mono/400.css";
-@import "@fontsource/ibm-plex-mono/500.css";
+@import "@fontsource-variable/plus-jakarta-sans";
 
 @import "tailwindcss";
 @import "tw-animate-css";
@@ -11,85 +9,108 @@
 
 /* ============================================================================
    Spark design tokens
-   Engineering-grade palette: grey instrument scale + spark orange accent.
-   Greys: #eff0f1 (page light) → #0c0c0c (page dark). Accent: #fe5b2a.
+   Calm neutrals, an electric-violet primary for anything interactive, and the
+   "ignition" gradient (amber → coral → violet) reserved for the brand mark and
+   hero moments. Green means money in; red is kept for problems.
    ============================================================================ */
 
 :root {
-  --background: #eff0f1;
-  --foreground: #18191b;
+  --background: #f7f7fa;
+  --foreground: #0e1020;
   --card: #ffffff;
-  --card-foreground: #18191b;
+  --card-foreground: #0e1020;
   --popover: #ffffff;
-  --popover-foreground: #18191b;
-  --primary: #fe5b2a;
-  --primary-foreground: #0c0c0c;
-  --secondary: #e3e4e6;
-  --secondary-foreground: #18191b;
-  --muted: #e6e7e8;
-  --muted-foreground: #6b6c6e;
-  --accent: #e6e7e8;
-  --accent-foreground: #18191b;
-  --destructive: #d92020;
-  --success: #2f7d16;
-  --border: #dcdee0;
-  --input: #d4d6d8;
-  --ring: #fe5b2a;
-  --chart-1: #fe5b2a;
-  --chart-2: #18191b;
-  --chart-3: #fe9170;
-  --chart-4: #747576;
-  --chart-5: #b4411e;
-  --radius: 0.25rem;
-  --sidebar: #141415;
-  --sidebar-foreground: #c3c4c8;
-  --sidebar-primary: #fe5b2a;
-  --sidebar-primary-foreground: #0c0c0c;
-  --sidebar-accent: #222326;
-  --sidebar-accent-foreground: #eff0f1;
-  --sidebar-border: #2f3032;
-  --sidebar-ring: #fe5b2a;
+  --popover-foreground: #0e1020;
+  --primary: #6e56f8;
+  --primary-foreground: #ffffff;
+  --secondary: #f0f0f6;
+  --secondary-foreground: #0e1020;
+  --muted: #f0f1f5;
+  --muted-foreground: #5e6278;
+  --accent: #f1effe;
+  --accent-foreground: #3d2bc2;
+  --destructive: #e5484d;
+  --success: #12a06b;
+  --warning: #f59e0b;
+  --warning-foreground: #92400e;
+  --border: #e6e7ee;
+  --input: #dcdee7;
+  --ring: #6e56f8;
+  --chart-1: #6e56f8;
+  --chart-2: #f43f5e;
+  --chart-3: #f59e0b;
+  --chart-4: #14b8a6;
+  --chart-5: #0ea5e9;
+  --chart-6: #d946ef;
+  --chart-7: #16a34a;
+  --chart-8: #f97316;
+  --chart-9: #3b82f6;
+  --chart-10: #94a3b8;
+  --chart-11: #84cc16;
+  --chart-12: #78716c;
+  --radius: 0.75rem;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #5e6278;
+  --sidebar-primary: #6e56f8;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f1effe;
+  --sidebar-accent-foreground: #3d2bc2;
+  --sidebar-border: #e6e7ee;
+  --sidebar-ring: #6e56f8;
+  --spark-gradient: linear-gradient(135deg, #ff9a3c 0%, #ff5470 48%, #8a5cff 100%);
+  --card-shadow: 0 1px 2px 0 rgb(16 24 40 / 0.04), 0 1px 3px 0 rgb(16 24 40 / 0.03);
 }
 
 .dark {
-  --background: #0c0c0c;
-  --foreground: #eff0f1;
-  --card: #18191b;
-  --card-foreground: #eff0f1;
-  --popover: #18191b;
-  --popover-foreground: #eff0f1;
-  --primary: #fe5b2a;
-  --primary-foreground: #0c0c0c;
-  --secondary: #2f3032;
-  --secondary-foreground: #eff0f1;
-  --muted: #222326;
-  --muted-foreground: #a3a3a4;
-  --accent: #2f3032;
-  --accent-foreground: #eff0f1;
-  --destructive: #fe4d4d;
-  --success: #7bfe2a;
-  --border: #2f3032;
-  --input: #3a3b3e;
-  --ring: #fe5b2a;
-  --chart-1: #fe5b2a;
-  --chart-2: #eff0f1;
-  --chart-3: #fe9170;
-  --chart-4: #8b8c8d;
-  --chart-5: #b4411e;
-  --sidebar: #141415;
-  --sidebar-foreground: #c3c4c8;
-  --sidebar-primary: #fe5b2a;
-  --sidebar-primary-foreground: #0c0c0c;
-  --sidebar-accent: #222326;
-  --sidebar-accent-foreground: #eff0f1;
-  --sidebar-border: #2f3032;
-  --sidebar-ring: #fe5b2a;
+  --background: #0b0c12;
+  --foreground: #eeeff5;
+  --card: #13141c;
+  --card-foreground: #eeeff5;
+  --popover: #171822;
+  --popover-foreground: #eeeff5;
+  --primary: #8b7bff;
+  --primary-foreground: #0b0c12;
+  --secondary: #1d1f2b;
+  --secondary-foreground: #eeeff5;
+  --muted: #1a1c26;
+  --muted-foreground: #9a9db2;
+  --accent: #231f3d;
+  --accent-foreground: #c9c1ff;
+  --destructive: #ff6369;
+  --success: #3dd68c;
+  --warning: #fbbf24;
+  --warning-foreground: #fcd34d;
+  --border: #262838;
+  --input: #2f3244;
+  --ring: #8b7bff;
+  --chart-1: #8b7bff;
+  --chart-2: #fb7185;
+  --chart-3: #fbbf24;
+  --chart-4: #2dd4bf;
+  --chart-5: #38bdf8;
+  --chart-6: #e879f9;
+  --chart-7: #4ade80;
+  --chart-8: #fb923c;
+  --chart-9: #60a5fa;
+  --chart-10: #94a3b8;
+  --chart-11: #a3e635;
+  --chart-12: #a8a29e;
+  --sidebar: #0f1017;
+  --sidebar-foreground: #9a9db2;
+  --sidebar-primary: #8b7bff;
+  --sidebar-primary-foreground: #0b0c12;
+  --sidebar-accent: #1c1a30;
+  --sidebar-accent-foreground: #d8d2ff;
+  --sidebar-border: #232534;
+  --sidebar-ring: #8b7bff;
+  --card-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.3);
 }
 
 @theme inline {
   --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Space Grotesk Variable", "Inter Variable", ui-sans-serif, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", monospace;
+  --font-display: "Plus Jakarta Sans Variable", "Inter Variable", ui-sans-serif, sans-serif;
+  /* Figures align without a terminal look: Inter with tabular numerals. */
+  --font-mono: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -98,6 +119,13 @@
   --color-sidebar-primary: var(--sidebar-primary);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar: var(--sidebar);
+  --color-chart-12: var(--chart-12);
+  --color-chart-11: var(--chart-11);
+  --color-chart-10: var(--chart-10);
+  --color-chart-9: var(--chart-9);
+  --color-chart-8: var(--chart-8);
+  --color-chart-7: var(--chart-7);
+  --color-chart-6: var(--chart-6);
   --color-chart-5: var(--chart-5);
   --color-chart-4: var(--chart-4);
   --color-chart-3: var(--chart-3);
@@ -108,6 +136,8 @@
   --color-border: var(--border);
   --color-destructive: var(--destructive);
   --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -122,11 +152,12 @@
   --color-card: var(--card);
   --color-foreground: var(--foreground);
   --color-background: var(--background);
-  --radius-sm: calc(var(--radius) - 2px);
-  --radius-md: var(--radius);
-  --radius-lg: calc(var(--radius) + 2px);
+  --shadow-card: var(--card-shadow);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-2xl: calc(var(--radius) + 6px);
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
 }
@@ -137,45 +168,58 @@
   }
   body {
     @apply font-sans bg-background text-foreground antialiased;
+    font-feature-settings: "cv11", "ss01";
   }
   html {
     @apply font-sans;
   }
+  h1,
+  h2,
+  h3 {
+    @apply font-display tracking-tight;
+  }
+  .font-mono {
+    font-variant-numeric: tabular-nums;
+  }
   ::selection {
-    background: #fe5b2a;
-    color: #0c0c0c;
+    background: color-mix(in oklab, var(--primary) 25%, transparent);
   }
 }
 
 @layer components {
-  /* Bracketed section label: [ OVERVIEW ] — brackets carry the accent. */
+  /* Small section label above a heading. */
   .eyebrow {
-    font-family: var(--font-mono);
-    font-size: 0.6875rem;
+    font-size: 0.8125rem;
     font-weight: 500;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-  }
-  .eyebrow::before {
-    content: "[ ";
-    color: var(--primary);
-  }
-  .eyebrow::after {
-    content: " ]";
-    color: var(--primary);
+    color: var(--muted-foreground);
   }
 
-  /* Display headline: caps, tight leading, Space Grotesk. */
+  /* Display headline: Plus Jakarta Sans, tight leading. */
   .headline {
     font-family: var(--font-display);
-    font-weight: 600;
-    line-height: 0.95;
-    letter-spacing: -0.015em;
-    text-transform: uppercase;
+    font-weight: 700;
+    line-height: 1.05;
+    letter-spacing: -0.025em;
     text-wrap: balance;
   }
 
-  /* Instrument-panel dot grid texture. */
+  /* Money and other figures: aligned digits, display face. */
+  .figure {
+    font-family: var(--font-display);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+
+  .bg-spark-gradient {
+    background-image: var(--spark-gradient);
+  }
+  .text-spark-gradient {
+    background-image: var(--spark-gradient);
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Subtle dot texture for hero panels. */
   .bg-dotgrid {
     background-image: radial-gradient(var(--dotgrid-color, var(--border)) 1px, transparent 1px);
     background-size: 22px 22px;

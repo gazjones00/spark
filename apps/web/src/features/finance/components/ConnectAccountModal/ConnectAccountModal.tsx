@@ -9,7 +9,8 @@ import { SuccessStep } from "./steps/SuccessStep";
 import { ErrorStep } from "./steps/ErrorStep";
 
 export interface ConnectAccountModalProps {
-  trigger?: React.ReactNode;
+  /** Element that opens the flow; it becomes the trigger rather than nesting inside one. */
+  trigger?: React.ReactElement;
   onSuccess?: () => void;
 }
 
@@ -31,7 +32,7 @@ export function ConnectAccountModal({ trigger, onSuccess }: ConnectAccountModalP
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger>{trigger || <Button>Connect Account</Button>}</DialogTrigger>
+      <DialogTrigger render={trigger ?? <Button>Connect account</Button>} />
       <DialogContent className="sm:max-w-md">
         {step === "start" && <StartStep onStart={handleStartConnection} />}
 

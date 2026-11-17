@@ -143,7 +143,7 @@ function HeroSparkline() {
           <p className="font-display mt-1 text-3xl font-semibold tabular-nums sm:text-4xl">
             £24,318
           </p>
-          <p className="mt-1 font-mono text-[11px] font-medium tracking-wide text-[#7bfe2a]">
+          <p className="mt-1 font-mono text-[11px] font-medium tracking-wide text-[#3dd68c]">
             ▲ +£412 THIS MONTH
           </p>
         </div>
@@ -158,8 +158,8 @@ function HeroSparkline() {
         >
           <defs>
             <linearGradient id="spark-fill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#fe5b2a" stopOpacity="0.22" />
-              <stop offset="100%" stopColor="#fe5b2a" stopOpacity="0" />
+              <stop offset="0%" stopColor="#8b7bff" stopOpacity="0.22" />
+              <stop offset="100%" stopColor="#8b7bff" stopOpacity="0" />
             </linearGradient>
           </defs>
           <path
@@ -170,20 +170,20 @@ function HeroSparkline() {
           <path
             d={line}
             fill="none"
-            stroke="#fe5b2a"
+            stroke="#8b7bff"
             strokeWidth="2.5"
             strokeLinejoin="round"
             strokeLinecap="round"
             vectorEffect="non-scaling-stroke"
             className="animate-spark-draw"
           />
-          <circle cx="1160" cy="38" r="5" fill="#fe5b2a" className="animate-spark-fade" />
+          <circle cx="1160" cy="38" r="5" fill="#8b7bff" className="animate-spark-fade" />
           <circle
             cx="1160"
             cy="38"
             r="10"
             fill="none"
-            stroke="#fe5b2a"
+            stroke="#8b7bff"
             strokeWidth="1.5"
             className="animate-spark-pulse"
           />
@@ -272,7 +272,7 @@ function Features() {
               className="grid gap-8 border-t border-[#c3c4c8] pt-10 md:grid-cols-[2fr_3fr] md:gap-16"
             >
               <h3 className="headline text-4xl sm:text-5xl">
-                <span className="text-[#fe5b2a]">{"// "}</span>
+                <span className="text-[#8b7bff]">{"// "}</span>
                 {block.name}
               </h3>
               <div>
@@ -284,7 +284,7 @@ function Features() {
                       key={row}
                       className="flex items-baseline gap-3 border-t border-[#dcdee0] py-3 text-sm first:border-t-0"
                     >
-                      <span className="font-mono text-xs font-medium text-[#fe5b2a]">→</span>
+                      <span className="font-mono text-xs font-medium text-[#8b7bff]">→</span>
                       {row}
                     </li>
                   ))}
@@ -327,7 +327,7 @@ function Security() {
                 key={point}
                 className="flex items-baseline gap-3 border-t border-[#2f3032] py-4 text-sm text-[#eff0f1]"
               >
-                <span className="font-mono text-xs font-medium text-[#fe5b2a]">→</span>
+                <span className="font-mono text-xs font-medium text-[#8b7bff]">→</span>
                 {point}
               </li>
             ))}
@@ -378,12 +378,12 @@ function Footer() {
           </p>
           <ul className="mt-3 space-y-2 text-sm">
             <li>
-              <a href="#features" className="transition-colors hover:text-[#fe5b2a]">
+              <a href="#features" className="transition-colors hover:text-[#8b7bff]">
                 Features
               </a>
             </li>
             <li>
-              <a href="#security" className="transition-colors hover:text-[#fe5b2a]">
+              <a href="#security" className="transition-colors hover:text-[#8b7bff]">
                 Security
               </a>
             </li>
@@ -395,12 +395,12 @@ function Footer() {
           </p>
           <ul className="mt-3 space-y-2 text-sm">
             <li>
-              <Link to="/login" className="transition-colors hover:text-[#fe5b2a]">
+              <Link to="/login" className="transition-colors hover:text-[#8b7bff]">
                 Sign in
               </Link>
             </li>
             <li>
-              <Link to="/signup" className="transition-colors hover:text-[#fe5b2a]">
+              <Link to="/signup" className="transition-colors hover:text-[#8b7bff]">
                 Create account
               </Link>
             </li>

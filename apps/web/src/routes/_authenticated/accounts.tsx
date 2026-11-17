@@ -69,7 +69,6 @@ function AccountsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Connections"
         title="Accounts"
         description="Manage your connected bank accounts"
         action={

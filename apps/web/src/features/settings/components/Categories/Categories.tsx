@@ -142,7 +142,7 @@ export function Categories() {
 
       <Card>
         <CardContent className="space-y-1">
-          <p className="eyebrow text-muted-foreground mb-3 text-[10px]">Your categories</p>
+          <p className="text-muted-foreground mb-3 text-sm font-medium">Your categories</p>
           {custom.length === 0 && (
             <p className="text-muted-foreground text-sm">No custom categories yet.</p>
           )}
@@ -215,7 +215,7 @@ export function Categories() {
 
       <Card>
         <CardContent>
-          <p className="eyebrow text-muted-foreground mb-3 text-[10px]">Built-in categories</p>
+          <p className="text-muted-foreground mb-3 text-sm font-medium">Built-in categories</p>
           <div className="flex flex-wrap gap-x-6 gap-y-2">
             {builtIn.map((category) => (
               <span key={category.id} className="inline-flex items-center gap-2 text-sm">

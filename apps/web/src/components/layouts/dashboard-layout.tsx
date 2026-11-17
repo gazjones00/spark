@@ -1,11 +1,12 @@
 import * as React from "react";
 
 import { Link, useLocation } from "@tanstack/react-router";
-import { Settings } from "lucide-react";
 
+import { SparkLogo } from "@/components/spark-mark";
 import { cn } from "@/lib/utils";
-import { SparkMark } from "@/components/spark-mark";
-import { DashboardSidebar, navItems } from "./dashboard-sidebar";
+import { DashboardSidebar } from "./dashboard-sidebar";
+import { isActivePath, navItems } from "./nav-items";
+import { UserMenu } from "./user-menu";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -17,58 +18,55 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       <MobileTopBar />
       <DashboardSidebar />
       <main className="flex-1 overflow-auto">
-        <div className="container mx-auto max-w-6xl p-4 sm:p-6 lg:p-8">{children}</div>
+        <div className="mx-auto w-full max-w-6xl px-4 pt-5 pb-28 sm:px-6 md:pb-10 lg:px-10 lg:pt-8">
+          {children}
+        </div>
       </main>
+      <MobileTabBar />
     </div>
   );
 }
 
-/** Compact rail for small screens — the sidebar is hidden below `md`. */
+/** Brand + account menu on small screens; the sidebar takes over from `md`. */
 function MobileTopBar() {
-  const location = useLocation();
-
   return (
-    <div className="bg-sidebar text-sidebar-foreground border-sidebar-border border-b md:hidden">
-      <div className="flex h-14 items-center justify-between px-4">
-        <Link to="/dashboard" className="flex items-center gap-2">
-          <SparkMark className="size-5" />
-          <span className="font-display text-sidebar-accent-foreground text-sm font-semibold tracking-[0.12em]">
-            SPARK
-          </span>
-        </Link>
-        <Link
-          to="/settings"
-          aria-label="Settings"
-          className={cn(
-            "p-2 transition-colors",
-            location.pathname.startsWith("/settings")
-              ? "text-sidebar-primary"
-              : "text-sidebar-foreground hover:text-sidebar-accent-foreground",
-          )}
-        >
-          <Settings className="size-4" />
-        </Link>
-      </div>
-      <nav className="flex items-center gap-1 overflow-x-auto px-2 pb-2">
+    <header className="bg-card/90 border-border sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between border-b px-4 backdrop-blur md:hidden">
+      <Link to="/dashboard" aria-label="Spark home">
+        <SparkLogo markClassName="size-5" className="[&>span:last-child]:text-lg" />
+      </Link>
+      <UserMenu compact />
+    </header>
+  );
+}
+
+/** Bottom tab bar: every primary destination one thumb-tap away. */
+function MobileTabBar() {
+  const location = useLocation();
+  return (
+    <nav
+      aria-label="Main"
+      className="bg-card/95 border-border fixed inset-x-0 bottom-0 z-30 border-t pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
+    >
+      <ul className="grid grid-cols-5">
         {navItems.map((item) => {
-          const isActive = location.pathname.startsWith(item.href);
+          const active = isActivePath(location.pathname, item.href);
           return (
-            <Link
-              key={item.href}
-              to={item.href}
-              className={cn(
-                "flex items-center gap-2 border-b-2 px-3 py-1.5 font-mono text-[11px] font-medium uppercase tracking-[0.14em] whitespace-nowrap transition-colors",
-                isActive
-                  ? "border-sidebar-primary text-sidebar-accent-foreground"
-                  : "border-transparent text-sidebar-foreground hover:text-sidebar-accent-foreground",
-              )}
-            >
-              <item.icon className={cn("size-3.5", isActive && "text-sidebar-primary")} />
-              {item.label}
-            </Link>
+            <li key={item.href}>
+              <Link
+                to={item.href}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  "flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors",
+                  active ? "text-primary" : "text-muted-foreground",
+                )}
+              >
+                <item.icon className="size-5" strokeWidth={active ? 2.25 : 1.75} />
+                {item.label}
+              </Link>
+            </li>
           );
         })}
-      </nav>
-    </div>
+      </ul>
+    </nav>
   );
 }

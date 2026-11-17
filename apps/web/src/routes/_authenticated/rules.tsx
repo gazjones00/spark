@@ -99,7 +99,6 @@ function RulesPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Ledger"
         title="Rules"
         description="Automatically categorize transactions. Rules apply to new syncs and are re-applied to history whenever they change. Transactions you categorized by hand are never changed by rules."
         action={

@@ -11,6 +11,7 @@ import { SpendingChart } from "@/features/finance/components/SpendingChart";
 import { RecentTransactions } from "@/features/finance/components/RecentTransactions";
 import { ConnectAccountModal } from "@/features/finance/components/ConnectAccountModal";
 import { useDashboardData, type DashboardData } from "@/features/finance/hooks/useDashboardData";
+import { useHydrated } from "@/lib/use-hydrated";
 import { orpc } from "@spark/orpc";
 import { useAuth } from "@spark/auth/react";
 
@@ -29,14 +30,14 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 });
 
 function DashboardPage() {
-  const { user } = useAuth();
+  const { user: sessionUser } = useAuth();
+  const user = useHydrated() ? sessionUser : null;
   const data = useDashboardData();
 
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Overview"
-        title="Dashboard"
+        title="Home"
         description={`Welcome back${user?.name ? `, ${user.name}` : ""}. Here's your financial overview.`}
       />
 
