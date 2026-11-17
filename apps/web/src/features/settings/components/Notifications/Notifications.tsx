@@ -9,22 +9,22 @@ import { orpc } from "@spark/orpc";
 const notificationOptions = [
   {
     key: "largeTransactions" as const,
-    label: "Large Transactions",
+    label: "Large transactions",
     description: "Get notified when a transaction exceeds your defined threshold",
   },
   {
     key: "lowBalance" as const,
-    label: "Low Balance",
+    label: "Low balance",
     description: "Get notified when an account balance falls below a threshold",
   },
   {
     key: "budgetOverspend" as const,
-    label: "Budget Overspend",
+    label: "Budget overspend",
     description: "Get notified when you exceed your budget in a category",
   },
   {
     key: "syncFailures" as const,
-    label: "Sync Failures",
+    label: "Sync failures",
     description: "Get notified when an account sync fails or needs re-authentication",
   },
 ];

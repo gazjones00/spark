@@ -116,10 +116,19 @@ function Details({
         <dl className="border-border divide-border divide-y rounded-xl border">
           {account ? (
             <Row label="Account">
-              <span className="flex items-center justify-end gap-2">
-                <BankLogo provider={account.provider} className="size-6 rounded-md" />
-                {account.displayName}
-                <span className="text-muted-foreground">· {bankName(account)}</span>
+              {/* Name over bank, like account rows elsewhere: the full name is
+                  always readable, on any device, and nothing is cut off. */}
+              <span className="flex min-w-0 items-start justify-end gap-2.5">
+                <BankLogo
+                  provider={account.provider}
+                  className="mt-0.5 size-5 shrink-0 rounded-[6px]"
+                />
+                <span className="min-w-0">
+                  <span className="block break-words">{account.displayName}</span>
+                  <span className="text-muted-foreground block text-xs break-words">
+                    {bankName(account)}
+                  </span>
+                </span>
               </span>
             </Row>
           ) : null}
@@ -129,7 +138,9 @@ function Details({
             <span className="break-words">{transaction.description}</span>
           </Row>
           {transaction.meta?.providerReference ? (
-            <Row label="Reference">{transaction.meta.providerReference}</Row>
+            <Row label="Reference">
+              <span className="break-all">{transaction.meta.providerReference}</span>
+            </Row>
           ) : null}
         </dl>
 

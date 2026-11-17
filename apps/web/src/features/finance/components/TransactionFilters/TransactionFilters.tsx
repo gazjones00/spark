@@ -135,7 +135,9 @@ function FilterSelect({
       <SelectTrigger
         aria-label={`Filter by ${label.toLowerCase()}`}
         className={
-          selected ? "border-primary/40 bg-accent text-accent-foreground shrink-0" : "shrink-0"
+          selected
+            ? "border-primary/40 bg-accent text-accent-foreground dark:bg-accent dark:hover:bg-accent shrink-0"
+            : "shrink-0"
         }
       >
         <span className="text-muted-foreground">{label}:</span>

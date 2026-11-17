@@ -102,7 +102,9 @@ function DashboardContent({
         onReauth={(providerId) => reauth.mutate(providerId)}
       />
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      {/* `grid-cols-1` keeps the single phone column from growing past the
+          screen to fit an unwrapped line of text. */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <NetWorthCard
             netWorth={data.netWorth}
@@ -120,7 +122,7 @@ function DashboardContent({
         />
       </div>
 
-      <div className="grid items-start gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           <SpendingBreakdown data={data.spendingByCategory} currency={data.currency} />
           <RecentActivity transactions={data.recentTransactions} accounts={data.accounts} />
